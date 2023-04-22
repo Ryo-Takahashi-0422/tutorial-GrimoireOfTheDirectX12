@@ -1,2 +1,6 @@
 Debug/
 x64/
+model/
+.vs/
+DirectX12_Play.sln
+.git

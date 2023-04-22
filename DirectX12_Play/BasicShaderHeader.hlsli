@@ -1,14 +1,19 @@
 struct Output
 {
     float4 svpos : SV_POSITION; // システム用頂点座標
-    float4 norm : NORMAL;
+    float4 pos : POSITON; // 頂点座標
+    float4 norm : NORMAL0; // 法線ベクトル
+    float4 vnormal : NORMAL1; // ビュー変換後の法線ベクトル
     float2 uv : TEXCOORD; // uv値
+    float3 ray : VECTOR; // 視点ベクトル
 };
 
-cbuffer cbuff0 : register(b0) // 変換行列
+cbuffer SceneBuffer : register(b0) // 変換行列
 {
-    matrix world;
-    matrix viewproj;
+    matrix world; // ワールド行列
+    matrix view; // ビュー行列
+    matrix proj; // プロジェクション行列
+    float3 eye; // 視点
 };
 
 cbuffer Material : register(b1)
@@ -17,3 +22,11 @@ cbuffer Material : register(b1)
     float4 specular; // r,g,b:specular , a:specularity
     float3 ambient;
 }
+
+SamplerState smp : register(s0); // 0番スロットに設定されたサンプラー
+SamplerState smpToon : register(s1); // 1番スロットに設定されたサンプラー(トゥーン)
+
+Texture2D<float4> tex : register(t0); //0番スロットに設定されたテクスチャ
+Texture2D <float4> sph : register(t1); // 1番スロットに設定されたテクスチャ
+Texture2D<float4> spa : register(t2); // 2番スロットに設定されたテクスチャ
+Texture2D<float4> toon : register(t3); // 3番スロットに設定されたトゥーンテクスチャ
