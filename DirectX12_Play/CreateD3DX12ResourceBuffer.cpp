@@ -1,18 +1,9 @@
 #include <stdafx.h>
 #include <CreateD3DX12ResourceBuffer.h>
 
-
-
-// テクスチャ用　CPUからのアップロード用バッファ、GPUからの読み取り用バッファ、DirectX::Image生成
-// @param metaData ロードしたファイルのTexmetadataオブジェクト
-// @param img ロードしたファイルのImageオブジェクト
-// @return CPUからのアップロード用バッファ,GPUからの読み取り用バッファ,DirectX::TexMetadata,DirectX::Image
-
 std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>> 
 CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMetadata* metaData, Image* img, std::string& texPath)
 {
-	auto& utility = Utility::Instance(); ////////////////////
-
 	std::map<std::string, std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>>> _resourceTable;
 	auto iterator = _resourceTable.find(texPath);
 	if (iterator != _resourceTable.end()) {
@@ -34,7 +25,7 @@ CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMe
 	D3D12_RESOURCE_DESC texUploadResourceDesc = {};
 	texUploadResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	texUploadResourceDesc.Alignment = 0;
-	texUploadResourceDesc.Width = utility.AlignmentSize(img->slicePitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) * img->height;// *5;
+	texUploadResourceDesc.Width = Utility::AlignmentSize(img->slicePitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) * img->height;// *5;
 	texUploadResourceDesc.Height = 1;
 	texUploadResourceDesc.DepthOrArraySize = 1;
 	texUploadResourceDesc.MipLevels = 1;
@@ -101,4 +92,147 @@ CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMe
 
 	_resourceTable[texPath] = std::forward_as_tuple(texUploadBuff.Get(), texReadBuff.Get());
 	return std::forward_as_tuple(texUploadBuff.Get(), texReadBuff.Get());
+}
+
+ComPtr<ID3D12Resource> CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(ComPtr<ID3D12Device> _dev, TexMetadata* metaData, Image* img, std::string texPath)
+{
+	// FlyWeight Pattern：同一テクスチャからのリソース生成を防ぎ、既存のリソースを返す
+	std::map<std::string, ComPtr<ID3D12Resource>> _resourceTable;
+	auto iterator = _resourceTable.find(texPath);
+	if (iterator != _resourceTable.end()) {
+		return iterator->second;
+	};
+
+	auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_CPU_PAGE_PROPERTY_WRITE_BACK, D3D12_MEMORY_POOL_L0);
+
+	D3D12_RESOURCE_DESC resDesc = {};
+	resDesc.Dimension = static_cast<D3D12_RESOURCE_DIMENSION>(metaData->dimension);
+	resDesc.Alignment = 0;
+	resDesc.Width = metaData->width;
+	resDesc.Height = metaData->height;
+	resDesc.DepthOrArraySize = metaData->arraySize;
+	resDesc.MipLevels = metaData->mipLevels;
+	resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;// B8G8R8X8でsrv生成するとエラー metaData->format;
+	//resDesc.Format = metaData->format;
+	resDesc.SampleDesc.Count = 1;
+	resDesc.SampleDesc.Quality = 0;
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	ComPtr<ID3D12Resource> MappedBuff = nullptr;
+	auto result = _dev->CreateCommittedResource
+	(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(MappedBuff.ReleaseAndGetAddressOf())
+	);
+
+	if (FAILED(result))
+	{
+		return nullptr;
+	}
+
+	result = MappedBuff->WriteToSubresource
+	(
+		0,
+		nullptr,
+		img->pixels,
+		img->rowPitch,
+		img->slicePitch
+	);
+
+	if (FAILED(result))
+	{
+		return nullptr;
+	}
+
+	_resourceTable[texPath] = MappedBuff;
+	return MappedBuff;
+}
+
+ComPtr<ID3D12Resource> CreateD3DX12ResourceBuffer::CreateColorTexture(ComPtr<ID3D12Device> _dev, const int param)
+{
+	ComPtr<ID3D12Resource> whiteBuff = nullptr;
+	auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_CPU_PAGE_PROPERTY_WRITE_BACK, D3D12_MEMORY_POOL_L0);
+	auto whiteResDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 4, 4);
+	HRESULT result = _dev->CreateCommittedResource
+	(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&whiteResDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(whiteBuff.ReleaseAndGetAddressOf())
+	);
+
+	if (FAILED(result))
+	{
+		return nullptr;
+	}
+
+	std::vector<unsigned char> data(4 * 4 * 4);
+	std::fill(data.begin(), data.end(), param);
+
+	result = whiteBuff->WriteToSubresource
+	(
+		0,
+		nullptr,
+		data.data(),
+		4 * 4,
+		data.size() // ソースデータの1つの深度スライスから次のデータまでの距離、つまりサイズ
+	);
+
+	return whiteBuff;
+}
+
+ComPtr<ID3D12Resource> CreateD3DX12ResourceBuffer::CreateGrayGradationTexture(ComPtr<ID3D12Device> _dev)
+{
+	ComPtr<ID3D12Resource> grayBuff = nullptr;
+	auto resDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 4, 256);
+	auto texHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_CPU_PAGE_PROPERTY_WRITE_BACK, D3D12_MEMORY_POOL_L0);
+	auto result = _dev->CreateCommittedResource(
+		&texHeapProp,
+		D3D12_HEAP_FLAG_NONE,//特に指定なし
+		&resDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(grayBuff.ReleaseAndGetAddressOf())
+	);
+	if (FAILED(result)) {
+		return nullptr;
+	}
+
+	//上が白くて下が黒いテクスチャデータを作成
+	std::vector<unsigned int> data(4 * 256);
+	auto it = data.begin();
+	unsigned int c = 0x30;
+	int i = 0;
+	for (; it != data.end(); it += 4) {
+		auto col = (0000 << 24) | RGB(c, c, c);
+		std::fill(it, it + 3, col);
+		i++;
+		if (i == 85)
+		{
+			c = 0xa0;
+		}
+
+		if (i == 170)
+		{
+			c = 0xff;
+		}
+	}
+
+	result = grayBuff->WriteToSubresource
+	(
+		0,
+		nullptr,
+		data.data(),
+		4 * sizeof(unsigned int),
+		sizeof(unsigned int) * data.size()
+	);
+
+	return grayBuff;
 }

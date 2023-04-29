@@ -93,19 +93,18 @@ private:
 		AdditionalMaterial addtional;
 	};
 
-	ComPtr<ID3D12Resource> CreateGrayGradationTexture();
-
 	//windowがメッセージループ中に取得したメッセージを処理するクラス
 	//LRESULT windowProcedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
-	void EnableDebugLayer();
-	std::string GetTexPathFromModeAndTexlPath(const std::string modelPath,const char* texPath);
-	std::wstring GetWideStringFromSring(const std::string& str);
-	std::string GetExtension(const std::string& path);
-	std::pair<std::string, std::string> SplitFileName(const std::string& path, const char splitter = '*');
-	std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>>
-		LoadTextureFromFile(TexMetadata* metaData, Image* img, std::string& texPath);
-	ComPtr<ID3D12Resource> CreateMappedSphSpaTexResource(TexMetadata* metaData, Image* img, std::string texPath);
-	ComPtr<ID3D12Resource> CreateColorTexture(const int param);
+
+	// シングルトンなのでコンストラクタ、コピーコンストラクタ、代入演算子はprivateにする
+	// コンストラクタ
+	AppD3DX12() {};
+
+	// コピーコンストラクタ
+	AppD3DX12(const AppD3DX12& x) { };
+
+	// 代入演算子
+	AppD3DX12& operator=(const AppD3DX12&) { return *this; };
 
 public:
 	///Applicationのシングルトンインスタンスを得る
@@ -120,8 +119,7 @@ public:
 	///後処理
 	void Terminate();
 
-	AppD3DX12();
-
+	//デストラクタ
 	~AppD3DX12();
 
 
