@@ -13,7 +13,7 @@ public:
 	// @param metaData ロードしたファイルのTexmetadataオブジェクト
 	// @param img ロードしたファイルのImageオブジェクト
 	// @return CPUからのアップロード用バッファ,GPUからの読み取り用バッファ,DirectX::TexMetadata,DirectX::Image
-	static std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>>  LoadTextureFromFile
+	static std::tuple<ComPtr<ID3D12Resource>, ComPtr<ID3D12Resource>> LoadTextureFromFile
 	(
 		ComPtr<ID3D12Device> _dev,
 		TexMetadata* metaData,
@@ -21,7 +21,16 @@ public:
 		std::string& texPath
 	);
 
-	static ComPtr<ID3D12Resource> CreateMappedSphSpaTexResource(ComPtr<ID3D12Device> _dev, TexMetadata* metaData, Image* img, std::string texPath);
+	static ComPtr<ID3D12Resource> CreateMappedSphSpaTexResource
+	(
+		ComPtr<ID3D12Device> _dev, 
+		TexMetadata* metaData, 
+		Image* img, std::string 
+		texPath
+	);
+
 	static ComPtr<ID3D12Resource> CreateColorTexture(ComPtr<ID3D12Device> _dev, const int param);
+
+	//トゥーンのためのグラデーションテクスチャ
 	static ComPtr<ID3D12Resource> CreateGrayGradationTexture(ComPtr<ID3D12Device> _dev);
 };

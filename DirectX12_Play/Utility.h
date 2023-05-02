@@ -1,39 +1,34 @@
 #pragma once
 
-class Utility 
+namespace Utility 
 {
-private:
-	static Utility instance;
-
-public:
-
 	//アライメントにそろえたサイズを返す
 	//@param size 元のサイズ
 	//@param alignment アライメントサイズ
 	//@return アライメントを揃えたサイズ
-	static size_t AlignmentSize(size_t size, size_t alignment);
+	size_t AlignmentSize(size_t size, size_t alignment);
 
-	static void EnableDebugLayer();
+	void EnableDebugLayer();
 
 	//モデルのパスとテクスチャのパスから合成パスを得る
 	//@param modelPath アプリからみたpmdモデルのパス
 	//@param texPath pmdモデルからみたテクスチャのパス
 	//@param return アプリからみたテクスチャのパス
-	static std::string GetTexPathFromModeAndTexlPath(const std::string modelPath, const char* texPath);
+	std::string GetTexPathFromModeAndTexlPath(const std::string modelPath, const char* texPath);
 
 	// std::string(マルチバイト文字列)→std::wstring(ワイド文字列)を得る
 	// @param str マルチバイト文字列
 	// return 変換されたワイド文字列
-	static std::wstring GetWideStringFromSring(const std::string& str);
+	std::wstring GetWideStringFromSring(const std::string& str);
 
 	//ファイルから拡張子を取得する
 	// @param path 対象パス文字列
 	// @return 拡張子
-	static std::string GetExtension(const std::string& path);
+	std::string GetExtension(const std::string& path);
 
 	//テクスチャのパスをセパレータ文字で分離する
 	// @param path 対象のパス
 	// @param splitter 文字列
 	// @return 分離前後の文字列ペア
-	static std::pair<std::string, std::string> SplitFileName(const std::string& path, const char splitter = '*');
+	std::pair<std::string, std::string> SplitFileName(const std::string& path, const char splitter = '*');
 };

@@ -8,10 +8,19 @@ int main() {
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #endif
 	auto& app = AppD3DX12::Instance();
-	if (!app.Init()) {
+	if (!app.PrepareRendering()) {
 		return -1;
 	}
-	//app.Run();
+
+	if (!app.PipelineInit()) {
+		return -1;
+	}
+
+	if (!app.ResourceInit()) {
+		return -1;
+	}
+
+	app.Run();
 	//app.Terminate();
 	return 0;
 }
