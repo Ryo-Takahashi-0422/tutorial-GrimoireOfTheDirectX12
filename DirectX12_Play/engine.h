@@ -27,3 +27,5 @@ using namespace DirectX;
 
 #include <CreateD3DX12ResourceBuffer.h>
 #include <Utility.h>
+#include <PMDMaterialInfo.h>
+#include <PrepareRenderingWindow.h>

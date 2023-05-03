@@ -17,7 +17,7 @@ AppD3DX12& AppD3DX12::Instance()
 	return instance;
 };
 
-///後処理
+// 後処理
 void AppD3DX12::Terminate()
 {
 
@@ -27,123 +27,6 @@ AppD3DX12::~AppD3DX12()
 {
 
 };
-
-//windowがメッセージループ中に取得したメッセージを処理するクラス
-LRESULT windowProcedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-	if (msg == WM_DESTROY)
-	{
-		PostQuitMessage(0);//OSへアプリ終了の通知
-		return 0;
-	}
-	return DefWindowProc(hwnd, msg, wparam, lparam);
-}
-
-HRESULT AppD3DX12::ReadPMDHeaderFile() 
-{
-	// PMDヘッダファイルの読み込み
-	auto fp = fopen(strModelPath.c_str(), "rb");
-	if (fp == nullptr) {
-		//エラー処理
-		assert(0);
-		return ERROR_FILE_NOT_FOUND;
-	}
-
-	// シグネチャ情報読み込み
-	fread(signature, sizeof(signature), 1, fp);
-
-	// pmdヘッダー情報読み込み
-	fread(&pmdHeader, sizeof(pmdHeader), 1, fp);
-
-	// pmd頂点情報の読み込み
-	fread(&vertNum, sizeof(vertNum), 1, fp);
-
-	// 頂点情報のサイズは38固定
-	pmdvertex_size = 38;
-
-	// 頂点コンテナのサイズ変更、頂点情報群t_vertexをpmdデータから読み込み
-	vertices.resize(vertNum * pmdvertex_size);
-	fread(vertices.data(), vertices.size(), 1, fp);
-
-	// pmdファイルの面頂点リストから頂点数取得、コンテナサイズ変更、頂点番号取得
-	fread(&indicesNum, sizeof(indicesNum), 1, fp);
-	indices.resize(indicesNum);
-	fread(indices.data(), indices.size() * sizeof(indices[0]), 1, fp);
-	printf("%d",sizeof(indices[0]));
-
-	// マテリアル読み込みとシェーダーへの出力準備
-	fread(&materialNum, sizeof(materialNum), 1, fp);
-	pmdMat1.resize(materialNum);
-	pmdMat2.resize(materialNum);
-	materials.resize(materialNum);
-
-	for (int i = 0; i < materialNum; i++)
-	{
-		fread(&pmdMat1[i], 46, 1, fp);
-		fread(&pmdMat2[i], sizeof(PMDMaterialSet2), 1, fp);
-	}
-
-	for (int i = 0; i < materialNum; i++)
-	{
-		materials[i].indiceNum = pmdMat2[i].indicesNum;
-		materials[i].material.diffuse = pmdMat1[i].diffuse;
-		materials[i].material.alpha = pmdMat1[i].alpha;
-		materials[i].material.specular = pmdMat1[i].specular;
-		materials[i].material.specularity = pmdMat1[i].specularity;
-		materials[i].material.ambient = pmdMat1[i].ambient;
-		materials[i].addtional.texPath = pmdMat2[i].texFilePath;
-	}
-
-	fclose(fp);
-	return S_OK;
-};
-
-void AppD3DX12::CreateAppWindow()
-{
-	//ウィンドウクラスの生成と初期化
-	w = {};
-	w.cbSize = sizeof(WNDCLASSEX);
-	w.lpfnWndProc = (WNDPROC)windowProcedure;
-	w.lpszClassName = _T("DX12Sample");
-	w.hInstance = GetModuleHandle(nullptr);
-
-	//上記ウィンドウクラスの登録。WINDCLASSEXとして扱われる。
-	RegisterClassEx(&w);
-
-	RECT wrc = { 0,0,window_width, window_height };
-
-	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
-
-	hwnd = CreateWindow(
-		w.lpszClassName,
-		_T("DX12テスト"),//タイトルバーの文字
-		WS_OVERLAPPEDWINDOW,//タイトルバーと境界線があるウィンドウです
-		CW_USEDEFAULT,//表示X座標はOSにお任せします
-		CW_USEDEFAULT,//表示Y座標はOSにお任せします
-		wrc.right - wrc.left,//ウィンドウ幅
-		wrc.bottom - wrc.top,//ウィンドウ高
-		nullptr,//親ウィンドウハンドル
-		nullptr,//メニューハンドル
-		w.hInstance,//呼び出しアプリケーションハンドル
-		nullptr);//追加パラメータ
-}
-
-void AppD3DX12::SetViewportAndRect()
-{
-	viewport = {};
-	viewport.Width = window_width;
-	viewport.Height = window_height;
-	viewport.TopLeftX = 0;
-	viewport.TopLeftY = 0;
-	viewport.MaxDepth = 1.0f;
-	viewport.MinDepth = 0.0f;
-
-	scissorRect = {};
-	scissorRect.top = 0; //切り抜き上座標
-	scissorRect.left = 0; //切り抜き左座標
-	scissorRect.right = scissorRect.left + window_width; //切り抜き右座標
-	scissorRect.bottom = scissorRect.top + window_height; //切り抜き下座標
-}
 
 HRESULT AppD3DX12::D3DX12DeviceInit()
 {
@@ -219,16 +102,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 #endif
 	// PMDファイルの読み込み
-	if (FAILED(AppD3DX12::ReadPMDHeaderFile())) return false;
+	pmdMaterialInfo = new PMDMaterialInfo;
+	if (FAILED(pmdMaterialInfo->ReadPMDHeaderFile())) return false;
 
 	// レンダリングウィンドウ設定
-	AppD3DX12::CreateAppWindow();
+	prepareRenderingWindow = new PrepareRenderingWindow;
+	prepareRenderingWindow->CreateAppWindow();
 
 	// レンダリングウィンドウ表示
-	ShowWindow(hwnd, SW_SHOW);
+	ShowWindow(prepareRenderingWindow->GetHWND(), SW_SHOW);
 
 	// ビューポートとシザー領域の設定
-	SetViewportAndRect();
+	prepareRenderingWindow->SetViewportAndRect();
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -275,8 +160,8 @@ bool AppD3DX12::PipelineInit(){
 
 	//初期化処理４：スワップチェーンの生成
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.Width = window_width;
-	swapChainDesc.Height = window_height;
+	swapChainDesc.Width = prepareRenderingWindow->GetWindowWidth();
+	swapChainDesc.Height = prepareRenderingWindow->GetWindowHeight();
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.Stereo = false;
 	swapChainDesc.SampleDesc.Count = 1;
@@ -289,7 +174,7 @@ bool AppD3DX12::PipelineInit(){
 	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	result = _dxgiFactory->CreateSwapChainForHwnd( //ここで生成
 		_cmdQueue.Get(),
-		hwnd,
+		prepareRenderingWindow->GetHWND(),
 		&swapChainDesc,
 		nullptr,
 		nullptr,
@@ -595,8 +480,8 @@ bool AppD3DX12::ResourceInit() {
 	//深度バッファー用リソースディスクリプタ
 	D3D12_RESOURCE_DESC depthResDesc = {};
 	depthResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthResDesc.Width = window_width;
-	depthResDesc.Height = window_height;
+	depthResDesc.Width = prepareRenderingWindow->GetWindowWidth();
+	depthResDesc.Height = prepareRenderingWindow->GetWindowHeight();
 	depthResDesc.DepthOrArraySize = 1;
 	depthResDesc.Format = DXGI_FORMAT_D32_FLOAT; // 深度値書き込み用
 	depthResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
@@ -607,16 +492,16 @@ bool AppD3DX12::ResourceInit() {
 	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
 	depthClearValue.DepthStencil.Depth = 1.0f; // 深さ1.0(最大値)でクリア
 
-	texUploadBuff.resize(materialNum);//テクスチャCPUアップロード用バッファー
-	texReadBuff.resize(materialNum);//テクスチャGPU読み取り用バッファー
-	sphMappedBuff.resize(materialNum);//sph用バッファー
-	spaMappedBuff.resize(materialNum);//spa用バッファー
-	toonUploadBuff.resize(materialNum);//トゥーン用アップロードバッファー
-	toonReadBuff.resize(materialNum);//トゥーン用リードバッファー
+	texUploadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャCPUアップロード用バッファー
+	texReadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャGPU読み取り用バッファー
+	sphMappedBuff.resize(pmdMaterialInfo->materialNum);//sph用バッファー
+	spaMappedBuff.resize(pmdMaterialInfo->materialNum);//spa用バッファー
+	toonUploadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用アップロードバッファー
+	toonReadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用リードバッファー
 
 	//頂点バッファーの作成(リソースと暗黙的なヒープの作成) ID3D12Resourceオブジェクトの内部パラメータ設定
-	D3D12_RESOURCE_DESC vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(vertices.size());
-	D3D12_RESOURCE_DESC indicesDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(indices[0]) * indices.size());
+	D3D12_RESOURCE_DESC vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(pmdMaterialInfo->vertices.size());
+	D3D12_RESOURCE_DESC indicesDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size());
 	result = _dev->CreateCommittedResource
 	(
 		&heapProps,
@@ -675,22 +560,22 @@ bool AppD3DX12::ResourceInit() {
 		return LoadFromDDSFile(path.c_str(), DDS_FLAGS_NONE, meta, img);
 	};
 
-	metaData.resize(materialNum);
-	img.resize(materialNum);
+	metaData.resize(pmdMaterialInfo->materialNum);
+	img.resize(pmdMaterialInfo->materialNum);
 	ScratchImage scratchImg = {};
 	result = CoInitializeEx(0, COINIT_MULTITHREADED);
 
 	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
-	for (int i = 0; i < materials.size(); i++)
+	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
 	{
-		if (strlen(materials[i].addtional.texPath.c_str()) == 0)
+		if (strlen(pmdMaterialInfo->materials[i].addtional.texPath.c_str()) == 0)
 		{
 			texUploadBuff[i] = nullptr;
 			texReadBuff[i] = nullptr;
 			continue;
 		}
 
-		std::string texFileName = materials[i].addtional.texPath;
+		std::string texFileName = pmdMaterialInfo->materials[i].addtional.texPath;
 
 		// ファイル名に*を含む場合の処理
 		if (std::count(std::begin(texFileName), std::end(texFileName), '*') > 0)
@@ -712,7 +597,7 @@ bool AppD3DX12::ResourceInit() {
 		// spa,sph拡張子ファイルはslicepitchが大きすぎてオーバーフロー?するため、バッファー作成に失敗する。
 		// 更に詳細は不明だがこれによりなぜかvertBuffのマッピングが失敗するようになるため、一時回避する
 
-		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, texFileName.c_str());
+		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(pmdMaterialInfo->strModelPath, texFileName.c_str());
 		auto wTexPath = Utility::GetWideStringFromSring(texFilePath);
 		auto extention = Utility::GetExtension(texFilePath);
 
@@ -764,17 +649,17 @@ bool AppD3DX12::ResourceInit() {
 	// トゥーン処理
 	std::string toonFilePath = "toon\\";
 	struct _stat s = {};
-	toonMetaData.resize(materialNum);
-	toonImg.resize(materialNum);
+	toonMetaData.resize(pmdMaterialInfo->materialNum);
+	toonImg.resize(pmdMaterialInfo->materialNum);
 	ScratchImage toonScratchImg = {};
 
-	for (int i = 0; i < materials.size(); i++)
+	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
 	{
 		//トゥーンリソースの読み込み
 		char toonFileName[16];
-		sprintf(toonFileName, "toon%02d.bmp", materials[i].addtional.toonIdx + 1);
+		sprintf(toonFileName, "toon%02d.bmp", pmdMaterialInfo->materials[i].addtional.toonIdx + 1);
 		toonFilePath += toonFileName;
-		toonFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, toonFilePath.c_str());
+		toonFilePath = Utility::GetTexPathFromModeAndTexlPath(pmdMaterialInfo->strModelPath, toonFilePath.c_str());
 
 		auto wTexPath = Utility::GetWideStringFromSring(toonFilePath);
 		auto extention = Utility::GetExtension(toonFilePath);
@@ -811,9 +696,9 @@ bool AppD3DX12::ResourceInit() {
 	}
 
 	//行列用定数バッファーの生成
-	worldMat = XMMatrixIdentity();
+	pmdMaterialInfo->worldMat = XMMatrixIdentity();
 	//auto worldMat = XMMatrixRotationY(15.0f);
-	angle = 0.0f;
+	pmdMaterialInfo->angle = 0.0f;
 
 	//ビュー行列の生成・乗算
 	XMFLOAT3 eye(0, 15, -15);
@@ -830,7 +715,7 @@ bool AppD3DX12::ResourceInit() {
 	auto projMat = XMMatrixPerspectiveFovLH
 	(
 		XM_PIDIV2, // 画角90°
-		static_cast<float>(window_height) / static_cast<float>(window_width),
+		static_cast<float>(prepareRenderingWindow->GetWindowHeight()) / static_cast<float>(prepareRenderingWindow->GetWindowWidth()),
 		1.0, // ニア―クリップ
 		100.0 // ファークリップ
 	);
@@ -854,7 +739,7 @@ bool AppD3DX12::ResourceInit() {
 	D3D12_HEAP_PROPERTIES materialHeapProp = {};
 	D3D12_RESOURCE_DESC materialBuffResDesc = {};
 	materialHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	materialBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * materialNum);
+	materialBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * pmdMaterialInfo->materialNum);
 
 	_dev->CreateCommittedResource
 	(
@@ -872,27 +757,27 @@ bool AppD3DX12::ResourceInit() {
 	//sという理解。Unmapはコメントアウトしても特に影響はないが...
 	//vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
-	std::copy(std::begin(vertices), std::end(vertices), vertMap);
+	std::copy(std::begin(pmdMaterialInfo->vertices), std::end(pmdMaterialInfo->vertices), vertMap);
 	vertBuff->Unmap(0, nullptr);
 
 	//インデクスバッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
 	//mappedIdx = nullptr;
 	result = idxBuff->Map(0, nullptr, (void**)&mappedIdx);
-	std::copy(std::begin(indices), std::end(indices), mappedIdx);
+	std::copy(std::begin(pmdMaterialInfo->indices), std::end(pmdMaterialInfo->indices), mappedIdx);
 	idxBuff->Unmap(0, nullptr);
 
 	//行列用定数バッファーのマッピング
 	//mapMatrix = nullptr;
-	result = matrixBuff->Map(0, nullptr, (void**)&mapMatrix);
-	mapMatrix->world = worldMat;
-	mapMatrix->view = viewMat;
-	mapMatrix->proj = projMat;
-	mapMatrix->eye = eye;
+	result = matrixBuff->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix);
+	pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
+	pmdMaterialInfo->mapMatrix->view = viewMat;
+	pmdMaterialInfo->mapMatrix->proj = projMat;
+	pmdMaterialInfo->mapMatrix->eye = eye;
 
 	//マテリアル用バッファーへのマッピング
 	//mapMaterial = nullptr;
 	result = materialBuff->Map(0, nullptr, (void**)&mapMaterial);
-	for (auto m : materials)
+	for (auto m : pmdMaterialInfo->materials)
 	{
 		*((MaterialForHlsl*)mapMaterial) = m.material;
 		mapMaterial += materialBuffSize;
@@ -902,7 +787,7 @@ bool AppD3DX12::ResourceInit() {
 	// テクスチャアップロード用バッファーの仮想アドレスをポインタにマップ(関連付け)して、
 	// 仮想的にインデックスデータをコピーする。
 	// テクスチャのアップロード用バッファへのマッピング
-	for (int matNum = 0; matNum < materialNum; matNum++)
+	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
 		if (texUploadBuff[matNum] == nullptr) continue;
 
@@ -925,7 +810,7 @@ bool AppD3DX12::ResourceInit() {
 	}
 
 	// トゥーンテクスチャも同様にマッピング
-	for (int matNum = 0; matNum < materialNum; matNum++)
+	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
 		if (toonUploadBuff[matNum] == nullptr) continue;
 
@@ -945,12 +830,12 @@ bool AppD3DX12::ResourceInit() {
 	}
 
 	// テクスチャ用転送オブジェクト
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> src(materialNum);
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> dst(materialNum);
-	std::vector<D3D12_RESOURCE_BARRIER> texBarriierDesc(materialNum);
+	std::vector<D3D12_TEXTURE_COPY_LOCATION> src(pmdMaterialInfo->materialNum);
+	std::vector<D3D12_TEXTURE_COPY_LOCATION> dst(pmdMaterialInfo->materialNum);
+	std::vector<D3D12_RESOURCE_BARRIER> texBarriierDesc(pmdMaterialInfo->materialNum);
 
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	for (int matNum = 0; matNum < materialNum; matNum++)
+	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
 		if (texUploadBuff[matNum] == nullptr || texReadBuff[matNum] == nullptr) continue;
 
@@ -1000,11 +885,11 @@ bool AppD3DX12::ResourceInit() {
 	}
 
 	// トゥーンテクスチャ用転送オブジェクト
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> toonSrc(materialNum);
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> toonDst(materialNum);
-	std::vector<D3D12_RESOURCE_BARRIER> toonBarriierDesc(materialNum);
+	std::vector<D3D12_TEXTURE_COPY_LOCATION> toonSrc(pmdMaterialInfo->materialNum);
+	std::vector<D3D12_TEXTURE_COPY_LOCATION> toonDst(pmdMaterialInfo->materialNum);
+	std::vector<D3D12_RESOURCE_BARRIER> toonBarriierDesc(pmdMaterialInfo->materialNum);
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	for (int matNum = 0; matNum < materialNum; matNum++)
+	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
 		if (toonUploadBuff[matNum] == nullptr || toonReadBuff[matNum] == nullptr) continue;
 
@@ -1057,7 +942,7 @@ bool AppD3DX12::ResourceInit() {
 	basicDescHeap = nullptr;
 	basicDescHeapDesc = {};
 	basicDescHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	basicDescHeapDesc.NumDescriptors = 1 + materialNum * 5; // 行列cbv,material cbv + テクスチャsrv, sph,spa,toon
+	basicDescHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv,material cbv + テクスチャsrv, sph,spa,toon
 	basicDescHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	basicDescHeapDesc.NodeMask = 0;
 
@@ -1083,12 +968,12 @@ bool AppD3DX12::ResourceInit() {
 
 	vbView = {};
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress();//バッファの仮想アドレス
-	vbView.SizeInBytes = vertices.size();//全バイト数
-	vbView.StrideInBytes = pmdvertex_size;//1頂点あたりのバイト数
+	vbView.SizeInBytes = pmdMaterialInfo->vertices.size();//全バイト数
+	vbView.StrideInBytes = pmdMaterialInfo->pmdvertex_size;//1頂点あたりのバイト数
 
 	ibView = {};
 	ibView.BufferLocation = idxBuff->GetGPUVirtualAddress();
-	ibView.SizeInBytes = sizeof(indices[0]) * indices.size();
+	ibView.SizeInBytes = sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; // 行列用
@@ -1136,7 +1021,7 @@ bool AppD3DX12::ResourceInit() {
 	grayTexBuff = CreateD3DX12ResourceBuffer::CreateGrayGradationTexture(_dev);
 
 	//マテリアル用のcbv,srvを作成
-	for (int i = 0; i < materialNum; i++)
+	for (int i = 0; i < pmdMaterialInfo->materialNum; i++)
 	{
 		_dev->CreateConstantBufferView(&materialCBVDesc, basicDescHeapHandle);
 		basicDescHeapHandle.ptr += inc;
@@ -1244,8 +1129,8 @@ void AppD3DX12::Run() {
 
 		_cmdList->SetPipelineState(_pipelineState.Get());
 		_cmdList->SetGraphicsRootSignature(_rootSignature.Get());
-		_cmdList->RSSetViewports(1, &viewport);
-		_cmdList->RSSetScissorRects(1, &scissorRect);
+		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
+		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 
@@ -1307,7 +1192,7 @@ void AppD3DX12::Run() {
 		materialHandle.ptr += inc;
 		unsigned int idxOffset = 0;
 
-		for (auto m : materials)
+		for (auto m : pmdMaterialInfo->materials)
 		{
 			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
 			//インデックス付きインスタンス化されたプリミティブを描画
@@ -1353,9 +1238,9 @@ void AppD3DX12::Run() {
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
 
 		//行列情報の更新
-		angle += 0.01f;
-		worldMat = XMMatrixRotationY(angle);
-		mapMatrix->world = worldMat;
+		pmdMaterialInfo->angle += 0.01f;
+		pmdMaterialInfo->worldMat = XMMatrixRotationY(pmdMaterialInfo->angle);
+		pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 
 
 		//フリップしてレンダリングされたイメージをユーザーに表示
@@ -1365,5 +1250,8 @@ void AppD3DX12::Run() {
 	delete vertMap;
 	delete mappedIdx;
 	delete mapMaterial;
-	UnregisterClass(w.lpszClassName, w.hInstance);
+	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
+
+	delete pmdMaterialInfo;
+	delete prepareRenderingWindow;
 }

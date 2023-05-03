@@ -1,0 +1,121 @@
+#pragma once
+
+	struct Vertex //?　下のvertices直下に宣言すると、std::copyでエラー発生する
+	{
+		XMFLOAT3 pos; // xyz座標
+		XMFLOAT2 uv; // uv座標
+	};
+
+	//PMDヘッダー構造体
+	struct PMDHeader
+	{
+		float version; // 00 00 80 3F == 1.00
+		char model_name[20]; // モデル名
+		char comment[256]; // コメント
+	};
+
+	//PMD 頂点構造体
+	struct PMDVertex
+	{   //38byte
+		float pos[3]; // x, y, z // 座標 12byte
+		float normal_vec[3]; // nx, ny, nz // 法線ベクトル 12byte
+		float uv[2]; // u, v // UV座標 // MMDは頂点UV 8byte
+		unsigned short bone_num[2]; // ボーン番号1、番号2 // モデル変形(頂点移動)時に影響 4byte
+		unsigned char bone_weight; // ボーン1に与える影響度 // min:0 max:100 // ボーン2への影響度は、(100 - bone_weight) 1byte
+		unsigned char edge_flag; // 0:通常、1:エッジ無効 // エッジ(輪郭)が有効の場合 1byte
+	};
+
+	//シェーダー側に渡す基本的な行列データ
+	struct SceneMatrix
+	{
+		XMMATRIX world; // モデル本体の回転・移動行列
+		XMMATRIX view; // ビュー行列
+		XMMATRIX proj; // プロジェクション行列
+		XMFLOAT3 eye; // 視点座標
+	};
+
+	//マテリアル読み込み用の構造体2セット
+	struct PMDMaterialSet1
+	{ //46Byte読み込み用
+		XMFLOAT3 diffuse;
+		float alpha;
+		float specularity;
+		XMFLOAT3 specular;
+		XMFLOAT3 ambient;
+		unsigned char toonIdx;
+		unsigned char edgeFlg;
+	};
+
+	struct PMDMaterialSet2
+	{ //24Byte読み込み用
+		unsigned int indicesNum;
+		char texFilePath[20];
+	};
+
+	//読み込んだマテリアル構造体の出力用に分類
+	struct MaterialForHlsl // メイン
+	{
+		XMFLOAT3 diffuse;
+		float alpha;
+		XMFLOAT3 specular;
+		float specularity;
+		XMFLOAT3 ambient;
+	};
+
+	struct AdditionalMaterial // サブ
+	{
+		std::string texPath;
+		int toonIdx;
+		bool edgeFlg;
+	};
+
+	struct Material // 集合体
+	{
+		unsigned int indiceNum;
+		MaterialForHlsl material;
+		AdditionalMaterial addtional;
+	};
+
+#pragma pack(1)
+	struct PMDBone // ボーン情報
+	{
+		char boneName[20]; // ボーン名
+		unsigned short parentIndex; // 親ボーン番号(ない場合は0xFFFF)
+		unsigned short tailIndex; // tail位置のボーン番号(チェーン末端の場合は0xFFFF 0 →補足2) // 親：子は1：多なので、主に位置決め用
+		unsigned char type; // ボーンの種類
+		unsigned short ikParentIndex; // IKボーン番号(影響IKボーン。ない場合は0)
+		XMFLOAT3 tailPos; // ボーンのヘッドの位置
+	};
+
+#pragma pack()
+
+class PMDMaterialInfo
+{
+
+private:
+
+
+public:
+
+	HRESULT ReadPMDHeaderFile();
+
+	float angle;
+	XMMATRIX worldMat;
+	SceneMatrix* mapMatrix = nullptr;
+
+	std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
+	char signature[3] = {}; // シグネチャ
+	PMDHeader pmdHeader = {};
+	unsigned int vertNum; // 頂点数
+	size_t pmdvertex_size;
+	std::vector<unsigned char> vertices{};
+	std::vector<unsigned short> indices{};
+	unsigned int indicesNum;
+	unsigned int materialNum;
+	std::vector<PMDMaterialSet1> pmdMat1;
+	std::vector<PMDMaterialSet2> pmdMat2;
+	std::vector<Material> materials;
+	unsigned short boneNum;
+	std::vector<PMDBone> pmdBones;
+
+};
