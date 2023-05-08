@@ -1,7 +1,6 @@
 #pragma once
 
 #include <DirectXTex.h>
-
 #include <Windows.h>
 #include<tchar.h>
 #ifdef _DEBUG
@@ -11,11 +10,7 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <DirectXMath.h>
-
-
 #include <d3dcompiler.h>//シェーダーコンパイルに必要
-
-
 #include <d3dx12.h>
 #include <string.h>
 #include <map>
@@ -25,7 +20,10 @@
 using namespace Microsoft::WRL;
 using namespace DirectX;
 
+//#include <AppD3DX12.h>
 #include <CreateD3DX12ResourceBuffer.h>
 #include <Utility.h>
 #include <PMDMaterialInfo.h>
 #include <PrepareRenderingWindow.h>
+#include <SetRootSignature.h>
+//#include <AppD3DX12.h>

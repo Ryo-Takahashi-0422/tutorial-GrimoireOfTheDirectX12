@@ -1,4 +1,5 @@
 #pragma once
+using namespace DirectX;
 
 	struct Vertex //?　下のvertices直下に宣言すると、std::copyでエラー発生する
 	{
@@ -84,16 +85,26 @@
 		unsigned short tailIndex; // tail位置のボーン番号(チェーン末端の場合は0xFFFF 0 →補足2) // 親：子は1：多なので、主に位置決め用
 		unsigned char type; // ボーンの種類
 		unsigned short ikParentIndex; // IKボーン番号(影響IKボーン。ない場合は0)
-		XMFLOAT3 tailPos; // ボーンのヘッドの位置
+		XMFLOAT3 headPos; // ボーンのヘッドの位置
 	};
-
 #pragma pack()
+
+	struct BoneNode
+	{
+		int boneIdx; // ボーンインデックス
+		XMFLOAT3 startPos; // ボーン基準点(回転中心)
+		XMFLOAT3 endPos; // ボーン先端点
+		std::vector<BoneNode*> children; // 子ノード
+	};
 
 class PMDMaterialInfo
 {
-
 private:
-
+	unsigned short boneNum;
+	std::vector<DirectX::XMMATRIX> _boneMatrice;
+	std::vector<PMDBone> pmdBones;
+	std::map<std::string, BoneNode> _boneNodeTable;
+	std::vector<std::string> boneName;
 
 public:
 
@@ -115,7 +126,5 @@ public:
 	std::vector<PMDMaterialSet1> pmdMat1;
 	std::vector<PMDMaterialSet2> pmdMat2;
 	std::vector<Material> materials;
-	unsigned short boneNum;
-	std::vector<PMDBone> pmdBones;
 
 };

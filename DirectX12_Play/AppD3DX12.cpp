@@ -10,7 +10,7 @@ using namespace DirectX;
 using namespace Microsoft::WRL;
 
 using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata*, ScratchImage&)>;
- 
+
 AppD3DX12& AppD3DX12::Instance()
 {
 	static AppD3DX12 instance;
@@ -224,62 +224,20 @@ bool AppD3DX12::PipelineInit(){
 			//コマンドアロケーター生成>>コマンドリスト作成
 	result = _dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator.ReleaseAndGetAddressOf()));
 
-	return TRUE;
+	return true;
 }
 
 bool AppD3DX12::ResourceInit() {
-	//●リソース初期化
-	// 初期化処理1：ルートシグネチャ設定
-
-	//サンプラー作成
-	CD3DX12_STATIC_SAMPLER_DESC stSamplerDesc[2] = {};
-	stSamplerDesc[0].Init(0);
-	stSamplerDesc[1].Init(1, D3D12_FILTER_ANISOTROPIC,
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-
-	//サンプラーのスロット設定
-	CD3DX12_DESCRIPTOR_RANGE descTableRange[3] = {};
-
-	descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // martix
-	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // material
-	descTableRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0); // colortex, graytex, spa, sph
-
-	D3D12_ROOT_PARAMETER rootParam[2] = {};
-	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	rootParam[0].DescriptorTable.NumDescriptorRanges = 1; // デプス用
-	rootParam[0].DescriptorTable.pDescriptorRanges = descTableRange;
-	rootParam[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	rootParam[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	rootParam[1].DescriptorTable.NumDescriptorRanges = 2; // マテリアルとテクスチャで使う
-	rootParam[1].DescriptorTable.pDescriptorRanges = &descTableRange[1];
-	rootParam[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-	rootSignatureDesc.NumParameters = 2;
-	rootSignatureDesc.pParameters = rootParam;
-	rootSignatureDesc.NumStaticSamplers = 2;
-	rootSignatureDesc.pStaticSamplers = stSamplerDesc;
-	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-	result = D3D12SerializeRootSignature //シリアル化
-	(
-		&rootSignatureDesc,
-		D3D_ROOT_SIGNATURE_VERSION_1,
-		_rootSigBlob.ReleaseAndGetAddressOf(),
-		errorBlob.GetAddressOf()
-	);
-
-	_rootSignature = nullptr;
-
-	result = _dev->CreateRootSignature
-	(
-		0,
-		_rootSigBlob->GetBufferPointer(),
-		_rootSigBlob->GetBufferSize(),
-		IID_PPV_ARGS(_rootSignature.ReleaseAndGetAddressOf())
-	);
-	_rootSigBlob->Release();
+	////●リソース初期化
+	
+	//// 初期化処理1：ルートシグネチャ設定
+	setRootSignature = new SetRootSignature;
+	if (FAILED(setRootSignature->SetRootsignatureParam(_dev)))
+	{
+		return false;
+	}
+	
+	setRootSignature->SetRootsignatureParam(_dev);
 
 	// 初期化処理2：シェーダーコンパイル
 
@@ -293,7 +251,7 @@ bool AppD3DX12::ResourceInit() {
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,
 		_vsBlob.ReleaseAndGetAddressOf()
-		, errorBlob.GetAddressOf()
+		, setRootSignature->GetErrorBlob().GetAddressOf()
 	);
 
 	result = D3DCompileFromFile
@@ -306,7 +264,7 @@ bool AppD3DX12::ResourceInit() {
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,
 		_psBlob.ReleaseAndGetAddressOf()
-		, errorBlob.GetAddressOf()
+		, setRootSignature->GetErrorBlob().GetAddressOf()
 	);
 
 	//エラーチェック
@@ -321,10 +279,10 @@ bool AppD3DX12::ResourceInit() {
 		else
 		{
 			std::string errstr;
-			errstr.resize(errorBlob->GetBufferSize());
+			errstr.resize(setRootSignature->GetErrorBlob()->GetBufferSize());
 
-			std::copy_n((char*)errorBlob->GetBufferPointer(),
-				errorBlob->GetBufferSize(),
+			std::copy_n((char*)setRootSignature->GetErrorBlob()->GetBufferPointer(),
+				setRootSignature->GetErrorBlob()->GetBufferSize(),
 				errstr.begin());
 			errstr += "\n";
 			OutputDebugStringA(errstr.c_str());
@@ -407,7 +365,8 @@ bool AppD3DX12::ResourceInit() {
 	// 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine = {};
-	gpipeLine.pRootSignature = _rootSignature.Get();
+	gpipeLine.pRootSignature = setRootSignature->GetRootSignature().Get();
+	//gpipeLine.pRootSignature = setRootSignature->GetRootSignature();
 
 	gpipeLine.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
 	gpipeLine.VS.BytecodeLength = _vsBlob->GetBufferSize();
@@ -670,7 +629,7 @@ bool AppD3DX12::ResourceInit() {
 			//return 0;
 			break;
 		}
-
+		
 		toonMetaData[i] = new TexMetadata;
 		result = loadLambdaTable[extention](wTexPath, toonMetaData[i], toonScratchImg);
 
@@ -733,7 +692,7 @@ bool AppD3DX12::ResourceInit() {
 		nullptr,
 		IID_PPV_ARGS(matrixBuff.ReleaseAndGetAddressOf())
 	);
-
+	
 	//マテリアル用定数バッファーの生成
 	auto materialBuffSize = (sizeof(MaterialForHlsl) + 0xff) & ~0xff;
 	D3D12_HEAP_PROPERTIES materialHeapProp = {};
@@ -825,7 +784,7 @@ bool AppD3DX12::ResourceInit() {
 			toonSrcAddress += toonImg[matNum]->rowPitch;
 			toonmapforImg += toonrowPitch;
 		}
-
+		
 		toonUploadBuff[matNum]->Unmap(0, nullptr);
 	}
 
@@ -1128,7 +1087,8 @@ void AppD3DX12::Run() {
 		//_cmdList->SetGraphicsRootSignature(_rootSignature);
 
 		_cmdList->SetPipelineState(_pipelineState.Get());
-		_cmdList->SetGraphicsRootSignature(_rootSignature.Get());
+		_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
+		//_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature());
 		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
 		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
@@ -1254,4 +1214,5 @@ void AppD3DX12::Run() {
 
 	delete pmdMaterialInfo;
 	delete prepareRenderingWindow;
+	delete setRootSignature;
 }

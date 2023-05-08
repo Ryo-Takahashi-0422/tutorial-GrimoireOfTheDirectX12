@@ -3,7 +3,7 @@
 class AppD3DX12
 {
 private:
-
+	
 	ComPtr<ID3D12Device> _dev = nullptr;
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
 	ComPtr<IDXGISwapChain4> _swapChain = nullptr;
@@ -12,8 +12,6 @@ private:
 	ComPtr<ID3D12CommandQueue> _cmdQueue = nullptr;
 	ComPtr<ID3D10Blob> _vsBlob = nullptr; // 頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _psBlob = nullptr; // ピクセルシェーダーオブジェクト格納用
-	ComPtr<ID3DBlob> _rootSigBlob = nullptr; // ルートシグネチャオブジェクト格納用
-	ComPtr<ID3DBlob> errorBlob = nullptr; // シェーダー関連エラー格納用
 	ComPtr<ID3D12Fence> _fence = nullptr;
 	UINT64 _fenceVal;
 	ComPtr<ID3D12DescriptorHeap> rtvHeaps = nullptr;
@@ -23,7 +21,7 @@ private:
 	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 
 	ComPtr<ID3D12PipelineState> _pipelineState = nullptr;
-	ComPtr<ID3D12RootSignature> _rootSignature = nullptr;
+
 	D3D12_VERTEX_BUFFER_VIEW vbView;
 	ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
@@ -77,6 +75,7 @@ private:
 	//ComPtr<PMDMaterialInfo> pmdMaterialInfo;
 	PMDMaterialInfo* pmdMaterialInfo = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
+	SetRootSignature* setRootSignature = nullptr;
 
 public:
 	///Applicationのシングルトンインスタンスを得る
@@ -102,4 +101,5 @@ public:
 
 	//デストラクタ
 	~AppD3DX12();
+
 };

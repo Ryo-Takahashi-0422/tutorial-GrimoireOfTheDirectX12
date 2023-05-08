@@ -182,6 +182,7 @@
     <ClCompile Include="CreateD3DX12ResourceBuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PrepareRenderingWindow.cpp" />
+    <ClCompile Include="SetRootSignature.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -228,6 +229,7 @@
     <ClInclude Include="CreateD3DX12ResourceBuffer.h" />
     <ClInclude Include="engine.h" />
     <ClInclude Include="PrepareRenderingWindow.h" />
+    <ClInclude Include="SetRootSignature.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>

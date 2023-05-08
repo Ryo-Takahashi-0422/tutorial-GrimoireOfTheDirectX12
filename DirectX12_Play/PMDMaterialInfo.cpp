@@ -60,6 +60,34 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile()
 	pmdBones.resize(boneNum);
 	fread(pmdBones.data(), sizeof(PMDBone), boneNum, fp);
 
+	// インデックスと名前の対応関係構築のため後で利用
+	boneName.resize(pmdBones.size());
+
+	// ボーンノードマップを作成
+	for (int idx = 0; idx < pmdBones.size(); idx++) 
+	{
+		auto& pb = pmdBones[idx];
+		boneName[idx] = pb.boneName;
+		auto& node = _boneNodeTable[pb.boneName];
+		node.boneIdx = idx;
+		node.startPos = pb.headPos;
+	}
+
+	// 親子関係の構築
+	for (auto pb : pmdBones) 
+	{
+		if (pb.parentIndex >= pmdBones.size())
+		{
+			continue;
+		}
+
+		auto pBoneName = boneName[pb.parentIndex]; // 自分の親の名前
+		_boneNodeTable[pBoneName].children.emplace_back(&_boneNodeTable[pb.boneName]); // 親テーブルの子に自分を追加
+	}
+
+	// ボーン用行列をすべて初期化
+	std::fill(_boneMatrice.begin(), _boneMatrice.end(), XMMatrixIdentity());
+
 	fclose(fp);
 	return S_OK;
 };
