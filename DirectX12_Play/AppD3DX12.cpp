@@ -28,6 +28,16 @@ AppD3DX12::~AppD3DX12()
 
 };
 
+void AppD3DX12::RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat)
+{
+	boneMatrices[node->boneIdx] *= mat;
+
+	for (auto cnode : node->children)
+	{
+		RecursiveMatrixMultiply(cnode, boneMatrices[node->boneIdx]);
+	}
+}
+
 HRESULT AppD3DX12::D3DX12DeviceInit()
 {
 	
@@ -95,6 +105,74 @@ HRESULT AppD3DX12::D3DX12DeviceInit()
 	result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(_fence.ReleaseAndGetAddressOf()));
 }
 
+void AppD3DX12::UpdateVMDMotion(std::map<std::string, BoneNode> bNodeTable, 
+	std::unordered_map<std::string, std::vector<KeyFrame>> motionData)
+{
+	_duration = 0;
+	for (auto& boneMotion : vmdMotionInfo->GetMotionData())
+	{
+		// キーフレームの順番を昇順に並び替える
+		std::sort(
+			boneMotion.second.begin(), boneMotion.second.end(),
+			[](const KeyFrame& lval, const KeyFrame& rval)
+			{
+				return lval.frameNo <= rval.frameNo;
+			}
+		);
+
+		// 最大フレーム番号取得
+		_duration = std::max<unsigned int>(_duration, boneMotion.second[boneMotion.second.size() - 1].frameNo);
+		auto itBoneNode = bNodeTable.find(boneMotion.first);
+		if (itBoneNode == bNodeTable.end())
+		{
+			continue;
+		}
+
+		// 合致するものを探す
+		
+		//auto node = bNodeTable[boneMotion.first];
+		auto node = itBoneNode->second;
+		auto keyFrames = boneMotion.second;
+		auto rit = std::find_if(
+			keyFrames.rbegin(), keyFrames.rend(),
+			[this](const KeyFrame keyFrame)
+			{
+				return keyFrame.frameNo <= pmdActor->GetFrameNo();
+			});
+
+		if (rit == keyFrames.rend())
+		{
+			continue;
+		}
+		
+		XMMATRIX rotation;
+		auto it = rit.base();
+		if (it != keyFrames.end())
+		{
+			auto t = static_cast<float>(pmdActor->GetFrameNo() - rit->frameNo)
+				/ static_cast<float>(it->frameNo - rit->frameNo);
+
+			t = pmdActor->GetYFromXOnBezier(t, it->p1, it->p2, 12);
+			// 線形補間
+			//rotation = XMMatrixRotationQuaternion(rit->quaternion) * (1 - t)
+			//	+ XMMatrixRotationQuaternion(it->quaternion) * t;
+
+			// 球面線形補間
+			rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(rit->quaternion, it->quaternion, t));
+		}
+		else
+		{
+			rotation = XMMatrixRotationQuaternion(rit->quaternion);
+		}
+
+		auto& pos = node.startPos;
+		auto mat = XMMatrixTranslation(-pos.x, -pos.y, -pos.z)
+			* rotation
+			* XMMatrixTranslation(pos.x, pos.y, pos.z);
+		boneMatrices[node.boneIdx] = mat;
+	}
+}
+
 #ifdef _DEBUG
 bool AppD3DX12::PrepareRendering() {
 #else
@@ -103,7 +181,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 #endif
 	// PMDファイルの読み込み
 	pmdMaterialInfo = new PMDMaterialInfo;
-	if (FAILED(pmdMaterialInfo->ReadPMDHeaderFile())) return false;
+	if (FAILED(pmdMaterialInfo->ReadPMDHeaderFile(strModelPath))) return false;
+
+	// VMDモーションファイルの読み込み
+	vmdMotionInfo = new VMDMotionInfo;
+	if (FAILED(vmdMotionInfo->ReadVMDHeaderFile(strMotionPath))) return false;
 
 	// レンダリングウィンドウ設定
 	prepareRenderingWindow = new PrepareRenderingWindow;
@@ -331,7 +413,7 @@ bool AppD3DX12::ResourceInit() {
 		{
 			"BONE_NO",
 			0,
-			DXGI_FORMAT_R16G16_UINT,
+			DXGI_FORMAT_R16G16_UINT, // bone[0], bone[1]
 			0,
 			D3D12_APPEND_ALIGNED_ELEMENT,
 			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
@@ -556,7 +638,7 @@ bool AppD3DX12::ResourceInit() {
 		// spa,sph拡張子ファイルはslicepitchが大きすぎてオーバーフロー?するため、バッファー作成に失敗する。
 		// 更に詳細は不明だがこれによりなぜかvertBuffのマッピングが失敗するようになるため、一時回避する
 
-		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(pmdMaterialInfo->strModelPath, texFileName.c_str());
+		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, texFileName.c_str());
 		auto wTexPath = Utility::GetWideStringFromSring(texFilePath);
 		auto extention = Utility::GetExtension(texFilePath);
 
@@ -618,7 +700,7 @@ bool AppD3DX12::ResourceInit() {
 		char toonFileName[16];
 		sprintf(toonFileName, "toon%02d.bmp", pmdMaterialInfo->materials[i].addtional.toonIdx + 1);
 		toonFilePath += toonFileName;
-		toonFilePath = Utility::GetTexPathFromModeAndTexlPath(pmdMaterialInfo->strModelPath, toonFilePath.c_str());
+		toonFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, toonFilePath.c_str());
 
 		auto wTexPath = Utility::GetWideStringFromSring(toonFilePath);
 		auto extention = Utility::GetExtension(toonFilePath);
@@ -725,6 +807,7 @@ bool AppD3DX12::ResourceInit() {
 	std::copy(std::begin(pmdMaterialInfo->indices), std::end(pmdMaterialInfo->indices), mappedIdx);
 	idxBuff->Unmap(0, nullptr);
 
+	boneMatrices = pmdMaterialInfo->GetBoneMatrices();
 	//行列用定数バッファーのマッピング
 	//mapMatrix = nullptr;
 	result = matrixBuff->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix);
@@ -732,6 +815,16 @@ bool AppD3DX12::ResourceInit() {
 	pmdMaterialInfo->mapMatrix->view = viewMat;
 	pmdMaterialInfo->mapMatrix->proj = projMat;
 	pmdMaterialInfo->mapMatrix->eye = eye;
+
+	pmdActor = new PMDActor;
+	bNodeTable = pmdMaterialInfo->GetBoneNode();
+	
+	//UpdateVMDMotion(bNodeTable, vmdMotionInfo->GetMotionData());
+
+	//RecursiveMatrixMultiply(&bNodeTable["センター"], XMMatrixIdentity());
+
+	//std::copy(boneMatrices.begin(), boneMatrices.end(), pmdMaterialInfo->mapMatrix->bones);
+	//pmdMaterialInfo->mapMatrix->bones
 
 	//マテリアル用バッファーへのマッピング
 	//mapMaterial = nullptr;
@@ -1069,7 +1162,8 @@ bool AppD3DX12::ResourceInit() {
 
 void AppD3DX12::Run() {
 	MSG msg = {};
-
+	pmdActor->PlayAnimation(); // アニメーション開始時刻の取得
+	pmdActor->MotionUpdate(_duration);
 	while (true)
 	{
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -1202,7 +1296,11 @@ void AppD3DX12::Run() {
 		pmdMaterialInfo->worldMat = XMMatrixRotationY(pmdMaterialInfo->angle);
 		pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 
-
+		// モーション用行列の更新と書き込み
+		pmdActor->MotionUpdate(_duration);
+		UpdateVMDMotion(bNodeTable, vmdMotionInfo->GetMotionData());
+		RecursiveMatrixMultiply(&bNodeTable["センター"], XMMatrixIdentity());
+		std::copy(boneMatrices.begin(), boneMatrices.end(), pmdMaterialInfo->mapMatrix->bones);
 		//フリップしてレンダリングされたイメージをユーザーに表示
 		_swapChain->Present(1, 0);
 	}
@@ -1213,6 +1311,8 @@ void AppD3DX12::Run() {
 	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
 
 	delete pmdMaterialInfo;
+	delete vmdMotionInfo;
+	delete pmdActor;
 	delete prepareRenderingWindow;
 	delete setRootSignature;
 }

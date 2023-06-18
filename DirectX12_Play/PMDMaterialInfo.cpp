@@ -1,6 +1,6 @@
 #include <stdafx.h>
 
-HRESULT PMDMaterialInfo::ReadPMDHeaderFile()
+HRESULT PMDMaterialInfo::ReadPMDHeaderFile(std::string strModelPath)
 {
 	// PMDヘッダファイルの読み込み
 	auto fp = fopen(strModelPath.c_str(), "rb");
@@ -86,8 +86,19 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile()
 	}
 
 	// ボーン用行列をすべて初期化
+	_boneMatrice.resize(pmdBones.size());
 	std::fill(_boneMatrice.begin(), _boneMatrice.end(), XMMatrixIdentity());
 
 	fclose(fp);
 	return S_OK;
 };
+
+std::vector<DirectX::XMMATRIX> PMDMaterialInfo::GetBoneMatrices()
+{
+	return _boneMatrice;
+}
+
+std::map<std::string, BoneNode> PMDMaterialInfo::GetBoneNode()
+{
+	return _boneNodeTable;
+}

@@ -16,6 +16,8 @@
 #include <map>
 #include <sys/stat.h>
 #include <wrl.h>
+#include <unordered_map>
+#include <algorithm>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -26,4 +28,6 @@ using namespace DirectX;
 #include <PMDMaterialInfo.h>
 #include <PrepareRenderingWindow.h>
 #include <SetRootSignature.h>
+#include <VMDMotionInfo.h>
+#include <PMDActor.h>
 //#include <AppD3DX12.h>

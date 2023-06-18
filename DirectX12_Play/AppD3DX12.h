@@ -3,7 +3,8 @@
 class AppD3DX12
 {
 private:
-	
+	std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
+	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\motion.vmd";
 	ComPtr<ID3D12Device> _dev = nullptr;
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
 	ComPtr<IDXGISwapChain4> _swapChain = nullptr;
@@ -74,8 +75,17 @@ private:
 
 	//ComPtr<PMDMaterialInfo> pmdMaterialInfo;
 	PMDMaterialInfo* pmdMaterialInfo = nullptr;
+	VMDMotionInfo* vmdMotionInfo = nullptr;
+	PMDActor* pmdActor = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
 	SetRootSignature* setRootSignature = nullptr;
+	std::vector<DirectX::XMMATRIX> boneMatrices;
+	std::map<std::string, BoneNode> bNodeTable;
+	unsigned int _duration; // アニメーションの最大フレーム番号
+
+	void RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat);
+	void UpdateVMDMotion(std::map<std::string, BoneNode> bNodeTable, 
+		std::unordered_map<std::string, std::vector<KeyFrame>> motionData);
 
 public:
 	///Applicationのシングルトンインスタンスを得る

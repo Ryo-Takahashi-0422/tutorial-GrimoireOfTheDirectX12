@@ -33,6 +33,7 @@ using namespace DirectX;
 		XMMATRIX view; // ビュー行列
 		XMMATRIX proj; // プロジェクション行列
 		XMFLOAT3 eye; // 視点座標
+		XMMATRIX bones[256]; // ボーン行列
 	};
 
 	//マテリアル読み込み用の構造体2セット
@@ -108,13 +109,13 @@ private:
 
 public:
 
-	HRESULT ReadPMDHeaderFile();
+	HRESULT ReadPMDHeaderFile(std::string);
 
 	float angle;
 	XMMATRIX worldMat;
 	SceneMatrix* mapMatrix = nullptr;
 
-	std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
+	//std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
 	char signature[3] = {}; // シグネチャ
 	PMDHeader pmdHeader = {};
 	unsigned int vertNum; // 頂点数
@@ -126,5 +127,7 @@ public:
 	std::vector<PMDMaterialSet1> pmdMat1;
 	std::vector<PMDMaterialSet2> pmdMat2;
 	std::vector<Material> materials;
-
+	std::vector<DirectX::XMMATRIX> GetBoneMatrices();
+	std::map<std::string, BoneNode> GetBoneNode();
+	
 };

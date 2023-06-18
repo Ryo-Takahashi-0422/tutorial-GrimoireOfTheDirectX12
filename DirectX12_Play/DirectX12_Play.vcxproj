@@ -178,6 +178,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AppD3DX12.cpp" />
+    <ClCompile Include="PMDActor.cpp" />
     <ClCompile Include="PMDMaterialInfo.cpp" />
     <ClCompile Include="CreateD3DX12ResourceBuffer.cpp" />
     <ClCompile Include="main.cpp" />
@@ -193,6 +194,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="VMDMotionInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicPixelShader.hlsl">
@@ -225,6 +227,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppD3DX12.h" />
+    <ClInclude Include="PMDActor.h" />
     <ClInclude Include="PMDMaterialInfo.h" />
     <ClInclude Include="CreateD3DX12ResourceBuffer.h" />
     <ClInclude Include="engine.h" />
@@ -232,6 +235,7 @@
     <ClInclude Include="SetRootSignature.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="VMDMotionInfo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

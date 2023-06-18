@@ -14,6 +14,7 @@ cbuffer SceneBuffer : register(b0) // 変換行列
     matrix view; // ビュー行列
     matrix proj; // プロジェクション行列
     float3 eye; // 視点
+    matrix bones[256]; // ボーン行列
 };
 
 cbuffer Material : register(b1)
