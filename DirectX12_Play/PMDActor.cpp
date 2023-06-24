@@ -115,7 +115,7 @@ void PMDActor::RecursiveMatrixMultiply(const DirectX::XMMATRIX& mat)
 
 	for (auto cnode : node->children)
 	{
-		RecursiveMatrixMultiply(cnode, boneMatrices[node->boneIdx]);
+		RecursiveMatrixMultiply(cnode, boneMatrices[cnode->boneIdx]);
 	}
 }
 
