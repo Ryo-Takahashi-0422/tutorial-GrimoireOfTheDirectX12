@@ -89,11 +89,11 @@ void PMDActor::UpdateVMDMotion()
 
 			t = GetYFromXOnBezier(t, it->p1, it->p2, 12);
 			// üŒ`•âŠÔ
-			//rotation = XMMatrixRotationQuaternion(rit->quaternion) * (1 - t)
-			//	+ XMMatrixRotationQuaternion(it->quaternion) * t;
+			rotation = XMMatrixRotationQuaternion(rit->quaternion) * (1 - t)
+				+ XMMatrixRotationQuaternion(it->quaternion) * t;
 
 			// ‹…–ÊüŒ`•âŠÔ
-			rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(rit->quaternion, it->quaternion, t));
+			//rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(rit->quaternion, it->quaternion, t));
 		}
 		else
 		{
