@@ -1,9 +1,104 @@
 #include <stdafx.h>
 #pragma comment(lib, "winmm.lib")
 
-unsigned int PMDActor::GetFrameNo() 
+namespace
 {
-	return frameNo;
+	enum class BoneType
+	{
+		Rotation,		// 回転
+		RotAndMove,		// 回転＆移動
+		IK,				// IK
+		Undefine,		// 未定義
+		IKChild,		// IK影響ボーン
+		RotationChild,	// 回転影響ボーン
+		IKDestination,	// IK接続先
+		Invisible		// 不可視ボーン
+	};
+}
+
+PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo) : pmdMaterialInfo(_pmdMatInfo)
+{
+	boneMatrices = pmdMaterialInfo->GetBoneMatrices();
+
+}
+
+XMMATRIX PMDActor::LookAtMatrix(const XMVECTOR& lookat, XMFLOAT3& up, XMFLOAT3& right)
+{
+	// 向かせたい方向(Z軸ベクトル)
+	XMVECTOR vz = lookat;
+
+	// (向かせたい方向を向かせたときの)仮Y軸
+	XMVECTOR vy = XMVector3Normalize(XMLoadFloat3(&up));
+
+	// 向かせたい方向を向かせたときのX軸を計算
+	XMVECTOR vx = XMVector3Normalize(XMVector3Cross(vy, vz));
+
+	// 真のY軸を計算
+	vy = XMVector3Cross(vz, vx);
+
+	// もしLookAtとupが同じ方向を向いていたらrightを基準にして作り直す
+	if (std::abs(XMVector3Dot(vy, vz).m128_f32[0]) == 1.0f)
+	{
+		// (向かせたい方向を向かせたときの)仮Xベクトル
+		vx = XMVector3Normalize(XMLoadFloat3(&right));
+
+		// 向かせたい方向を向かせたときのY軸を計算
+		vy = XMVector3Normalize(XMVector3Cross(vz, vx));
+
+		//真のX軸を計算
+		vx = XMVector3Normalize(XMVector3Cross(vy, vz));
+	}
+
+	XMMATRIX ret = XMMatrixIdentity();
+	ret.r[0] = vx;
+	ret.r[1] = vy;
+	ret.r[2] = vx;
+	return ret;
+}
+
+XMMATRIX PMDActor::LookAtMatrix(const XMVECTOR& origin, const XMVECTOR& lookat, XMFLOAT3& up, XMFLOAT3& right) {
+	return XMMatrixTranspose(LookAtMatrix(origin, up, right)) *	LookAtMatrix(lookat, up, right);
+}
+
+void PMDActor::IKSolve()
+{
+	for (auto& ik : _ikData)
+	{
+		auto childrenNodeCount = ik.nodeIdx.size();
+		switch (childrenNodeCount)
+		{
+		case 0: // 間のボーンが0(ケース無し)
+			continue;
+		case 1: // 間のボーンが1の時はLookAt
+			SolveLookAtIK(ik);
+		case 2: // 間のボーンが2の時は余弦定理
+			SolveCosineIK(ik);
+		default: // 間のボーンが3の時はCCD-IK
+			SolveCCDIK(ik);
+		}
+	}
+}
+
+void PMDActor::SolveCCDIK(const PMDIK& ik)
+{
+
+}
+
+void PMDActor::SolveCosineIK(const PMDIK& ik)
+{
+
+}
+
+void PMDActor::SolveLookAtIK(const PMDIK& ik) 
+{
+	// root→targetへ向かうベクトルを導出
+	auto rootNode = pmdMaterialInfo->_boneNodeAddressArray[ik.nodeIdx[0]];
+	auto targetNode = pmdMaterialInfo->_boneNodeAddressArray[ik.targetidx];
+
+	auto rpos1 = XMLoadFloat3(&rootNode->startPos);
+	auto tpos1 = XMLoadFloat3(&targetNode->startPos);
+
+	auto rpos2 = XMVector3TransformCoord(rpos1, boneMatrices[ik.nodeIdx[0]]);
 }
 
 void PMDActor::PlayAnimation() 
@@ -21,6 +116,11 @@ void PMDActor::MotionUpdate(unsigned int maxFrameNum)
 		PlayAnimation();
 		frameNo = 0;
 	}
+}
+
+unsigned int PMDActor::GetFrameNo()
+{
+	return frameNo;
 }
 
 float PMDActor::GetYFromXOnBezier(float x, const XMFLOAT2& a, const XMFLOAT2& b, uint8_t n)

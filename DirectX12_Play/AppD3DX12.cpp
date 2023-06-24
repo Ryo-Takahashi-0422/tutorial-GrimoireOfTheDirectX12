@@ -816,7 +816,7 @@ bool AppD3DX12::ResourceInit() {
 	pmdMaterialInfo->mapMatrix->proj = projMat;
 	pmdMaterialInfo->mapMatrix->eye = eye;
 
-	pmdActor = new PMDActor;
+	pmdActor = new PMDActor(pmdMaterialInfo);
 	bNodeTable = pmdMaterialInfo->GetBoneNode();
 	
 	//UpdateVMDMotion(bNodeTable, vmdMotionInfo->GetMotionData());

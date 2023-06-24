@@ -92,10 +92,21 @@ using namespace DirectX;
 
 	struct BoneNode
 	{
-		int boneIdx; // ボーンインデックス
+		uint32_t boneIdx; // ボーンインデックス
+		uint32_t boneType; // ボーン種別 0:回転,1:回転＆移動,2:IK,...7:不可視ボーン
+		uint32_t ikParentBone; // IK親ボーン
 		XMFLOAT3 startPos; // ボーン基準点(回転中心)
-		XMFLOAT3 endPos; // ボーン先端点
+		//XMFLOAT3 endPos; // ボーン先端点
 		std::vector<BoneNode*> children; // 子ノード
+	};
+
+	struct PMDIK // PMDモデル内IK情報
+	{
+		uint16_t boneidx; // IKボーン番号
+		uint16_t targetidx; // IKターゲットボーン番号 // IKボーンが最初に接続するボーン		
+		uint16_t iterations; // 再帰演算回数 // IK値1
+		float limit; // 演算1回あたりの制限角度 // IK値2
+		std::vector<uint16_t> nodeIdx; // IK影響下のボーン番号
 	};
 
 class PMDMaterialInfo
@@ -106,6 +117,9 @@ private:
 	std::vector<PMDBone> pmdBones;
 	std::map<std::string, BoneNode> _boneNodeTable;
 	std::vector<std::string> boneName;
+	uint16_t ikNum;
+	uint8_t chainLen; // IKチェーンの長さ(間のノード数)
+	std::vector<PMDIK> pmdIkData; // IK情報コンテナ
 
 public:
 
@@ -129,5 +143,7 @@ public:
 	std::vector<Material> materials;
 	std::vector<DirectX::XMMATRIX> GetBoneMatrices();
 	std::map<std::string, BoneNode> GetBoneNode();
-	
+
+	std::vector<std::string> _boneNameArray; // インデックスからボーン名を検索する用
+	std::vector<BoneNode*> _boneNodeAddressArray; // インデックスからノードを検索する用
 };

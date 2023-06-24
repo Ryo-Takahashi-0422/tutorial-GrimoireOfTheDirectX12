@@ -62,15 +62,21 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile(std::string strModelPath)
 
 	// インデックスと名前の対応関係構築のため後で利用
 	boneName.resize(pmdBones.size());
+	_boneNameArray.resize(pmdBones.size());
+	_boneNodeAddressArray.resize(pmdBones.size());
 
 	// ボーンノードマップを作成
-	for (int idx = 0; idx < pmdBones.size(); idx++) 
+	for (int idx = 0; idx < pmdBones.size(); idx++)
 	{
 		auto& pb = pmdBones[idx];
 		boneName[idx] = pb.boneName;
 		auto& node = _boneNodeTable[pb.boneName];
 		node.boneIdx = idx;
 		node.startPos = pb.headPos;
+
+		//インデックス検索用
+		_boneNameArray[idx] = pb.boneName;
+		_boneNodeAddressArray[idx] = &node;
 	}
 
 	// 親子関係の構築
@@ -89,6 +95,66 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile(std::string strModelPath)
 	_boneMatrice.resize(pmdBones.size());
 	std::fill(_boneMatrice.begin(), _boneMatrice.end(), XMMatrixIdentity());
 
+	// IKデータの数を読む
+	ikNum = 0;
+	fread(&ikNum, sizeof(ikNum), 1, fp);
+	pmdIkData.resize(ikNum);
+
+	for (auto& ik : pmdIkData)
+	{
+		fread(&ik.boneidx, sizeof(ik.boneidx), 1, fp);
+		fread(&ik.targetidx, sizeof(ik.targetidx), 1, fp);
+		fread(&chainLen, sizeof(chainLen), 1, fp);
+		ik.nodeIdx.resize(chainLen);
+		fread(&ik.iterations, sizeof(ik.iterations), 1, fp);
+		fread(&ik.limit, sizeof(ik.limit), 1, fp);
+
+		if (chainLen == 0)
+		{
+			continue; // 間のノード数が0なら処理終了
+		}
+
+		fread(ik.nodeIdx.data(), sizeof(ik.nodeIdx[0]), chainLen, fp);
+	}
+
+	// ﾃﾞﾊﾞｯｸﾞ用
+	auto getNameFromIdx = [&](uint16_t idx)->std::string
+	{
+		auto it = std::find_if(
+			_boneNodeTable.begin(),
+			_boneNodeTable.end(),
+			[idx](const std::pair<std::string, BoneNode>& obj)->bool
+			{
+				return obj.second.boneIdx == idx;
+			});
+
+		if (it != _boneNodeTable.end())
+		{
+			return it->first;
+		}
+
+		else
+		{
+			return "";
+		}
+	};
+
+	for (auto& ik : pmdIkData)
+	{
+		std::ostringstream oss;
+		oss << "IKボーン番号=" << ik.boneidx << ":" << getNameFromIdx(ik.boneidx) << std::endl;
+		
+		for (auto& node : ik.nodeIdx)
+		{
+			oss << "\t ノードボーン =" << node << ":" << getNameFromIdx(node) << std::endl;				
+		}
+
+		oss << "IKターゲットボーン番号=" << ik.targetidx << ":" << getNameFromIdx(ik.targetidx) << "\n" << std::endl;
+
+		//OutputDebugStringW(oss.str().c_str());
+		OutputDebugStringA(oss.str().c_str());
+	}
+	
 	fclose(fp);
 	return S_OK;
 };

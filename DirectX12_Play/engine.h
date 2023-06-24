@@ -30,4 +30,5 @@ using namespace DirectX;
 #include <SetRootSignature.h>
 #include <VMDMotionInfo.h>
 #include <PMDActor.h>
+#include <sstream>
 //#include <AppD3DX12.h>

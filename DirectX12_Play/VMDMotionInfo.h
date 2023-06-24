@@ -15,12 +15,14 @@ struct VMDMotion
 // モーション構造体
 struct KeyFrame
 {
-	unsigned int frameNo;
-	XMVECTOR quaternion;
+	unsigned int frameNo; // フレーム番号
+	XMVECTOR quaternion; // クォータニオン
+	XMFLOAT3 offset; // IK初期位置からのオフセット情報
 	DirectX::XMFLOAT2 p1, p2; // ベジェ曲線の中間制御点
-
 	KeyFrame(unsigned int fno, XMVECTOR q, XMFLOAT2 ip1, XMFLOAT2 ip2) : frameNo(fno), quaternion(q), p1(ip1), p2(ip2)
-	{}
+	{} // 並行情報無しver
+	KeyFrame(unsigned int fno, XMVECTOR q, XMFLOAT3 ofst , XMFLOAT2 ip1, XMFLOAT2 ip2) : frameNo(fno), quaternion(q),offset(ofst), p1(ip1), p2(ip2)
+	{} // 並行情報有りver
 };
 
 class VMDMotionInfo
