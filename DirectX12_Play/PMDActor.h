@@ -7,16 +7,31 @@ private:
 	DWORD elapsedTime; // 経過ミリ秒
 	unsigned int frameNo; // 現在のフレームNo
 	std::vector<PMDIK> _ikData; // ikデータ群
-	PMDMaterialInfo* pmdMaterialInfo;
+	PMDMaterialInfo* pmdMaterialInfo = nullptr;
+	VMDMotionInfo* vmdMotionInfo = nullptr;
+	size_t pmdBonesNum;
 	std::vector<DirectX::XMMATRIX> boneMatrices;
+	std::map<std::string, BoneNode> bNodeTable;
+	void RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat);
+
+	int i = 0;
 
 public:
+	//std::vector<DirectX::XMMATRIX> boneMatrices;
 	// コピーコンストラクタ
-	PMDActor(PMDMaterialInfo* _pmdMatInfo);
+	PMDActor(PMDMaterialInfo* _pmdMatInfo, VMDMotionInfo* _vmdMotionInfo);
 	unsigned int GetFrameNo();
 	void PlayAnimation();
 	void MotionUpdate(unsigned int maxFrameNum);
 	float GetYFromXOnBezier(float x,const XMFLOAT2& a, const XMFLOAT2& b, uint8_t n);
+	std::vector<DirectX::XMMATRIX>* GetMatrices();
+	unsigned int _duration; // アニメーションの最大フレーム番号
+
+	// アニメーション情報を更新してボーン(親)の位置や角度を変化させる
+	void UpdateVMDMotion();
+
+	// 描画前にアニメーションによる親ボーンの角度変化を再帰的に子ボーンへ伝達する
+	void RecursiveMatrixMultiply(const DirectX::XMMATRIX& mat);
 
 	// z軸を特定の方向に向かせる行列を返す関数
 	// @param lookat 向かせたい方向ベクトル

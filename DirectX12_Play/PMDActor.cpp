@@ -16,10 +16,117 @@ namespace
 	};
 }
 
-PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo) : pmdMaterialInfo(_pmdMatInfo)
-{
-	boneMatrices = pmdMaterialInfo->GetBoneMatrices();
+//PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo, VMDMotionInfo* _vmdMotionInfo) : pmdMaterialInfo(_pmdMatInfo), vmdMotionInfo(_vmdMotionInfo)
+//{
+//	//boneMatrices = pmdMaterialInfo->GetBoneMatrices();
+//	pmdBonesNum = pmdMaterialInfo->GetNumberOfBones();
+//	boneMatrices.resize(pmdBonesNum);
+//	std::fill(boneMatrices.begin(), boneMatrices.end(), XMMatrixIdentity());
+//	bNodeTable = pmdMaterialInfo->GetBoneNode();
+//}
 
+PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo, VMDMotionInfo* _vmdMotionInfo)
+{
+	pmdMaterialInfo = new PMDMaterialInfo;
+	vmdMotionInfo = new VMDMotionInfo;
+
+	pmdMaterialInfo = _pmdMatInfo;
+	vmdMotionInfo = _vmdMotionInfo;
+
+	//boneMatrices = pmdMaterialInfo->GetBoneMatrices();
+	pmdBonesNum = pmdMaterialInfo->GetNumberOfBones();
+	boneMatrices.resize(pmdBonesNum);
+	std::fill(boneMatrices.begin(), boneMatrices.end(), XMMatrixIdentity());
+	bNodeTable = pmdMaterialInfo->GetBoneNode();
+}
+
+void PMDActor::UpdateVMDMotion()
+{
+	i++;
+	_duration = 0;
+	for (auto& boneMotion : vmdMotionInfo->GetMotionData())
+	{
+		// キーフレームの順番を昇順に並び替える
+		std::sort(
+			boneMotion.second.begin(), boneMotion.second.end(),
+			[](const KeyFrame& lval, const KeyFrame& rval)
+			{
+				return lval.frameNo <= rval.frameNo;
+			}
+		);
+
+		// 最大フレーム番号取得
+		_duration = std::max<unsigned int>(_duration, boneMotion.second[boneMotion.second.size() - 1].frameNo);
+		auto itBoneNode = bNodeTable.find(boneMotion.first);
+		if (itBoneNode == bNodeTable.end())
+		{
+			continue;
+		}
+
+		// 合致するものを探す
+
+		//auto node = bNodeTable[boneMotion.first];
+		auto node = itBoneNode->second;
+		auto keyFrames = boneMotion.second;
+		auto rit = std::find_if(
+			keyFrames.rbegin(), keyFrames.rend(),
+			[this](const KeyFrame keyFrame)
+			{
+				return keyFrame.frameNo <= frameNo;
+			});
+
+		if (rit == keyFrames.rend())
+		{
+			continue;
+		}
+
+		XMMATRIX rotation;
+		auto it = rit.base();
+		if (it != keyFrames.end())
+		{
+			auto t = static_cast<float>(frameNo - rit->frameNo)
+				/ static_cast<float>(it->frameNo - rit->frameNo);
+
+			t = GetYFromXOnBezier(t, it->p1, it->p2, 12);
+			// 線形補間
+			//rotation = XMMatrixRotationQuaternion(rit->quaternion) * (1 - t)
+			//	+ XMMatrixRotationQuaternion(it->quaternion) * t;
+
+			// 球面線形補間
+			rotation = XMMatrixRotationQuaternion(XMQuaternionSlerp(rit->quaternion, it->quaternion, t));
+		}
+		else
+		{
+			rotation = XMMatrixRotationQuaternion(rit->quaternion);
+		}
+
+		auto& pos = node.startPos;
+		auto mat = XMMatrixTranslation(-pos.x, -pos.y, -pos.z)
+			* rotation
+			* XMMatrixTranslation(pos.x, pos.y, pos.z);
+		boneMatrices[node.boneIdx] = mat;
+	}
+}
+
+void PMDActor::RecursiveMatrixMultiply(const DirectX::XMMATRIX& mat)
+{
+	auto node = &bNodeTable["センター"];
+	boneMatrices[node->boneIdx] *= mat;
+
+	for (auto cnode : node->children)
+	{
+		RecursiveMatrixMultiply(cnode, boneMatrices[node->boneIdx]);
+	}
+}
+
+void PMDActor::RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat)
+{
+	boneMatrices[node->boneIdx] *= mat;
+
+	for (auto cnode : node->children)
+	{
+		RecursiveMatrixMultiply(cnode, boneMatrices[node->boneIdx]);
+	}
 }
 
 XMMATRIX PMDActor::LookAtMatrix(const XMVECTOR& lookat, XMFLOAT3& up, XMFLOAT3& right)
@@ -156,4 +263,9 @@ float PMDActor::GetYFromXOnBezier(float x, const XMFLOAT2& a, const XMFLOAT2& b,
 	// 求めたいtは既に求めているのでyを計算する
 	auto r = 1 - t;
 	return t * t * t + 3 * t * t * r * b.x + 3 * t * r * r * a.x;
+}
+
+std::vector<DirectX::XMMATRIX>* PMDActor::GetMatrices()
+{
+	return &boneMatrices;
 }

@@ -159,9 +159,14 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile(std::string strModelPath)
 	return S_OK;
 };
 
-std::vector<DirectX::XMMATRIX> PMDMaterialInfo::GetBoneMatrices()
+//std::vector<DirectX::XMMATRIX> PMDMaterialInfo::GetBoneMatrices()
+//{
+//	return _boneMatrice;
+//}
+
+size_t PMDMaterialInfo::GetNumberOfBones()
 {
-	return _boneMatrice;
+	return pmdBones.size();
 }
 
 std::map<std::string, BoneNode> PMDMaterialInfo::GetBoneNode()

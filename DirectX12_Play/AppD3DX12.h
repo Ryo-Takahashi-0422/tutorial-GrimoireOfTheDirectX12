@@ -79,7 +79,7 @@ private:
 	PMDActor* pmdActor = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
 	SetRootSignature* setRootSignature = nullptr;
-	std::vector<DirectX::XMMATRIX> boneMatrices;
+	std::vector<DirectX::XMMATRIX>* boneMatrices = nullptr;
 	std::map<std::string, BoneNode> bNodeTable;
 	unsigned int _duration; // アニメーションの最大フレーム番号
 

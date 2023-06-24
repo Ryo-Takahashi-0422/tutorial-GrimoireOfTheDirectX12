@@ -141,7 +141,8 @@ public:
 	std::vector<PMDMaterialSet1> pmdMat1;
 	std::vector<PMDMaterialSet2> pmdMat2;
 	std::vector<Material> materials;
-	std::vector<DirectX::XMMATRIX> GetBoneMatrices();
+	//std::vector<DirectX::XMMATRIX> GetBoneMatrices();
+	size_t GetNumberOfBones();
 	std::map<std::string, BoneNode> GetBoneNode();
 
 	std::vector<std::string> _boneNameArray; // インデックスからボーン名を検索する用
