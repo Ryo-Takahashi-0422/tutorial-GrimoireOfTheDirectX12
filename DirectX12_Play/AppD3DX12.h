@@ -73,8 +73,8 @@ private:
 	/// <returns></returns>
 	HRESULT D3DX12DeviceInit();
 
-	//ComPtr<PMDMaterialInfo> pmdMaterialInfo;
 	PMDMaterialInfo* pmdMaterialInfo = nullptr;
+	//ComPtr<PMDMaterialInfo> pmdMaterialInfo;
 	VMDMotionInfo* vmdMotionInfo = nullptr;
 	PMDActor* pmdActor = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	

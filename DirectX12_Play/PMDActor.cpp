@@ -16,15 +16,6 @@ namespace
 	};
 }
 
-//PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo, VMDMotionInfo* _vmdMotionInfo) : pmdMaterialInfo(_pmdMatInfo), vmdMotionInfo(_vmdMotionInfo)
-//{
-//	//boneMatrices = pmdMaterialInfo->GetBoneMatrices();
-//	pmdBonesNum = pmdMaterialInfo->GetNumberOfBones();
-//	boneMatrices.resize(pmdBonesNum);
-//	std::fill(boneMatrices.begin(), boneMatrices.end(), XMMatrixIdentity());
-//	bNodeTable = pmdMaterialInfo->GetBoneNode();
-//}
-
 PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo, VMDMotionInfo* _vmdMotionInfo)
 {
 	pmdMaterialInfo = new PMDMaterialInfo;
@@ -42,7 +33,6 @@ PMDActor::PMDActor(PMDMaterialInfo* _pmdMatInfo, VMDMotionInfo* _vmdMotionInfo)
 
 void PMDActor::UpdateVMDMotion()
 {
-	i++;
 	_duration = 0;
 	for (auto& boneMotion : vmdMotionInfo->GetMotionData())
 	{
@@ -228,6 +218,11 @@ void PMDActor::MotionUpdate(unsigned int maxFrameNum)
 unsigned int PMDActor::GetFrameNo()
 {
 	return frameNo;
+}
+
+unsigned int PMDActor::GetDuration()
+{
+	return _duration;
 }
 
 float PMDActor::GetYFromXOnBezier(float x, const XMFLOAT2& a, const XMFLOAT2& b, uint8_t n)

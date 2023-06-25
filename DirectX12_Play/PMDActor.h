@@ -13,8 +13,7 @@ private:
 	std::vector<DirectX::XMMATRIX> boneMatrices;
 	std::map<std::string, BoneNode> bNodeTable;
 	void RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat);
-
-	int i = 0;
+	unsigned int _duration; // アニメーションの最大フレーム番号
 
 public:
 	//std::vector<DirectX::XMMATRIX> boneMatrices;
@@ -25,7 +24,8 @@ public:
 	void MotionUpdate(unsigned int maxFrameNum);
 	float GetYFromXOnBezier(float x,const XMFLOAT2& a, const XMFLOAT2& b, uint8_t n);
 	std::vector<DirectX::XMMATRIX>* GetMatrices();
-	unsigned int _duration; // アニメーションの最大フレーム番号
+	unsigned int GetDuration();
+
 
 	// アニメーション情報を更新してボーン(親)の位置や角度を変化させる
 	void UpdateVMDMotion();
