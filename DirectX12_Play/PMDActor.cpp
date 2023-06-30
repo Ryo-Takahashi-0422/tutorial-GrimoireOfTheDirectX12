@@ -380,7 +380,13 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 
 	boneMatrices[ik.nodeIdx[1]] *= mat1; // ルートボーン行列はルートボーンの回転行列
 	boneMatrices[ik.nodeIdx[0]] = mat2 * boneMatrices[ik.nodeIdx[1]]; // 中間ボーン行列は中間ボーン及びルートボーンの回転行列を乗算したもので
-	boneMatrices[ik.targetidx] = boneMatrices[ik.nodeIdx[0]]; // 末端ボーン行列はルート・中間ボーン行列の影響を受ける
+	
+	 // 実際は末端ボーン行列はルート・中間ボーン行列の影響を受ける。扱っているPMDモデルのリグの組み方によって、足首ボーンは
+	 // それぞれ2つのIKチェーンに組み込まれている。それぞれLookAtIKとCosineIK対象である。LookAt側での結果にCosineでの以下計算結果が
+	 // 上書きされることで、足首ボーンが望まない動きをしてしまうため、処理を省くことで整合性を合わせている。独自の、その場しのぎの
+	 // やり方で改善が必要と思われる。
+	//boneMatrices[ik.targetidx] = boneMatrices[ik.nodeIdx[0]];
+	
 }
 
 void PMDActor::SolveLookAtIK(const PMDIK& ik) 
@@ -402,10 +408,11 @@ void PMDActor::SolveLookAtIK(const PMDIK& ik)
 	auto targetVec = XMVectorSubtract(tpos2, rpos2);
 	targetVec = XMVector3Normalize(targetVec);
 
-	//auto parentMat = boneMatrices[0];
-	//XMVECTOR det;
-	//auto invParentMat = XMMatrixInverse(&det, parentMat);
+	auto parentMat = boneMatrices[0];
+	XMVECTOR det;
+	auto invParentMat = XMMatrixInverse(&det, parentMat);
 	//boneMatrices[ik.nodeIdx[0]] *= invParentMat;
+	//boneMatrices[ik.targetidx] *= invParentMat;
 
 	XMFLOAT3 up = XMFLOAT3(0, 1, 0); // 上ベクトル
 	XMFLOAT3 right = XMFLOAT3(1, 0, 0); // 右ベクトル
@@ -414,7 +421,7 @@ void PMDActor::SolveLookAtIK(const PMDIK& ik)
 		* LookAtMatrix(originVec, targetVec, up, right)
 		* XMMatrixTranslationFromVector(rpos2);
 
-	boneMatrices[ik.nodeIdx[0]] = mat;
+	boneMatrices[ik.nodeIdx[0]] *= mat;
 }
 
 void PMDActor::PlayAnimation() 
