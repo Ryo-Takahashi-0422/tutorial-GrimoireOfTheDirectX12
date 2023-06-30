@@ -111,6 +111,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// PMDActorクラスのインスタンス化
 	pmdActor = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
+	//pmdActor->SolveCCDIK(pmdMaterialInfo->GetpPMDIKData()[0]);
 
 	// アニメーション用の回転・並行移動行列の参照準備
 	boneMatrices = new std::vector<DirectX::XMMATRIX>;
@@ -1219,7 +1220,8 @@ void AppD3DX12::Run() {
 		// モーション用行列の更新と書き込み
 		pmdActor->MotionUpdate(pmdActor->GetDuration());
 		pmdActor->UpdateVMDMotion();
-	    pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
+	    //pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
+		//pmdActor->IKSolve();
 		std::copy(boneMatrices->begin(), boneMatrices->end(), pmdMaterialInfo->mapMatrix->bones);
 
 		//フリップしてレンダリングされたイメージをユーザーに表示

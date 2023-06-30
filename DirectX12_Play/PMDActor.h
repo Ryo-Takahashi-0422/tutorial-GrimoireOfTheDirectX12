@@ -6,7 +6,7 @@ private:
 	DWORD _startTime; // アニメーション開始時のミリ秒
 	DWORD elapsedTime; // 経過ミリ秒
 	unsigned int frameNo; // 現在のフレームNo
-	std::vector<PMDIK> _ikData; // ikデータ群
+	std::vector<PMDIK> ikData; // ikデータ群
 	PMDMaterialInfo* pmdMaterialInfo = nullptr;
 	VMDMotionInfo* vmdMotionInfo = nullptr;
 	size_t pmdBonesNum;
@@ -14,6 +14,26 @@ private:
 	std::map<std::string, BoneNode> bNodeTable;
 	void RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat);
 	unsigned int _duration; // アニメーションの最大フレーム番号
+	std::vector<BoneNode*> boneNodeAddressArray;
+	float epsilon;
+
+	// CCD-IKによりボーン方向を決定 node構成：root-interminiate(2個以上)-target
+	// @param ik 対象IKオブジェクト
+	void SolveCCDIK(const PMDIK& ik);
+	std::vector<XMVECTOR> bonePositions; // IK構成点を保存
+
+	// 余弦定理IKによりボーン方向を決定 node構成：root-interminiate-target
+	// @param ik 対象IKオブジェクト
+	void SolveCosineIK(const PMDIK& ik);
+	std::vector<XMVECTOR> positions; // IK構成点を保存
+	std::array<float, 2> edgeLens; // IKの各ボーン間の距離を保存
+	std::vector<uint32_t> kneeIdxs;
+
+	// LOOKAT行列によりボーン方向を決定 node構成：root-target
+	// @param ik 対象IKオブジェクト
+	void SolveLookAtIK(const PMDIK& ik);
+
+
 
 public:
 	//std::vector<DirectX::XMMATRIX> boneMatrices;
@@ -50,15 +70,5 @@ public:
 	// IKの導出パターンを決定する
 	void IKSolve();
 
-	// CCD-IKによりボーン方向を決定 node構成：root-interminiate(2個以上)-target
-	// @param ik 対象IKオブジェクト
-	void SolveCCDIK(const PMDIK& ik);
 
-	// 余弦定理IKによりボーン方向を決定 node構成：root-interminiate-target
-	// @param ik 対象IKオブジェクト
-	void SolveCosineIK(const PMDIK& ik);
-
-	// LOOKAT行列によりボーン方向を決定 node構成：root-target
-	// @param ik 対象IKオブジェクト
-	void SolveLookAtIK(const PMDIK& ik);
 };

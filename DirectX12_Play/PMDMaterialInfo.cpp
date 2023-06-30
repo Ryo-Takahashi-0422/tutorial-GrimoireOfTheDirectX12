@@ -72,11 +72,21 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile(std::string strModelPath)
 		boneName[idx] = pb.boneName;
 		auto& node = _boneNodeTable[pb.boneName];
 		node.boneIdx = idx;
+		node.boneType = pb.type;
+		node.ikParentBone = pb.ikParentIndex;
 		node.startPos = pb.headPos;
+		//node.children
 
 		//インデックス検索用
 		_boneNameArray[idx] = pb.boneName;
 		_boneNodeAddressArray[idx] = &node;
+
+		// ひざ判定 PMDActorが利用
+		std::string boneName = pb.boneName;
+		if(boneName.find("ひざ") != std::string::npos)
+		{
+			kneeIdxs.emplace_back(idx);
+		}
 	}
 
 	// 親子関係の構築
@@ -144,11 +154,13 @@ HRESULT PMDMaterialInfo::ReadPMDHeaderFile(std::string strModelPath)
 		std::ostringstream oss;
 		oss << "IKボーン番号=" << ik.boneidx << ":" << getNameFromIdx(ik.boneidx) << std::endl;
 		
+		int i = 0;
 		for (auto& node : ik.nodeIdx)
 		{
-			oss << "\t ノードボーン =" << node << ":" << getNameFromIdx(node) << std::endl;				
+			oss << i << "\t ノードボーン =" << node << ":" << getNameFromIdx(node) << std::endl;
+			i++;
 		}
-
+		i = 0;
 		oss << "IKターゲットボーン番号=" << ik.targetidx << ":" << getNameFromIdx(ik.targetidx) << "\n" << std::endl;
 
 		//OutputDebugStringW(oss.str().c_str());
@@ -172,4 +184,19 @@ size_t PMDMaterialInfo::GetNumberOfBones()
 std::map<std::string, BoneNode> PMDMaterialInfo::GetBoneNode()
 {
 	return _boneNodeTable;
+}
+
+std::vector<uint32_t> PMDMaterialInfo::GetKneeIdx()
+{
+	return kneeIdxs;
+}
+
+std::vector<PMDIK> PMDMaterialInfo::GetpPMDIKData()
+{
+	return pmdIkData;
+}
+
+const std::vector<BoneNode*> PMDMaterialInfo::GetBoneNodeAddressArray()
+{
+	return _boneNodeAddressArray;
 }

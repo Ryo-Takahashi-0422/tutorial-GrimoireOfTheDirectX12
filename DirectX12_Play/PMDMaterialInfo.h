@@ -120,6 +120,8 @@ private:
 	uint16_t ikNum;
 	uint8_t chainLen; // IKチェーンの長さ(間のノード数)
 	std::vector<PMDIK> pmdIkData; // IK情報コンテナ
+	std::vector<uint32_t> kneeIdxs;
+	std::vector<BoneNode*> _boneNodeAddressArray; // インデックスからノードを検索する用
 
 public:
 
@@ -144,7 +146,10 @@ public:
 	//std::vector<DirectX::XMMATRIX> GetBoneMatrices();
 	size_t GetNumberOfBones();
 	std::map<std::string, BoneNode> GetBoneNode();
+	std::vector<uint32_t> GetKneeIdx();
+	std::vector<PMDIK> GetpPMDIKData();
+	const std::vector<BoneNode*> GetBoneNodeAddressArray();
 
 	std::vector<std::string> _boneNameArray; // インデックスからボーン名を検索する用
-	std::vector<BoneNode*> _boneNodeAddressArray; // インデックスからノードを検索する用
+	
 };

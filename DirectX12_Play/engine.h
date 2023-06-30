@@ -18,6 +18,7 @@
 #include <wrl.h>
 #include <unordered_map>
 #include <algorithm>
+#include <array>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;

@@ -31,7 +31,7 @@ HRESULT VMDMotionInfo::ReadVMDHeaderFile(std::string strMotionPath)
 	for (auto& m : vmdMotions)
 	{
 		_motionData[m.boneName].emplace_back(
-			KeyFrame(m.frameNo, XMLoadFloat4(&m.quaternion),
+			KeyFrame(m.frameNo, XMLoadFloat4(&m.quaternion), m.location,
 				XMFLOAT2((float)m.bezier[3] / 127.0f, (float)m.bezier[7] / 127.0f),
 				XMFLOAT2((float)m.bezier[11] / 127.0f, (float)m.bezier[15] / 127.0f)));
 	}
