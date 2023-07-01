@@ -32,8 +32,10 @@ private:
 	// LOOKAT行列によりボーン方向を決定 node構成：root-target
 	// @param ik 対象IKオブジェクト
 	void SolveLookAtIK(const PMDIK& ik);
+	std::map<unsigned int, bool> lookAtSolvedIK;
 
-
+	XMMATRIX beforeIKMat;
+	float befTheta1;
 
 public:
 	//std::vector<DirectX::XMMATRIX> boneMatrices;
@@ -69,6 +71,4 @@ public:
 	
 	// IKの導出パターンを決定する
 	void IKSolve();
-
-
 };

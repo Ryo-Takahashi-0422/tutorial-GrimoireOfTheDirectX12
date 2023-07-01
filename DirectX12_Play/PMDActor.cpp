@@ -109,7 +109,6 @@ void PMDActor::UpdateVMDMotion()
 		boneMatrices[node.boneIdx] = mat * offsetMat;
 		//boneMatrices[node.boneIdx] = mat * XMMatrixTranslationFromVector(offset);
 	}
-
 	RecursiveMatrixMultiply(&bNodeTable["センター"], XMMatrixIdentity());
 	IKSolve();
 }
@@ -165,22 +164,33 @@ XMMATRIX PMDActor::LookAtMatrix(const XMVECTOR& origin, const XMVECTOR& lookat, 
 
 void PMDActor::IKSolve()
 {
+	//for (auto& ik : ikData)
+	//{
+
+	//	lookAtSolvedIK[ik.targetidx] = false;
+	//	for (auto& ikNode : ik.nodeIdx)
+	//	{
+	//		lookAtSolvedIK[ikNode] = false;
+	//	}
+	//}
+
 	for (auto& ik : ikData)
 	{
+
+
 		auto childrenNodeCount = ik.nodeIdx.size();
 		switch (childrenNodeCount)
 		{
 		case 0: // 間のボーンが0(ケース無し)
 			continue;
 		case 1: // 間のボーンが1の時はLookAt
-			SolveLookAtIK(ik);
+			//SolveLookAtIK(ik);
 			break;
 		case 2: // 間のボーンが2の時は余弦定理
 			SolveCosineIK(ik);
 			break;
 		default: // 間のボーンが3の時はCCD-IK
 			SolveCCDIK(ik);
-			break;
 		}
 	}
 }
@@ -194,7 +204,16 @@ void PMDActor::SolveCCDIK(const PMDIK& ik)
 	auto parentMat = boneMatrices[boneNodeAddressArray[ik.boneidx]->ikParentBone];
 	XMVECTOR det;
 	auto invParentMat = XMMatrixInverse(&det, parentMat);
-	auto targetNextPos = XMVector3Transform(targetOriginPos, boneMatrices[ik.boneidx] * invParentMat);
+
+	// invParentsMatによる変位だとIKボーンの変位が皆無になる。これは"初音ミク.pmd"におけるリグ構成では髪とﾈｸﾀｲIKボーンに
+	// 対してセンターボーンが親となっており、このセンターボーンの変位による影響を逆行列乗算により打ち消すことになり、その結果を
+	// bornMatrices[]に上書きしているから。この関数に入る前に、Recursive...により乗算された行列が格納されている)。
+	// boneMatrices[0] * invParentMatによる変位は0である。=targetOriginPosであるが、bornMatrices[]と結びついていないため
+	// Recursive...()による演算によりセンターボーンの子であるIKボーンは変位する。さらにいうとIK children達もセンターボーン
+	// による変位と分離されている
+	//auto targetNextPos = XMVector3Transform(targetOriginPos, invParentMat);
+	//auto targetNextPos = XMVector3Transform(targetOriginPos, boneMatrices[0] * invParentMat);
+	auto targetNextPos = targetOriginPos;
 
 	// 末端ボーンの初期位置
 	auto endPos = XMLoadFloat3(&boneNodeAddressArray[ik.targetidx]->startPos);
@@ -281,6 +300,8 @@ void PMDActor::SolveCCDIK(const PMDIK& ik)
 		}
 	}
 
+	// 計算過程で格納しておいた行列をboneMatricesの各アドレスに上書きしていく
+	// センターボーンによる影響を考慮していない結果になっている。
 	int idx = 0;
 	for (auto& cidx : ik.nodeIdx)
 	{
@@ -288,6 +309,9 @@ void PMDActor::SolveCCDIK(const PMDIK& ik)
 		++idx;
 	}
 	
+	// ルートボーンから末端ボーンへIKボーンの親ボーン("初音ミク.pmd"では「センター」ボーン)行列を乗算して、
+	// その結果を再帰的に乗算していく。つまり、センターボーンを考慮しない結果をセンターボーンによる影響と結びつけることで、
+	// あるべき結果(行列)をボーンに適用していく。
 	auto rootNode = pmdMaterialInfo->GetBoneNodeAddressArray()[ik.nodeIdx.back()];
 	RecursiveMatrixMultiply(rootNode, parentMat);
 }
@@ -303,6 +327,7 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 	auto endNode = boneNodeAddressArray[ik.targetidx];
 	positions.clear();
 	positions.emplace_back(XMLoadFloat3(&endNode->startPos));
+	//positions.emplace_back(XMVector3Transform(XMLoadFloat3(&endNode->startPos), boneMatrices[ik.boneidx]));
 
 	// 教科書に無かったので追加。末端ボーンはIKボーンをターゲットとして動く。IKボーンは通常マスターボーン以外に親を持たない。
 	// 今回のケースでもデータ上はセンターボーンを親としていないため、センターボーンの影響を無くすためにアフィン変換行列の逆行列を
@@ -312,7 +337,8 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 	auto invParentMat = XMMatrixInverse(&det, parentMat);
 	boneMatrices[ik.targetidx] *= invParentMat;
 	//boneMatrices[ik.nodeIdx[0]] *= invParentMat;
-	auto targetNextPos = XMVector3Transform(XMLoadFloat3(&boneNodeAddressArray[ik.targetidx]->startPos), boneMatrices[ik.targetidx]);
+	//auto targetNextPos = XMVector3Transform(XMLoadFloat3(&boneNodeAddressArray[ik.targetidx]->startPos), boneMatrices[ik.targetidx]);
+	auto targetNextPos = XMVector3Transform(XMLoadFloat3(&boneNodeAddressArray[ik.boneidx]->startPos), boneMatrices[ik.boneidx]);
 	targetPos = targetNextPos;
 
 	// 中間及びルートノード(MMDデータの構成上、参照は中間→ルートの順になる)
@@ -340,9 +366,10 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 	// ルートから末端へのベクトル(座標変換後。初期位置ではないことに注意)を作っておく
 	auto linearVec = XMVectorSubtract(positions[2], positions[0]);
 
-	float A = XMVector3Length(linearVec).m128_f32[0]; // 座標変換後のルート→末端ベクトル長さ
+	
 	float B = edgeLens[0]; // ルート→中間ベクトルの長さ
 	float C = edgeLens[1]; // 中間→末端ベクトルの長さ
+	float A = min(B + C - 0.01f, XMVector3Length(linearVec).m128_f32[0]); // 座標変換後のルート→末端ベクトル長さ
 
 	linearVec = XMVector3Normalize(linearVec);
 
@@ -351,6 +378,43 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 
 	// 座標変換後にルート→中間ベクトルと中間→末端ベクトルの成す角度θ2
 	float theta2 = acosf((B * B + C * C - A * A) / (2 * B * C));
+
+	// IKボーンにZ方向の変位がある場合の処理
+    // 教科書ベースではikのz方向移動有りモーションが再現出来ないので独自処理として追加
+	XMMATRIX rotationOfIK = XMMatrixIdentity();
+	XMVECTOR root2IK;
+	XMVECTOR root2TargetStart;
+	XMVECTOR rootMinusroot2IK;
+	float theta3 = 0;
+	if (frameNo > 1)
+	{
+		// 中間ノードにikボーンが近づいてきたら、ルートボーンを原点としてルート→IKの角度分ルート・中間・末端ボーンを回転させる
+		float f = beforeIKMat.r[3].m128_f32[2] - boneMatrices[ik.boneidx].r[3].m128_f32[2];
+		if (f > 0.001f) 
+		{
+			root2IK = XMVectorSubtract(targetPos, positions[0]);
+			root2TargetStart = XMVectorSubtract(XMLoadFloat3(&targetNode->startPos), positions[0]);
+			rootMinusroot2IK = XMVectorSubtract(root2IK, root2TargetStart);
+			float D = XMVector3Length(root2IK).m128_f32[0];
+			float E = XMVector3Length(rootMinusroot2IK).m128_f32[0];
+			float y = (B * B + D * D - E * E) / (2 * B * D);
+			y = min(1, y); // 1超えるとarccos値が計算できない
+			theta3 = acosf(y);
+		}
+
+		// 中間ノードからikボーンが遠ざかったら、ルートボーンを原点としてルート→IKの角度分ルート・中間・末端ボーンを逆回転させる
+		else if(f < 0)
+		{
+			root2IK = XMVectorSubtract(targetPos, positions[0]);
+			root2TargetStart = XMVectorSubtract(XMLoadFloat3(&targetNode->startPos), positions[0]);
+			rootMinusroot2IK = XMVectorSubtract(root2IK, root2TargetStart);
+			float D = XMVector3Length(root2IK).m128_f32[0];
+			float E = XMVector3Length(rootMinusroot2IK).m128_f32[0];
+			float y = (B * B + D * D - E * E) / (2 * B * D);
+			y = min(1, y); // 1超えるとarccos値が計算できない
+			theta3 = -acosf(y);
+		}
+	}
 
 	// 軸を求める
 	// もし真ん中が「ひざ」であった場合には強制的にX軸とする
@@ -370,6 +434,10 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 		axis = XMLoadFloat3(&right);
 	}
 
+	rotationOfIK = XMMatrixTranslationFromVector(-positions[0])
+		* XMMatrixRotationAxis(axis, theta3)
+		* XMMatrixTranslationFromVector(positions[0]);
+
 	auto mat1 = XMMatrixTranslationFromVector(-positions[0]);
 	mat1 *= XMMatrixRotationAxis(axis, theta1);
 	mat1 *= XMMatrixTranslationFromVector(positions[0]);
@@ -378,15 +446,40 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 	mat2 *= XMMatrixRotationAxis(axis, theta2 - XM_PI);  // 中間ボーン=ひじと考えると分かりやすい。曲げた角度は曲がった後の角度-180°
 	mat2 *= XMMatrixTranslationFromVector(positions[1]);
 
-	boneMatrices[ik.nodeIdx[1]] *= mat1; // ルートボーン行列はルートボーンの回転行列
+	boneMatrices[ik.nodeIdx[1]] *= rotationOfIK * mat1; // ルートボーン行列はルートボーンの回転行列
 	boneMatrices[ik.nodeIdx[0]] = mat2 * boneMatrices[ik.nodeIdx[1]]; // 中間ボーン行列は中間ボーン及びルートボーンの回転行列を乗算したもので
 	
+	// "初音ミク.pmd"専用処理。足IKの移動にしたがってつま先IKを移動させる。
+	if (ik.boneidx == 83)
+	{
+		boneMatrices[85] = boneMatrices[ik.boneidx];
+	}
+	else if (ik.boneidx == 84)
+	{
+		boneMatrices[86] = boneMatrices[ik.boneidx];
+	}
+
 	 // 実際は末端ボーン行列はルート・中間ボーン行列の影響を受ける。扱っているPMDモデルのリグの組み方によって、足首ボーンは
 	 // それぞれ2つのIKチェーンに組み込まれている。それぞれLookAtIKとCosineIK対象である。LookAt側での結果にCosineでの以下計算結果が
 	 // 上書きされることで、足首ボーンが望まない動きをしてしまうため、処理を省くことで整合性を合わせている。独自の、その場しのぎの
 	 // やり方で改善が必要と思われる。
-	//boneMatrices[ik.targetidx] = boneMatrices[ik.nodeIdx[0]];
-	
+	if (!lookAtSolvedIK[ik.targetidx])
+	{
+		boneMatrices[ik.targetidx] = boneMatrices[ik.nodeIdx[0]];
+		//auto mat3 = XMMatrixTranslationFromVector(-positions[2]);
+		//mat3 *= boneMatrices[ik.boneidx];
+		//mat3 *= XMMatrixTranslationFromVector(positions[2]);
+		//boneMatrices[ik.targetidx] = mat3;
+	}
+
+	else
+	{
+		//boneMatrices[ik.targetidx] = boneMatrices[ik.nodeIdx[0]];// *XMMatrixTranspose(XMMatrixRotationAxis(axis, theta1) * XMMatrixRotationAxis(axis, theta2 - XM_PI));
+		boneMatrices[ik.targetidx] = boneMatrices[ik.boneidx];//boneMatrices[ik.nodeIdx[0]] * XMMatrixTranslationFromVector(targetNextPos);
+	}
+	befTheta1 = theta1;
+	beforeIKMat = boneMatrices[ik.boneidx];
+
 }
 
 void PMDActor::SolveLookAtIK(const PMDIK& ik) 
@@ -422,6 +515,8 @@ void PMDActor::SolveLookAtIK(const PMDIK& ik)
 		* XMMatrixTranslationFromVector(rpos2);
 
 	boneMatrices[ik.nodeIdx[0]] *= mat;
+	
+	lookAtSolvedIK[ik.nodeIdx[0]] = true;
 }
 
 void PMDActor::PlayAnimation() 

@@ -4,7 +4,7 @@ class AppD3DX12
 {
 private:
 	std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\èââπÉ~ÉN.pmd";
-	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\squat.vmd";
+	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\squat2.vmd";
 	ComPtr<ID3D12Device> _dev = nullptr;
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
 	ComPtr<IDXGISwapChain4> _swapChain = nullptr;

@@ -1214,6 +1214,7 @@ void AppD3DX12::Run() {
 
 		//s—ñî•ñ‚ÌXV
 		pmdMaterialInfo->angle += 0.01f;
+		//pmdMaterialInfo->angle = 20.0f;
 		pmdMaterialInfo->worldMat = XMMatrixRotationY(pmdMaterialInfo->angle);
 		pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 
