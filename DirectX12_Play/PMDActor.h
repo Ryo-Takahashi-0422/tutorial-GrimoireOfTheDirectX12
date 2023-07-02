@@ -32,7 +32,7 @@ private:
 	// LOOKAT行列によりボーン方向を決定 node構成：root-target
 	// @param ik 対象IKオブジェクト
 	void SolveLookAtIK(const PMDIK& ik);
-	std::map<unsigned int, bool> lookAtSolvedIK;
+	std::vector<unsigned int> lookAtSolvedIK;
 
 	XMMATRIX beforeIKMat;
 	float befTheta1;

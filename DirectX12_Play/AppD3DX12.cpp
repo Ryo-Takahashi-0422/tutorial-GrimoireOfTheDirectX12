@@ -1213,8 +1213,8 @@ void AppD3DX12::Run() {
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
 
 		//行列情報の更新
-		pmdMaterialInfo->angle += 0.01f;
-		//pmdMaterialInfo->angle = 20.0f;
+		//pmdMaterialInfo->angle += 0.01f;
+		pmdMaterialInfo->angle = 200.0f;
 		pmdMaterialInfo->worldMat = XMMatrixRotationY(pmdMaterialInfo->angle);
 		pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 
