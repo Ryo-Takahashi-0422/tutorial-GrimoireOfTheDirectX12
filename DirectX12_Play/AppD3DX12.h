@@ -32,11 +32,8 @@ private:
 	ComPtr<ID3D12DescriptorHeap> basicDescHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC basicDescHeapDesc;
 
-	//ComPtr<ID3D12Resource> vertBuff = nullptr;//CPUとGPUの共有?バッファー領域(リソースとヒープ)
-	//ComPtr<ID3D12Resource> idxBuff = nullptr;//CPUとGPUの共有?バッファー領域(リソースとヒープ)
 	ComPtr<ID3D12Resource> matrixBuff = nullptr; // 行列用定数バッファー
 	ComPtr<ID3D12Resource> materialBuff = nullptr; // マテリアル用定数バッファー
-	ComPtr<ID3D12Resource> depthBuff = nullptr; // デプスバッファー
 	std::vector<ComPtr<ID3D12Resource>> texUploadBuff;//テクスチャCPUアップロード用バッファー
 	std::vector<ComPtr<ID3D12Resource>> texReadBuff;//テクスチャGPU読み取り用バッファー
 	std::vector<ComPtr<ID3D12Resource>> sphMappedBuff;//sph用バッファー
@@ -81,6 +78,8 @@ private:
 	PMDActor* pmdActor = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
 	SetRootSignature* setRootSignature = nullptr;
+	TextureLoader* textureLoader = nullptr;
+
 	std::vector<DirectX::XMMATRIX>* boneMatrices = nullptr;
 	std::map<std::string, BoneNode> bNodeTable;
 	unsigned int _duration; // アニメーションの最大フレーム番号

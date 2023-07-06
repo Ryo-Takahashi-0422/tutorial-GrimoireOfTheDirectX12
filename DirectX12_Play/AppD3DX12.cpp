@@ -125,8 +125,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	prepareRenderingWindow = new PrepareRenderingWindow;
 	prepareRenderingWindow->CreateAppWindow();
 
+	// TextureLoaderクラスのインスタンス化
+	textureLoader = new TextureLoader;
+
 	// BufferHeapCreatorクラスのインスタンス化
-	bufferHeapCreator = new BufferHeapCreator(prepareRenderingWindow);
+	bufferHeapCreator = new BufferHeapCreator(pmdMaterialInfo, prepareRenderingWindow, textureLoader);
 
 	// レンダリングウィンドウ表示
 	ShowWindow(prepareRenderingWindow->GetHWND(), SW_SHOW);
@@ -414,15 +417,6 @@ bool AppD3DX12::ResourceInit() {
 	//クリアバリュー(特定のリソースのクリア操作を最適化するために使用される値)
 	D3D12_CLEAR_VALUE depthClearValue = {};
 	bufferHeapCreator->SetClearValue(&depthClearValue);
-	//depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	//depthClearValue.DepthStencil.Depth = 1.0f; // 深さ1.0(最大値)でクリア
-
-	texUploadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャCPUアップロード用バッファー
-	texReadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャGPU読み取り用バッファー
-	sphMappedBuff.resize(pmdMaterialInfo->materialNum);//sph用バッファー
-	spaMappedBuff.resize(pmdMaterialInfo->materialNum);//spa用バッファー
-	toonUploadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用アップロードバッファー
-	toonReadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用リードバッファー
 
 	//ID3D12Resourceオブジェクトの内部パラメータ設定
 	D3D12_RESOURCE_DESC vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(pmdMaterialInfo->vertices.size());
@@ -438,165 +432,22 @@ bool AppD3DX12::ResourceInit() {
 	result = bufferHeapCreator->CreateBufferOfDepth(_dev, depthHeapProps, depthResDesc);
 
 	//ファイル形式毎のテクスチャロード処理
-	std::map<std::string, LoadLambda_t> loadLambdaTable;
-	loadLambdaTable["sph"]
-		= loadLambdaTable["spa"]
-		= loadLambdaTable["bmp"]
-		= loadLambdaTable["png"]
-		= loadLambdaTable["jpg"]
-		= [](const std::wstring& path, TexMetadata* meta, ScratchImage& img)
-		->HRESULT
-	{
-		return LoadFromWICFile(path.c_str(), WIC_FLAGS_NONE, meta, img);
-	};
-
-	loadLambdaTable["tga"]
-		= [](const std::wstring& path, TexMetadata* meta, ScratchImage& img)
-		->HRESULT
-	{
-		return LoadFromTGAFile(path.c_str(), meta, img);
-	};
-
-	loadLambdaTable["dds"]
-		= [](const std::wstring& path, TexMetadata* meta, ScratchImage& img)
-		->HRESULT
-	{
-		return LoadFromDDSFile(path.c_str(), DDS_FLAGS_NONE, meta, img);
-	};
-
+	textureLoader->LoadTexture();
+	
+	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
 	metaData.resize(pmdMaterialInfo->materialNum);
 	img.resize(pmdMaterialInfo->materialNum);
 	ScratchImage scratchImg = {};
-	result = CoInitializeEx(0, COINIT_MULTITHREADED);
+	result = CoInitializeEx(0, COINIT_MULTITHREADED);	
+	bufferHeapCreator->CreateUploadAndReadBuff(_dev, strModelPath, metaData, img); // バッファ作成
 
-	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
-	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
-	{
-		if (strlen(pmdMaterialInfo->materials[i].addtional.texPath.c_str()) == 0)
-		{
-			texUploadBuff[i] = nullptr;
-			texReadBuff[i] = nullptr;
-			continue;
-		}
-
-		std::string texFileName = pmdMaterialInfo->materials[i].addtional.texPath;
-
-		// ファイル名に*を含む場合の処理
-		if (std::count(std::begin(texFileName), std::end(texFileName), '*') > 0)
-		{
-			auto namePair = Utility::SplitFileName(texFileName);
-
-			if (Utility::GetExtension(namePair.first) == "sph" || Utility::GetExtension(namePair.first) == "spa")
-			{
-				texFileName = namePair.second;
-			}
-
-			else
-			{
-				texFileName = namePair.first;
-			}
-		}
-
-		// spa,sph拡張子ファイルはslicepitchが大きすぎてオーバーフロー?するため、バッファー作成に失敗する。
-		// 更に詳細は不明だがこれによりなぜかbufferHeapCreator->GetVertBuff()のマッピングが失敗するようになるため、一時回避する
-
-		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, texFileName.c_str());
-		auto wTexPath = Utility::GetWideStringFromSring(texFilePath);
-		auto extention = Utility::GetExtension(texFilePath);
-
-		if (!loadLambdaTable.count(extention))
-		{
-			std::cout << "読み込めないテクスチャが存在します" << std::endl;
-			//return 0;
-			return false;
-		}
-		metaData[i] = new TexMetadata;
-		result = loadLambdaTable[extention](wTexPath, metaData[i], scratchImg);
-
-		if (scratchImg.GetImage(0, 0, 0) == nullptr) continue;
-
-		// std::vector の型にconst適用するとコンパイラにより挙動が変化するため禁止
-		img[i] = new Image;
-		img[i]->pixels = scratchImg.GetImage(0, 0, 0)->pixels;
-		img[i]->rowPitch = scratchImg.GetImage(0, 0, 0)->rowPitch;
-		img[i]->format = scratchImg.GetImage(0, 0, 0)->format;
-		img[i]->width = scratchImg.GetImage(0, 0, 0)->width;
-		img[i]->height = scratchImg.GetImage(0, 0, 0)->height;
-		img[i]->slicePitch = scratchImg.GetImage(0, 0, 0)->slicePitch;
-
-		// CPU主導でGPUへsphファイルのバッファ生成・サブリソースへコピー
-		// 要リファクタリング
-
-		if (Utility::GetExtension(texFileName) == "sph")
-		{
-			sphMappedBuff[i] = CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(_dev, metaData[i], img[i], texFilePath);
-			std::tie(texUploadBuff[i], texReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
-			spaMappedBuff[i] = nullptr;
-		}
-
-		else if (Utility::GetExtension(texFileName) == "spa")
-		{
-			spaMappedBuff[i] = CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(_dev, metaData[i], img[i], texFilePath);
-			std::tie(texUploadBuff[i], texReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
-			sphMappedBuff[i] = nullptr;
-		}
-
-		else
-		{
-			std::tie(texUploadBuff[i], texReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, metaData[i], img[i], texFilePath);
-			sphMappedBuff[i] = nullptr;
-			spaMappedBuff[i] = nullptr;
-		}
-	}
-
-	// トゥーン処理
+	// トゥーンテクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
 	std::string toonFilePath = "toon\\";
 	struct _stat s = {};
 	toonMetaData.resize(pmdMaterialInfo->materialNum);
 	toonImg.resize(pmdMaterialInfo->materialNum);
 	ScratchImage toonScratchImg = {};
-
-	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
-	{
-		//トゥーンリソースの読み込み
-		char toonFileName[16];
-		sprintf(toonFileName, "toon%02d.bmp", pmdMaterialInfo->materials[i].addtional.toonIdx + 1);
-		toonFilePath += toonFileName;
-		toonFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, toonFilePath.c_str());
-
-		auto wTexPath = Utility::GetWideStringFromSring(toonFilePath);
-		auto extention = Utility::GetExtension(toonFilePath);
-
-		if (!loadLambdaTable.count(extention))
-		{
-			std::cout << "読み込めないテクスチャが存在します" << std::endl;
-			//return 0;
-			break;
-		}
-		
-		toonMetaData[i] = new TexMetadata;
-		result = loadLambdaTable[extention](wTexPath, toonMetaData[i], toonScratchImg);
-
-		if (toonScratchImg.GetImage(0, 0, 0) == nullptr) continue;
-
-		// std::vector の型にconst適用するとコンパイラにより挙動が変化するため禁止
-		toonImg[i] = new Image;
-		toonImg[i]->pixels = scratchImg.GetImage(0, 0, 0)->pixels;
-		toonImg[i]->rowPitch = scratchImg.GetImage(0, 0, 0)->rowPitch;
-		toonImg[i]->format = scratchImg.GetImage(0, 0, 0)->format;
-		toonImg[i]->width = scratchImg.GetImage(0, 0, 0)->width;
-		toonImg[i]->height = scratchImg.GetImage(0, 0, 0)->height;
-		toonImg[i]->slicePitch = scratchImg.GetImage(0, 0, 0)->slicePitch;
-
-		// tooIdx指定(+1)のtoonファイルが存在する場合
-		if (_stat(toonFilePath.c_str(), &s) == 0)
-		{
-			std::tie(toonUploadBuff[i], toonReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, toonMetaData[i], toonImg[i], toonFilePath);
-		}
-
-		else
-			std::tie(toonUploadBuff[i], toonReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
-	}
+	bufferHeapCreator->CreateToonUploadAndReadBuff(_dev, strModelPath, toonMetaData, toonImg); // バッファ作成
 
 	//行列用定数バッファーの生成
 	pmdMaterialInfo->worldMat = XMMatrixIdentity();
@@ -717,12 +568,12 @@ bool AppD3DX12::ResourceInit() {
 	// テクスチャのアップロード用バッファへのマッピング
 	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
-		if (texUploadBuff[matNum] == nullptr) continue;
+		if (bufferHeapCreator->GetTexUploadBuff()[matNum] == nullptr) continue;
 
 		auto srcAddress = img[matNum]->pixels;
 		auto rowPitch = Utility::AlignmentSize(img[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);//////////////////////////////
 		uint8_t* mapforImg = nullptr; // ピクセルデータのシステムメモリバッファーへのポインターがuint8_t(img->pixcel)
-		result = texUploadBuff[matNum]->Map(0, nullptr, (void**)&mapforImg);
+		result = bufferHeapCreator->GetTexUploadBuff()[matNum]->Map(0, nullptr, (void**)&mapforImg);
 
 		// img:元データの初期アドレス(srcAddress)を元ピッチ分オフセットしながら、補正したピッチ個分(rowPitch)のアドレスを
 		// mapforImgにその数分(rowPitch)オフセットを繰り返しつつコピーしていく
@@ -734,18 +585,18 @@ bool AppD3DX12::ResourceInit() {
 			mapforImg += rowPitch;
 		}
 
-		texUploadBuff[matNum]->Unmap(0, nullptr);
+		bufferHeapCreator->GetTexUploadBuff()[matNum]->Unmap(0, nullptr);
 	}
 
 	// トゥーンテクスチャも同様にマッピング
 	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
-		if (toonUploadBuff[matNum] == nullptr) continue;
+		if (bufferHeapCreator->GetToonUploadBuff()[matNum] == nullptr) continue;
 
 		auto toonSrcAddress = toonImg[matNum]->pixels;
 		auto toonrowPitch = Utility::AlignmentSize(toonImg[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		uint8_t* toonmapforImg = nullptr;
-		result = toonUploadBuff[matNum]->Map(0, nullptr, (void**)&toonmapforImg);
+		result = bufferHeapCreator->GetToonUploadBuff()[matNum]->Map(0, nullptr, (void**)&toonmapforImg);
 
 		for (int i = 0; i < toonImg[matNum]->height; ++i)
 		{
@@ -754,7 +605,7 @@ bool AppD3DX12::ResourceInit() {
 			toonmapforImg += toonrowPitch;
 		}
 		
-		toonUploadBuff[matNum]->Unmap(0, nullptr);
+		bufferHeapCreator->GetToonUploadBuff()[matNum]->Unmap(0, nullptr);
 	}
 
 	// テクスチャ用転送オブジェクト
@@ -765,9 +616,9 @@ bool AppD3DX12::ResourceInit() {
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
-		if (texUploadBuff[matNum] == nullptr || texReadBuff[matNum] == nullptr) continue;
+		if (bufferHeapCreator->GetTexUploadBuff()[matNum] == nullptr || bufferHeapCreator->GetTexReadBuff()[matNum] == nullptr) continue;
 
-		src[matNum].pResource = texUploadBuff[matNum].Get();
+		src[matNum].pResource = bufferHeapCreator->GetTexUploadBuff()[matNum].Get();
 		src[matNum].Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		src[matNum].PlacedFootprint.Offset = 0;
 		src[matNum].PlacedFootprint.Footprint.Width = metaData[matNum]->width;
@@ -778,7 +629,7 @@ bool AppD3DX12::ResourceInit() {
 		src[matNum].PlacedFootprint.Footprint.Format = img[matNum]->format;//metaData.format;
 
 		//コピー先設定
-		dst[matNum].pResource = texReadBuff[matNum].Get();
+		dst[matNum].pResource = bufferHeapCreator->GetTexReadBuff()[matNum].Get();
 		dst[matNum].Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		dst[matNum].SubresourceIndex = 0;
 
@@ -788,7 +639,7 @@ bool AppD3DX12::ResourceInit() {
 			//バリア設定
 			texBarriierDesc[matNum].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			texBarriierDesc[matNum].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			texBarriierDesc[matNum].Transition.pResource = texReadBuff[matNum].Get();
+			texBarriierDesc[matNum].Transition.pResource = bufferHeapCreator->GetTexReadBuff()[matNum].Get();
 			texBarriierDesc[matNum].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			texBarriierDesc[matNum].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 			texBarriierDesc[matNum].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -819,9 +670,9 @@ bool AppD3DX12::ResourceInit() {
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
-		if (toonUploadBuff[matNum] == nullptr || toonReadBuff[matNum] == nullptr) continue;
+		if (bufferHeapCreator->GetToonUploadBuff()[matNum] == nullptr || bufferHeapCreator->GetToonReadBuff()[matNum] == nullptr) continue;
 
-		toonSrc[matNum].pResource = toonUploadBuff[matNum].Get();
+		toonSrc[matNum].pResource = bufferHeapCreator->GetToonUploadBuff()[matNum].Get();
 		toonSrc[matNum].Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		toonSrc[matNum].PlacedFootprint.Offset = 0;
 		toonSrc[matNum].PlacedFootprint.Footprint.Width = toonMetaData[matNum]->width;
@@ -832,7 +683,7 @@ bool AppD3DX12::ResourceInit() {
 		toonSrc[matNum].PlacedFootprint.Footprint.Format = toonImg[matNum]->format;
 
 		//コピー先設定
-		toonDst[matNum].pResource = toonReadBuff[matNum].Get();
+		toonDst[matNum].pResource = bufferHeapCreator->GetToonReadBuff()[matNum].Get();
 		toonDst[matNum].Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		toonDst[matNum].SubresourceIndex = 0;
 
@@ -842,7 +693,7 @@ bool AppD3DX12::ResourceInit() {
 			//バリア設定
 			toonBarriierDesc[matNum].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			toonBarriierDesc[matNum].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			toonBarriierDesc[matNum].Transition.pResource = toonReadBuff[matNum].Get();
+			toonBarriierDesc[matNum].Transition.pResource = bufferHeapCreator->GetToonReadBuff()[matNum].Get();
 			toonBarriierDesc[matNum].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			toonBarriierDesc[matNum].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 			toonBarriierDesc[matNum].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -956,7 +807,7 @@ bool AppD3DX12::ResourceInit() {
 		materialCBVDesc.BufferLocation += materialBuffSize;
 
 		// テクスチャ
-		if (texReadBuff[i] == nullptr)
+		if (bufferHeapCreator->GetTexReadBuff()[i] == nullptr)
 		{
 			srvDesc.Format = whiteBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
@@ -965,15 +816,15 @@ bool AppD3DX12::ResourceInit() {
 
 		else
 		{
-			srvDesc.Format = texReadBuff[i]->GetDesc().Format;
+			srvDesc.Format = bufferHeapCreator->GetTexReadBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(texReadBuff[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetTexReadBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
 
 		// sphファイル
-		if (sphMappedBuff[i] == nullptr)
+		if (bufferHeapCreator->GetsphMappedBuff()[i] == nullptr)
 		{
 			srvDesc.Format = whiteBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
@@ -982,15 +833,15 @@ bool AppD3DX12::ResourceInit() {
 
 		else
 		{
-			srvDesc.Format = sphMappedBuff[i]->GetDesc().Format;
+			srvDesc.Format = bufferHeapCreator->GetsphMappedBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(sphMappedBuff[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetsphMappedBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
 
 		// spaファイル
-		if (spaMappedBuff[i] == nullptr)
+		if (bufferHeapCreator->GetspaMappedBuff()[i] == nullptr)
 		{
 			srvDesc.Format = BlackBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
@@ -999,15 +850,15 @@ bool AppD3DX12::ResourceInit() {
 
 		else
 		{
-			srvDesc.Format = spaMappedBuff[i]->GetDesc().Format;
+			srvDesc.Format = bufferHeapCreator->GetspaMappedBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(spaMappedBuff[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetspaMappedBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
 
 		// トゥーンテクスチャファイル
-		if (toonReadBuff[i] == nullptr)
+		if (bufferHeapCreator->GetToonReadBuff()[i] == nullptr)
 		{
 			srvDesc.Format = grayTexBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
@@ -1016,9 +867,9 @@ bool AppD3DX12::ResourceInit() {
 
 		else
 		{
-			srvDesc.Format = toonReadBuff[i]->GetDesc().Format;
+			srvDesc.Format = bufferHeapCreator->GetToonReadBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(toonReadBuff[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetToonReadBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
@@ -1196,4 +1047,5 @@ void AppD3DX12::Run() {
 	delete setRootSignature;
 	delete gPLSetting;
 	delete bufferHeapCreator;
+	delete textureLoader;
 }

@@ -22,6 +22,7 @@
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
+using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata*, ScratchImage&)>;
 
 //#include <AppD3DX12.h>
 #include <CreateD3DX12ResourceBuffer.h>
@@ -32,6 +33,7 @@ using namespace DirectX;
 #include <VMDMotionInfo.h>
 #include <PMDActor.h>
 #include <GraphicsPipelineSetting.h>
+#include <TextureLoader.h>
 #include <BufferHeapCreator.h>
 #include <sstream>
 //#include <AppD3DX12.h>

@@ -1,10 +1,23 @@
 #include <stdafx.h>
 #include <BufferHeapCreator.h>
 
-BufferHeapCreator::BufferHeapCreator(PrepareRenderingWindow* _prepareRenderingWindow)
+BufferHeapCreator::BufferHeapCreator(PMDMaterialInfo* _pmdMaterialInfo,  PrepareRenderingWindow* _prepareRenderingWindow, TextureLoader* _textureLoader)
 {
+	pmdMaterialInfo = new PMDMaterialInfo;
+	pmdMaterialInfo = _pmdMaterialInfo;
+
 	prepareRenderingWindow = new PrepareRenderingWindow;
 	prepareRenderingWindow = _prepareRenderingWindow;
+
+	textureLoader = new TextureLoader;
+	textureLoader = _textureLoader;
+
+	texUploadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャCPUアップロード用バッファー
+	texReadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャGPU読み取り用バッファー
+	sphMappedBuff.resize(pmdMaterialInfo->materialNum);//sph用バッファー
+	spaMappedBuff.resize(pmdMaterialInfo->materialNum);//spa用バッファー
+	toonUploadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用アップロードバッファー
+	toonReadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用リードバッファー
 }
 
 void BufferHeapCreator::SetVertexAndIndexHeapProp(D3D12_HEAP_PROPERTIES* heapProps)
@@ -82,6 +95,138 @@ HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev,
 	);
 }
 
+void BufferHeapCreator::CreateUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
+	std::string strModelPath, std::vector<DirectX::TexMetadata*>& metaData, std::vector<DirectX::Image*>& img)
+{
+	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
+	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
+	{
+		if (strlen(pmdMaterialInfo->materials[i].addtional.texPath.c_str()) == 0)
+		{
+			texUploadBuff[i] = nullptr;
+			texReadBuff[i] = nullptr;
+			continue;
+		}
+
+		std::string texFileName = pmdMaterialInfo->materials[i].addtional.texPath;
+
+		// ファイル名に*を含む場合の処理
+		if (std::count(std::begin(texFileName), std::end(texFileName), '*') > 0)
+		{
+			auto namePair = Utility::SplitFileName(texFileName);
+
+			if (Utility::GetExtension(namePair.first) == "sph" || Utility::GetExtension(namePair.first) == "spa")
+			{
+				texFileName = namePair.second;
+			}
+
+			else
+			{
+				texFileName = namePair.first;
+			}
+		}
+
+		// spa,sph拡張子ファイルはslicepitchが大きすぎてオーバーフロー?するため、バッファー作成に失敗する。
+		// 更に詳細は不明だがこれによりなぜかbufferHeapCreator->GetVertBuff()のマッピングが失敗するようになるため、一時回避する
+
+		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, texFileName.c_str());
+		auto wTexPath = Utility::GetWideStringFromSring(texFilePath);
+		auto extention = Utility::GetExtension(texFilePath);
+
+		if (!textureLoader->GetTable().count(extention))
+		{
+			std::cout << "読み込めないテクスチャが存在します" << std::endl;
+			return;
+		}
+		metaData[i] = new TexMetadata;
+		result = textureLoader->GetTable()[extention](wTexPath, metaData[i], scratchImg);
+
+		if (scratchImg.GetImage(0, 0, 0) == nullptr) continue;
+
+		// std::vector の型にconst適用するとコンパイラにより挙動が変化するため禁止
+		img[i] = new Image;
+		img[i]->pixels = scratchImg.GetImage(0, 0, 0)->pixels;
+		img[i]->rowPitch = scratchImg.GetImage(0, 0, 0)->rowPitch;
+		img[i]->format = scratchImg.GetImage(0, 0, 0)->format;
+		img[i]->width = scratchImg.GetImage(0, 0, 0)->width;
+		img[i]->height = scratchImg.GetImage(0, 0, 0)->height;
+		img[i]->slicePitch = scratchImg.GetImage(0, 0, 0)->slicePitch;
+
+		// CPU主導でGPUへsphファイルのバッファ生成・サブリソースへコピー
+		// 要リファクタリング
+
+		if (Utility::GetExtension(texFileName) == "sph")
+		{
+			sphMappedBuff[i] = CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(_dev, metaData[i], img[i], texFilePath);
+			std::tie(texUploadBuff[i], texReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
+			spaMappedBuff[i] = nullptr;
+		}
+
+		else if (Utility::GetExtension(texFileName) == "spa")
+		{
+			spaMappedBuff[i] = CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(_dev, metaData[i], img[i], texFilePath);
+			std::tie(texUploadBuff[i], texReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
+			sphMappedBuff[i] = nullptr;
+		}
+
+		else
+		{
+			std::tie(texUploadBuff[i], texReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, metaData[i], img[i], texFilePath);
+			sphMappedBuff[i] = nullptr;
+			spaMappedBuff[i] = nullptr;
+		}
+	}
+}
+
+void BufferHeapCreator::CreateToonUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
+	std::string strModelPath,
+	std::vector<DirectX::TexMetadata*>& toonMetaData,
+	std::vector<DirectX::Image*>& toonImg)
+{
+
+	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
+	{
+		//トゥーンリソースの読み込み
+		char toonFileName[16];
+		sprintf(toonFileName, "toon%02d.bmp", pmdMaterialInfo->materials[i].addtional.toonIdx + 1);
+		toonFilePath += toonFileName;
+		toonFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, toonFilePath.c_str());
+
+		auto wTexPath = Utility::GetWideStringFromSring(toonFilePath);
+		auto extention = Utility::GetExtension(toonFilePath);
+
+		if (!textureLoader->GetTable().count(extention))
+		{
+			std::cout << "読み込めないテクスチャが存在します" << std::endl;
+			//return 0;
+			break;
+		}
+
+		toonMetaData[i] = new TexMetadata;
+		result = textureLoader->GetTable()[extention](wTexPath, toonMetaData[i], toonScratchImg);
+
+		if (toonScratchImg.GetImage(0, 0, 0) == nullptr) continue;
+
+		// std::vector の型にconst適用するとコンパイラにより挙動が変化するため禁止
+		toonImg[i] = new Image;
+		toonImg[i]->pixels = scratchImg.GetImage(0, 0, 0)->pixels;
+		toonImg[i]->rowPitch = scratchImg.GetImage(0, 0, 0)->rowPitch;
+		toonImg[i]->format = scratchImg.GetImage(0, 0, 0)->format;
+		toonImg[i]->width = scratchImg.GetImage(0, 0, 0)->width;
+		toonImg[i]->height = scratchImg.GetImage(0, 0, 0)->height;
+		toonImg[i]->slicePitch = scratchImg.GetImage(0, 0, 0)->slicePitch;
+
+		// tooIdx指定(+1)のtoonファイルが存在する場合
+		if (_stat(toonFilePath.c_str(), &s) == 0)
+		{
+			std::tie(toonUploadBuff[i], toonReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, toonMetaData[i], toonImg[i], toonFilePath);
+		}
+
+		else
+			std::tie(toonUploadBuff[i], toonReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
+	}
+}
+
 ComPtr<ID3D12Resource> BufferHeapCreator::GetVertBuff()
 {
 	return vertBuff;
@@ -95,4 +240,34 @@ ComPtr<ID3D12Resource> BufferHeapCreator::GetIdxBuff()
 ComPtr<ID3D12Resource> BufferHeapCreator::GetDepthBuff()
 {
 	return depthBuff;
+}
+
+std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetTexUploadBuff()
+{
+	return texUploadBuff;
+}
+
+std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetTexReadBuff()
+{
+	return texReadBuff;
+}
+
+std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetsphMappedBuff()
+{
+	return sphMappedBuff;
+}
+
+std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetspaMappedBuff()
+{
+	return spaMappedBuff;
+}
+
+std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetToonUploadBuff()
+{
+	return toonUploadBuff;
+}
+
+std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetToonReadBuff()
+{
+	return toonReadBuff;
 }
