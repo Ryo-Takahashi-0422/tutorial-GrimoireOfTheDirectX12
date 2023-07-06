@@ -31,5 +31,6 @@ using namespace DirectX;
 #include <SetRootSignature.h>
 #include <VMDMotionInfo.h>
 #include <PMDActor.h>
+#include <GraphicsPipelineSetting.h>
 #include <sstream>
 //#include <AppD3DX12.h>

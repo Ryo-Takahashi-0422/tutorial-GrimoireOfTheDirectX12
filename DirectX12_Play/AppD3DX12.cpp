@@ -113,6 +113,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pmdActor = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
 	//pmdActor->SolveCCDIK(pmdMaterialInfo->GetpPMDIKData()[0]);
 
+	// GraphicsPipelineSettingクラスのインスタンス化
+	gPLSetting = new GraphicsPipelineSetting;
+
 	// アニメーション用の回転・並行移動行列の参照準備
 	boneMatrices = new std::vector<DirectX::XMMATRIX>;
 	boneMatrices = pmdActor->GetMatrices();
@@ -376,58 +379,16 @@ bool AppD3DX12::ResourceInit() {
 
 
 	// 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
-
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine = {};
-	gpipeLine.pRootSignature = setRootSignature->GetRootSignature().Get();
-	//gpipeLine.pRootSignature = setRootSignature->GetRootSignature();
+	for(int i=0;i<sizeof(inputLayout);++i)
+	{
+		gPLSetting->SetInputlayout(i, inputLayout[i]);
+	}
 
-	gpipeLine.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
-	gpipeLine.VS.BytecodeLength = _vsBlob->GetBufferSize();
-
-	gpipeLine.PS.pShaderBytecode = _psBlob->GetBufferPointer();
-	gpipeLine.PS.BytecodeLength = _psBlob->GetBufferSize();
-
-	gpipeLine.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
-
-	gpipeLine.RasterizerState.MultisampleEnable = false;
-	gpipeLine.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-	gpipeLine.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	gpipeLine.RasterizerState.DepthClipEnable = true;
-
-	D3D12_RENDER_TARGET_BLEND_DESC renderTargetdDesc = {};
-	renderTargetdDesc.BlendEnable = false;//ブレンドを有効にするか無効にするか
-	renderTargetdDesc.LogicOpEnable = false;//論理操作を有効にするか無効にするか
-	renderTargetdDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-	gpipeLine.BlendState.AlphaToCoverageEnable = false;
-	gpipeLine.BlendState.IndependentBlendEnable = false;
-	gpipeLine.BlendState.RenderTarget[0] = renderTargetdDesc;
-	gpipeLine.InputLayout.pInputElementDescs = inputLayout;
-
-	gpipeLine.InputLayout.NumElements = _countof(inputLayout);
-
-	gpipeLine.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-
-	gpipeLine.NumRenderTargets = 1;
-
-	gpipeLine.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-
-	gpipeLine.SampleDesc.Count = 1; //1サンプル/ピクセル
-	gpipeLine.SampleDesc.Quality = 0;
-
-	gpipeLine.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-	gpipeLine.DepthStencilState.DepthEnable = true;
-	gpipeLine.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // 深度バッファーに深度値を描き込む
-	gpipeLine.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // ソースデータがコピー先データより小さい場合書き込む
-	gpipeLine.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-
-	_pipelineState = nullptr;
-
+	gpipeLine = gPLSetting->SetGPL(gpipeLine, _dev, _pipelineState, setRootSignature, _vsBlob, _psBlob);
 	result = _dev->CreateGraphicsPipelineState(&gpipeLine, IID_PPV_ARGS(_pipelineState.ReleaseAndGetAddressOf()));
 
-
 	// 初期化処理5：コマンドリスト生成
-
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
 
 	// 初期化処理6：コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
@@ -486,7 +447,8 @@ bool AppD3DX12::ResourceInit() {
 
 	//インデックスバッファーを作成(リソースと暗黙的なヒープの作成)
 	result = _dev->CreateCommittedResource
-	(&heapProps,
+	(
+		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&indicesDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,

@@ -4,7 +4,7 @@ class AppD3DX12
 {
 private:
 	std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\èââπÉ~ÉN.pmd";
-	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\squat3.vmd";
+	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\squat2.vmd";
 	ComPtr<ID3D12Device> _dev = nullptr;
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
 	ComPtr<IDXGISwapChain4> _swapChain = nullptr;
@@ -22,6 +22,7 @@ private:
 	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 
 	ComPtr<ID3D12PipelineState> _pipelineState = nullptr;
+	GraphicsPipelineSetting* gPLSetting = nullptr;
 
 	D3D12_VERTEX_BUFFER_VIEW vbView;
 	ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;
