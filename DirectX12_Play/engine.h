@@ -32,5 +32,6 @@ using namespace DirectX;
 #include <VMDMotionInfo.h>
 #include <PMDActor.h>
 #include <GraphicsPipelineSetting.h>
+#include <BufferHeapCreator.h>
 #include <sstream>
 //#include <AppD3DX12.h>

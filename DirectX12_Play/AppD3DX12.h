@@ -23,6 +23,7 @@ private:
 
 	ComPtr<ID3D12PipelineState> _pipelineState = nullptr;
 	GraphicsPipelineSetting* gPLSetting = nullptr;
+	BufferHeapCreator* bufferHeapCreator = nullptr;
 
 	D3D12_VERTEX_BUFFER_VIEW vbView;
 	ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;
@@ -31,8 +32,8 @@ private:
 	ComPtr<ID3D12DescriptorHeap> basicDescHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC basicDescHeapDesc;
 
-	ComPtr<ID3D12Resource> vertBuff = nullptr;//CPUとGPUの共有?バッファー領域(リソースとヒープ)
-	ComPtr<ID3D12Resource> idxBuff = nullptr;//CPUとGPUの共有?バッファー領域(リソースとヒープ)
+	//ComPtr<ID3D12Resource> vertBuff = nullptr;//CPUとGPUの共有?バッファー領域(リソースとヒープ)
+	//ComPtr<ID3D12Resource> idxBuff = nullptr;//CPUとGPUの共有?バッファー領域(リソースとヒープ)
 	ComPtr<ID3D12Resource> matrixBuff = nullptr; // 行列用定数バッファー
 	ComPtr<ID3D12Resource> materialBuff = nullptr; // マテリアル用定数バッファー
 	ComPtr<ID3D12Resource> depthBuff = nullptr; // デプスバッファー
@@ -87,6 +88,8 @@ private:
 	void RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat);
 	void UpdateVMDMotion(std::map<std::string, BoneNode> bNodeTable, 
 		std::unordered_map<std::string, std::vector<KeyFrame>> motionData);
+
+	ComPtr<ID3D12Resource> _peraResource;
 
 public:
 	///Applicationのシングルトンインスタンスを得る

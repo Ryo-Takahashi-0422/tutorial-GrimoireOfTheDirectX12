@@ -178,6 +178,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AppD3DX12.cpp" />
+    <ClCompile Include="BufferHeapCreator.cpp" />
     <ClCompile Include="GraphicsPipelineSetting.cpp" />
     <ClCompile Include="PMDActor.cpp" />
     <ClCompile Include="PMDMaterialInfo.cpp" />
@@ -228,6 +229,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppD3DX12.h" />
+    <ClInclude Include="BufferHeapCreator.h" />
     <ClInclude Include="GraphicsPipelineSetting.h" />
     <ClInclude Include="PMDActor.h" />
     <ClInclude Include="PMDMaterialInfo.h" />

@@ -125,6 +125,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	prepareRenderingWindow = new PrepareRenderingWindow;
 	prepareRenderingWindow->CreateAppWindow();
 
+	// BufferHeapCreatorクラスのインスタンス化
+	bufferHeapCreator = new BufferHeapCreator(prepareRenderingWindow);
+
 	// レンダリングウィンドウ表示
 	ShowWindow(prepareRenderingWindow->GetHWND(), SW_SHOW);
 
@@ -398,32 +401,21 @@ bool AppD3DX12::ResourceInit() {
 
 	//頂点バッファーとインデックスバッファー用のヒーププロパティ設定
 	D3D12_HEAP_PROPERTIES heapProps = {};
-	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	heapProps.CreationNodeMask = 0;
-	heapProps.VisibleNodeMask = 0;
+	bufferHeapCreator->SetVertexAndIndexHeapProp(&heapProps);
 
 	//深度バッファー用ヒーププロパティ設定
 	D3D12_HEAP_PROPERTIES depthHeapProps = {};
-	depthHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-	depthHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	depthHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	bufferHeapCreator->SetDepthHeapProp(&depthHeapProps);
 
 	//深度バッファー用リソースディスクリプタ
 	D3D12_RESOURCE_DESC depthResDesc = {};
-	depthResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthResDesc.Width = prepareRenderingWindow->GetWindowWidth();
-	depthResDesc.Height = prepareRenderingWindow->GetWindowHeight();
-	depthResDesc.DepthOrArraySize = 1;
-	depthResDesc.Format = DXGI_FORMAT_D32_FLOAT; // 深度値書き込み用
-	depthResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
-	depthResDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	bufferHeapCreator->SetDepthResourceDesc(&depthResDesc);
 
 	//クリアバリュー(特定のリソースのクリア操作を最適化するために使用される値)
 	D3D12_CLEAR_VALUE depthClearValue = {};
-	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	depthClearValue.DepthStencil.Depth = 1.0f; // 深さ1.0(最大値)でクリア
+	bufferHeapCreator->SetClearValue(&depthClearValue);
+	//depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	//depthClearValue.DepthStencil.Depth = 1.0f; // 深さ1.0(最大値)でクリア
 
 	texUploadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャCPUアップロード用バッファー
 	texReadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャGPU読み取り用バッファー
@@ -432,40 +424,18 @@ bool AppD3DX12::ResourceInit() {
 	toonUploadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用アップロードバッファー
 	toonReadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用リードバッファー
 
-	//頂点バッファーの作成(リソースと暗黙的なヒープの作成) ID3D12Resourceオブジェクトの内部パラメータ設定
+	//ID3D12Resourceオブジェクトの内部パラメータ設定
 	D3D12_RESOURCE_DESC vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(pmdMaterialInfo->vertices.size());
 	D3D12_RESOURCE_DESC indicesDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size());
-	result = _dev->CreateCommittedResource
-	(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&vertresDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, // リソースの状態。GPUからして読み取り用
-		nullptr,
-		IID_PPV_ARGS(vertBuff.ReleaseAndGetAddressOf())
-	);
+	
+	//頂点バッファーの作成(リソースと暗黙的なヒープの作成) 
+	result = bufferHeapCreator->CreateBufferOfVertex(_dev, heapProps, vertresDesc);
 
 	//インデックスバッファーを作成(リソースと暗黙的なヒープの作成)
-	result = _dev->CreateCommittedResource
-	(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&indicesDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(idxBuff.ReleaseAndGetAddressOf())
-	);
+	result = bufferHeapCreator->CreateBufferOfIndex(_dev, heapProps, indicesDesc);
 
 	//デプスバッファーを作成
-	result = _dev->CreateCommittedResource
-	(
-		&depthHeapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&depthResDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		nullptr,
-		IID_PPV_ARGS(depthBuff.ReleaseAndGetAddressOf())
-	);
+	result = bufferHeapCreator->CreateBufferOfDepth(_dev, depthHeapProps, depthResDesc);
 
 	//ファイル形式毎のテクスチャロード処理
 	std::map<std::string, LoadLambda_t> loadLambdaTable;
@@ -525,11 +495,10 @@ bool AppD3DX12::ResourceInit() {
 			{
 				texFileName = namePair.first;
 			}
-
 		}
 
 		// spa,sph拡張子ファイルはslicepitchが大きすぎてオーバーフロー?するため、バッファー作成に失敗する。
-		// 更に詳細は不明だがこれによりなぜかvertBuffのマッピングが失敗するようになるため、一時回避する
+		// 更に詳細は不明だがこれによりなぜかbufferHeapCreator->GetVertBuff()のマッピングが失敗するようになるため、一時回避する
 
 		auto texFilePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, texFileName.c_str());
 		auto wTexPath = Utility::GetWideStringFromSring(texFilePath);
@@ -685,20 +654,44 @@ bool AppD3DX12::ResourceInit() {
 		IID_PPV_ARGS(materialBuff.ReleaseAndGetAddressOf())
 	);
 
+	// マルチパスレンダリング用
+    // 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
+	auto heapDesc2 = rtvHeaps->GetDesc();
+
+	// 使っているバックバッファーの情報を利用する
+	auto& bbuff = _backBuffers[0];
+	auto resDesc2 = bbuff->GetDesc();
+
+	D3D12_HEAP_PROPERTIES heapProp2 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+	// レンダリング時のクリア値と同じ値
+	float clsClr[4] = { 0.5,0.5,0.5,1.0 };
+	D3D12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, clsClr);
+
+	auto result = _dev->CreateCommittedResource
+	(
+		&heapProp2,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc2,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		&clearValue,
+		IID_PPV_ARGS(_peraResource.ReleaseAndGetAddressOf())
+	);
+
 	//頂点バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的に頂点データをコピーする。
 	//CPUは暗黙的なヒープの情報を得られないため、Map関数によりVRAM上のバッファーにアドレスを割り当てた状態で
 	//頂点などの情報をVRAMへコピーしている(次の３つはCPUとGPUどちらもアクセス可能なUPLOADタイプなヒープ故マップ可能)、
 	//sという理解。Unmapはコメントアウトしても特に影響はないが...
 	//vertMap = nullptr;
-	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
+	result = bufferHeapCreator->GetVertBuff()->Map(0, nullptr, (void**)&vertMap);
 	std::copy(std::begin(pmdMaterialInfo->vertices), std::end(pmdMaterialInfo->vertices), vertMap);
-	vertBuff->Unmap(0, nullptr);
+	bufferHeapCreator->GetVertBuff()->Unmap(0, nullptr);
 
 	//インデクスバッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
 	//mappedIdx = nullptr;
-	result = idxBuff->Map(0, nullptr, (void**)&mappedIdx);
+	result = bufferHeapCreator->GetIdxBuff()->Map(0, nullptr, (void**)&mappedIdx);
 	std::copy(std::begin(pmdMaterialInfo->indices), std::end(pmdMaterialInfo->indices), mappedIdx);
-	idxBuff->Unmap(0, nullptr);
+	bufferHeapCreator->GetIdxBuff()->Unmap(0, nullptr);
 
 	//boneMatrices = pmdMaterialInfo->GetBoneMatrices();
 	//行列用定数バッファーのマッピング
@@ -902,12 +895,12 @@ bool AppD3DX12::ResourceInit() {
 	// 初期化処理8：各ビューを作成
 
 	vbView = {};
-	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress();//バッファの仮想アドレス
+	vbView.BufferLocation = bufferHeapCreator->GetVertBuff()->GetGPUVirtualAddress();//バッファの仮想アドレス
 	vbView.SizeInBytes = pmdMaterialInfo->vertices.size();//全バイト数
 	vbView.StrideInBytes = pmdMaterialInfo->pmdvertex_size;//1頂点あたりのバイト数
 
 	ibView = {};
-	ibView.BufferLocation = idxBuff->GetGPUVirtualAddress();
+	ibView.BufferLocation = bufferHeapCreator->GetIdxBuff()->GetGPUVirtualAddress();
 	ibView.SizeInBytes = sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 
@@ -926,7 +919,7 @@ bool AppD3DX12::ResourceInit() {
 
 	_dev->CreateDepthStencilView
 	(
-		depthBuff.Get(),
+		bufferHeapCreator->GetDepthBuff().Get(),
 		&dsvDesc,
 		dsvHeap->GetCPUDescriptorHandleForHeapStart()
 	);
@@ -1201,4 +1194,6 @@ void AppD3DX12::Run() {
 	delete pmdActor;
 	delete prepareRenderingWindow;
 	delete setRootSignature;
+	delete gPLSetting;
+	delete bufferHeapCreator;
 }
