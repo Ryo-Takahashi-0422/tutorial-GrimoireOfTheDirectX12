@@ -30,7 +30,8 @@ AppD3DX12::~AppD3DX12()
 
 HRESULT AppD3DX12::D3DX12DeviceInit()
 {
-	
+	result = CoInitializeEx(0, COINIT_MULTITHREADED);
+
 	//ファクトリーの生成
 	result = S_OK;
 	if (FAILED(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf()))))
@@ -130,6 +131,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// BufferHeapCreatorクラスのインスタンス化
 	bufferHeapCreator = new BufferHeapCreator(pmdMaterialInfo, prepareRenderingWindow, textureLoader);
+
+	// TextureTransporterクラスのインスタンス化
+	textureTransporter = new TextureTransporter(pmdMaterialInfo, bufferHeapCreator);
 
 	// レンダリングウィンドウ表示
 	ShowWindow(prepareRenderingWindow->GetHWND(), SW_SHOW);
@@ -383,10 +387,9 @@ bool AppD3DX12::ResourceInit() {
 		}
 	};
 
-
 	// 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine = {};
-	for(int i=0;i<sizeof(inputLayout);++i)
+	for (int i = 0; i < sizeof(inputLayout) / sizeof(D3D12_INPUT_ELEMENT_DESC); ++i)
 	{
 		gPLSetting->SetInputlayout(i, inputLayout[i]);
 	}
@@ -438,9 +441,9 @@ bool AppD3DX12::ResourceInit() {
 	metaData.resize(pmdMaterialInfo->materialNum);
 	img.resize(pmdMaterialInfo->materialNum);
 	ScratchImage scratchImg = {};
-	result = CoInitializeEx(0, COINIT_MULTITHREADED);	
+	//result = CoInitializeEx(0, COINIT_MULTITHREADED);	
 	bufferHeapCreator->CreateUploadAndReadBuff(_dev, strModelPath, metaData, img); // バッファ作成
-
+	
 	// トゥーンテクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
 	std::string toonFilePath = "toon\\";
 	struct _stat s = {};
@@ -489,6 +492,8 @@ bool AppD3DX12::ResourceInit() {
 	materialBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * pmdMaterialInfo->materialNum);
 	result = bufferHeapCreator->CreateConstBufferOfMaterial(_dev, materialHeapProp, materialBuffResDesc);
 
+
+
 	// マルチパスレンダリング用
     // 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
 	auto heapDesc2 = rtvHeaps->GetDesc();
@@ -512,6 +517,8 @@ bool AppD3DX12::ResourceInit() {
 		&clearValue,
 		IID_PPV_ARGS(_peraResource.ReleaseAndGetAddressOf())
 	);
+
+
 
 	//頂点バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的に頂点データをコピーする。
 	//CPUは暗黙的なヒープの情報を得られないため、Map関数によりVRAM上のバッファーにアドレスを割り当てた状態で
@@ -593,113 +600,12 @@ bool AppD3DX12::ResourceInit() {
 	}
 
 	// テクスチャ用転送オブジェクト
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> src(pmdMaterialInfo->materialNum);
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> dst(pmdMaterialInfo->materialNum);
-	std::vector<D3D12_RESOURCE_BARRIER> texBarriierDesc(pmdMaterialInfo->materialNum);
-
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
-	{
-		if (bufferHeapCreator->GetTexUploadBuff()[matNum] == nullptr || bufferHeapCreator->GetTexReadBuff()[matNum] == nullptr) continue;
-
-		src[matNum].pResource = bufferHeapCreator->GetTexUploadBuff()[matNum].Get();
-		src[matNum].Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		src[matNum].PlacedFootprint.Offset = 0;
-		src[matNum].PlacedFootprint.Footprint.Width = metaData[matNum]->width;
-		src[matNum].PlacedFootprint.Footprint.Height = metaData[matNum]->height;
-		src[matNum].PlacedFootprint.Footprint.Depth = metaData[matNum]->depth;
-		src[matNum].PlacedFootprint.Footprint.RowPitch =
-			Utility::AlignmentSize(img[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT); // R8G8B8A8:4bit * widthの値は256の倍数であること
-		src[matNum].PlacedFootprint.Footprint.Format = img[matNum]->format;//metaData.format;
-
-		//コピー先設定
-		dst[matNum].pResource = bufferHeapCreator->GetTexReadBuff()[matNum].Get();
-		dst[matNum].Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dst[matNum].SubresourceIndex = 0;
-
-		{
-			_cmdList->CopyTextureRegion(&dst[matNum], 0, 0, 0, &src[matNum], nullptr);
-
-			//バリア設定
-			texBarriierDesc[matNum].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			texBarriierDesc[matNum].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			texBarriierDesc[matNum].Transition.pResource = bufferHeapCreator->GetTexReadBuff()[matNum].Get();
-			texBarriierDesc[matNum].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			texBarriierDesc[matNum].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			texBarriierDesc[matNum].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-			_cmdList->ResourceBarrier(1, &texBarriierDesc[matNum]);
-			_cmdList->Close();
-			//コマンドリストの実行
-			ID3D12CommandList* cmdlists[] = { _cmdList.Get() };
-			_cmdQueue->ExecuteCommandLists(1, cmdlists);
-			////待ち
-			_cmdQueue->Signal(_fence.Get(), ++_fenceVal);
-
-			if (_fence->GetCompletedValue() != _fenceVal) {
-				auto event = CreateEvent(nullptr, false, false, nullptr);
-				_fence->SetEventOnCompletion(_fenceVal, event);
-				WaitForSingleObject(event, INFINITE);
-				CloseHandle(event);
-			}
-			_cmdAllocator->Reset();//キューをクリア
-			_cmdList->Reset(_cmdAllocator.Get(), nullptr);
-		}
-	}
+	textureTransporter->TransportTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img, _fence, _fenceVal);
 
 	// トゥーンテクスチャ用転送オブジェクト
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> toonSrc(pmdMaterialInfo->materialNum);
-	std::vector<D3D12_TEXTURE_COPY_LOCATION> toonDst(pmdMaterialInfo->materialNum);
-	std::vector<D3D12_RESOURCE_BARRIER> toonBarriierDesc(pmdMaterialInfo->materialNum);
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
-	{
-		if (bufferHeapCreator->GetToonUploadBuff()[matNum] == nullptr || bufferHeapCreator->GetToonReadBuff()[matNum] == nullptr) continue;
-
-		toonSrc[matNum].pResource = bufferHeapCreator->GetToonUploadBuff()[matNum].Get();
-		toonSrc[matNum].Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		toonSrc[matNum].PlacedFootprint.Offset = 0;
-		toonSrc[matNum].PlacedFootprint.Footprint.Width = toonMetaData[matNum]->width;
-		toonSrc[matNum].PlacedFootprint.Footprint.Height = toonMetaData[matNum]->height;
-		toonSrc[matNum].PlacedFootprint.Footprint.Depth = toonMetaData[matNum]->depth;
-		toonSrc[matNum].PlacedFootprint.Footprint.RowPitch =
-			Utility::AlignmentSize(toonImg[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT); // R8G8B8A8:4bit * widthの値は256の倍数であること
-		toonSrc[matNum].PlacedFootprint.Footprint.Format = toonImg[matNum]->format;
-
-		//コピー先設定
-		toonDst[matNum].pResource = bufferHeapCreator->GetToonReadBuff()[matNum].Get();
-		toonDst[matNum].Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		toonDst[matNum].SubresourceIndex = 0;
-
-		{
-			_cmdList->CopyTextureRegion(&toonDst[matNum], 0, 0, 0, &toonSrc[matNum], nullptr);
-
-			//バリア設定
-			toonBarriierDesc[matNum].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			toonBarriierDesc[matNum].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			toonBarriierDesc[matNum].Transition.pResource = bufferHeapCreator->GetToonReadBuff()[matNum].Get();
-			toonBarriierDesc[matNum].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			toonBarriierDesc[matNum].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			toonBarriierDesc[matNum].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-			_cmdList->ResourceBarrier(1, &toonBarriierDesc[matNum]);
-			_cmdList->Close();
-			//コマンドリストの実行
-			ID3D12CommandList* cmdlists[] = { _cmdList.Get() };
-			_cmdQueue->ExecuteCommandLists(1, cmdlists);
-			////待ち
-			_cmdQueue->Signal(_fence.Get(), ++_fenceVal);
-
-			if (_fence->GetCompletedValue() != _fenceVal) {
-				auto event = CreateEvent(nullptr, false, false, nullptr);
-				_fence->SetEventOnCompletion(_fenceVal, event);
-				WaitForSingleObject(event, INFINITE);
-				CloseHandle(event);
-			}
-			_cmdAllocator->Reset();//キューをクリア
-			_cmdList->Reset(_cmdAllocator.Get(), nullptr);
-		}
-	}
+	textureTransporter->TransportToonTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal);
 
 	//行列CBV,SRVディスクリプタヒープ作成
 	basicDescHeap = nullptr;
@@ -867,7 +773,6 @@ bool AppD3DX12::ResourceInit() {
 	// 初期化処理10：イベントハンドルの作成
 	// 初期化処理11：GPUの処理完了待ち
 
-		//●描画
 	return true;
 }
 
@@ -1018,18 +923,22 @@ void AppD3DX12::Run() {
 		//フリップしてレンダリングされたイメージをユーザーに表示
 		_swapChain->Present(1, 0);
 	}
-
+	
 	delete vertMap;
 	delete mappedIdx;
 	delete mapMaterial;
 	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
+	
+	delete bufferHeapCreator;
+	delete textureTransporter;
+	delete textureLoader;
 
-	delete pmdMaterialInfo;
-	delete vmdMotionInfo;
 	delete pmdActor;
-	delete prepareRenderingWindow;
+	
 	delete setRootSignature;
 	delete gPLSetting;
-	delete bufferHeapCreator;
-	delete textureLoader;
+
+	delete vmdMotionInfo;
+	delete prepareRenderingWindow;
+	delete pmdMaterialInfo;
 }

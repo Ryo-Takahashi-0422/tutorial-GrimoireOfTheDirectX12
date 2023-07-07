@@ -24,6 +24,7 @@ private:
 	ComPtr<ID3D12PipelineState> _pipelineState = nullptr;
 	GraphicsPipelineSetting* gPLSetting = nullptr;
 	BufferHeapCreator* bufferHeapCreator = nullptr;
+	TextureTransporter* textureTransporter = nullptr;
 
 	D3D12_VERTEX_BUFFER_VIEW vbView;
 	ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;

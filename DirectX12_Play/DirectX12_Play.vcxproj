@@ -193,6 +193,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TextureLoader.cpp" />
+    <ClCompile Include="TextureTransporter.cpp" />
     <ClCompile Include="Utility.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
@@ -240,6 +241,7 @@
     <ClInclude Include="SetRootSignature.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TextureLoader.h" />
+    <ClInclude Include="TextureTransporter.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="VMDMotionInfo.h" />
   </ItemGroup>
