@@ -95,6 +95,34 @@ HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev,
 	);
 }
 
+HRESULT BufferHeapCreator::CreateConstBufferOfMatrix(ComPtr<ID3D12Device> _dev, 
+	D3D12_HEAP_PROPERTIES& constBuffProp, D3D12_RESOURCE_DESC& constBuffResdesc)
+{
+	return _dev->CreateCommittedResource
+	(
+		&constBuffProp,
+		D3D12_HEAP_FLAG_NONE,
+		&constBuffResdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(matrixBuff.ReleaseAndGetAddressOf())
+	);
+}
+
+HRESULT BufferHeapCreator::CreateConstBufferOfMaterial(ComPtr<ID3D12Device> _dev,
+	D3D12_HEAP_PROPERTIES& materialHeapProp, D3D12_RESOURCE_DESC& materialBuffResDesc)
+{
+	return _dev->CreateCommittedResource
+	(
+		&materialHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&materialBuffResDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(materialBuff.ReleaseAndGetAddressOf())
+	);
+}
+
 void BufferHeapCreator::CreateUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 	std::string strModelPath, std::vector<DirectX::TexMetadata*>& metaData, std::vector<DirectX::Image*>& img)
 {
@@ -240,6 +268,16 @@ ComPtr<ID3D12Resource> BufferHeapCreator::GetIdxBuff()
 ComPtr<ID3D12Resource> BufferHeapCreator::GetDepthBuff()
 {
 	return depthBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetMatrixBuff()
+{
+	return matrixBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetMaterialBuff()
+{
+	return materialBuff;
 }
 
 std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetTexUploadBuff()

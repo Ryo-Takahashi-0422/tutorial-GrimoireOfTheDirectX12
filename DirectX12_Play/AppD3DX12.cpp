@@ -474,19 +474,12 @@ bool AppD3DX12::ResourceInit() {
 		100.0 // ファークリップ
 	);
 
+	// 行列用定数バッファーの生成
 	D3D12_HEAP_PROPERTIES constBuffProp = {};
 	constBuffProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	D3D12_RESOURCE_DESC constBuffResdesc = {};
 	constBuffResdesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(SceneMatrix) + 0xff) & ~0xff);;
-	_dev->CreateCommittedResource
-	(
-		&constBuffProp,
-		D3D12_HEAP_FLAG_NONE,
-		&constBuffResdesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(matrixBuff.ReleaseAndGetAddressOf())
-	);
+	result = bufferHeapCreator->CreateConstBufferOfMatrix(_dev, constBuffProp, constBuffResdesc);
 	
 	//マテリアル用定数バッファーの生成
 	auto materialBuffSize = (sizeof(MaterialForHlsl) + 0xff) & ~0xff;
@@ -494,16 +487,7 @@ bool AppD3DX12::ResourceInit() {
 	D3D12_RESOURCE_DESC materialBuffResDesc = {};
 	materialHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	materialBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * pmdMaterialInfo->materialNum);
-
-	_dev->CreateCommittedResource
-	(
-		&materialHeapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&materialBuffResDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(materialBuff.ReleaseAndGetAddressOf())
-	);
+	result = bufferHeapCreator->CreateConstBufferOfMaterial(_dev, materialHeapProp, materialBuffResDesc);
 
 	// マルチパスレンダリング用
     // 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
@@ -547,7 +531,7 @@ bool AppD3DX12::ResourceInit() {
 	//boneMatrices = pmdMaterialInfo->GetBoneMatrices();
 	//行列用定数バッファーのマッピング
 	//mapMatrix = nullptr;
-	result = matrixBuff->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix);
+	result = bufferHeapCreator->GetMatrixBuff()->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix);
 	pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 	pmdMaterialInfo->mapMatrix->view = viewMat;
 	pmdMaterialInfo->mapMatrix->proj = projMat;
@@ -555,14 +539,14 @@ bool AppD3DX12::ResourceInit() {
 
 	//マテリアル用バッファーへのマッピング
 	//mapMaterial = nullptr;
-	result = materialBuff->Map(0, nullptr, (void**)&mapMaterial);
+	result = bufferHeapCreator->GetMaterialBuff()->Map(0, nullptr, (void**)&mapMaterial);
 	for (auto m : pmdMaterialInfo->materials)
 	{
 		*((MaterialForHlsl*)mapMaterial) = m.material;
 		mapMaterial += materialBuffSize;
 	}
-	materialBuff->Unmap(0, nullptr);
-
+	bufferHeapCreator->GetMaterialBuff()->Unmap(0, nullptr);
+	
 	// テクスチャアップロード用バッファーの仮想アドレスをポインタにマップ(関連付け)して、
 	// 仮想的にインデックスデータをコピーする。
 	// テクスチャのアップロード用バッファへのマッピング
@@ -756,11 +740,11 @@ bool AppD3DX12::ResourceInit() {
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; // 行列用
-	cbvDesc.BufferLocation = matrixBuff->GetGPUVirtualAddress();
-	cbvDesc.SizeInBytes = matrixBuff->GetDesc().Width;
+	cbvDesc.BufferLocation = bufferHeapCreator->GetMatrixBuff()->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = bufferHeapCreator->GetMatrixBuff()->GetDesc().Width;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC materialCBVDesc = {}; // マテリアル情報、テクスチャ、sph
-	materialCBVDesc.BufferLocation = materialBuff->GetGPUVirtualAddress();
+	materialCBVDesc.BufferLocation = bufferHeapCreator->GetMaterialBuff()->GetGPUVirtualAddress();
 	materialCBVDesc.SizeInBytes = materialBuffSize;
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};

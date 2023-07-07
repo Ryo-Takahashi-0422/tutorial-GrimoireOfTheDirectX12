@@ -32,14 +32,6 @@ private:
 	ComPtr<ID3D12DescriptorHeap> basicDescHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC basicDescHeapDesc;
 
-	ComPtr<ID3D12Resource> matrixBuff = nullptr; // 行列用定数バッファー
-	ComPtr<ID3D12Resource> materialBuff = nullptr; // マテリアル用定数バッファー
-	std::vector<ComPtr<ID3D12Resource>> texUploadBuff;//テクスチャCPUアップロード用バッファー
-	std::vector<ComPtr<ID3D12Resource>> texReadBuff;//テクスチャGPU読み取り用バッファー
-	std::vector<ComPtr<ID3D12Resource>> sphMappedBuff;//sph用バッファー
-	std::vector<ComPtr<ID3D12Resource>> spaMappedBuff;//spa用バッファー
-	std::vector<ComPtr<ID3D12Resource>> toonUploadBuff;//トゥーン用アップロードバッファー
-	std::vector<ComPtr<ID3D12Resource>> toonReadBuff;//トゥーン用リードバッファー
 	ComPtr<ID3D12Resource> whiteBuff = nullptr;
 	ComPtr<ID3D12Resource> BlackBuff = nullptr;
 	ComPtr<ID3D12Resource> grayTexBuff = nullptr;
