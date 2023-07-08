@@ -24,11 +24,10 @@ private:
 	GraphicsPipelineSetting* gPLSetting = nullptr;
 	BufferHeapCreator* bufferHeapCreator = nullptr;
 	TextureTransporter* textureTransporter = nullptr;
+	MappingExecuter* mappingExecuter = nullptr;
 
 	D3D12_VERTEX_BUFFER_VIEW vbView;
-	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
 	D3D12_INDEX_BUFFER_VIEW ibView;
-	D3D12_DESCRIPTOR_HEAP_DESC matrixHeapDesc;
 
 	ComPtr<ID3D12Resource> whiteBuff = nullptr;
 	ComPtr<ID3D12Resource> BlackBuff = nullptr;
@@ -38,10 +37,6 @@ private:
 	std::vector<DirectX::Image*> img;
 	std::vector<DirectX::TexMetadata*> toonMetaData;
 	std::vector<DirectX::Image*> toonImg;
-
-	unsigned char* vertMap = nullptr;
-	unsigned short* mappedIdx = nullptr;
-	char* mapMaterial = nullptr;
 
 	// シングルトンなのでコンストラクタ、コピーコンストラクタ、代入演算子はprivateにする
 	// コンストラクタ

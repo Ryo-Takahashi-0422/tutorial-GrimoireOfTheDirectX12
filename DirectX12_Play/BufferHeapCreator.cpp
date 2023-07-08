@@ -18,70 +18,76 @@ BufferHeapCreator::BufferHeapCreator(PMDMaterialInfo* _pmdMaterialInfo,  Prepare
 	spaMappedBuff.resize(pmdMaterialInfo->materialNum);//spa用バッファー
 	toonUploadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用アップロードバッファー
 	toonReadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用リードバッファー
+
+	materialBuffSize = (sizeof(MaterialForHlsl) + 0xff) & ~0xff;
 }
 
-void BufferHeapCreator::SetRTVHeapDesc(D3D12_DESCRIPTOR_HEAP_DESC* rtvHeapDesc)
+void BufferHeapCreator::SetRTVHeapDesc()
 {
-	rtvHeapDesc->Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvHeapDesc->NumDescriptors = 2;
-	rtvHeapDesc->Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	rtvHeapDesc->NodeMask = 0;
+	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvHeapDesc.NumDescriptors = 2;
+	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	rtvHeapDesc.NodeMask = 0;
 }
 
-void BufferHeapCreator::SetDSVHeapDesc()//D3D12_DESCRIPTOR_HEAP_DESC* dsvHeapDesc)
+void BufferHeapCreator::SetDSVHeapDesc()
 {
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.NumDescriptors = 1;
 }
 
-void BufferHeapCreator::SetMatrixHeapDesc(D3D12_DESCRIPTOR_HEAP_DESC* matrixHeapDesc)
+void BufferHeapCreator::SetMatrixHeapDesc()
 {
-	matrixHeapDesc->Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	matrixHeapDesc->NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv,material cbv + テクスチャsrv, sph,spa,toon
-	matrixHeapDesc->Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	matrixHeapDesc->NodeMask = 0;
+	matrixHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	matrixHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv,material cbv + テクスチャsrv, sph,spa,toon
+	matrixHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	matrixHeapDesc.NodeMask = 0;
 }
 
-void BufferHeapCreator::SetVertexAndIndexHeapProp(D3D12_HEAP_PROPERTIES* heapProps)
+void BufferHeapCreator::SetVertexAndIndexHeapProp()
 {
-	heapProps->Type = D3D12_HEAP_TYPE_UPLOAD;
-	heapProps->CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapProps->MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	heapProps->CreationNodeMask = 0;
-	heapProps->VisibleNodeMask = 0;
+	vertexHeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	vertexHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	vertexHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	vertexHeapProps.CreationNodeMask = 0;
+	vertexHeapProps.VisibleNodeMask = 0;
 }
 
-void BufferHeapCreator::SetDepthHeapProp(D3D12_HEAP_PROPERTIES* depthHeapProps)
+void BufferHeapCreator::SetDepthHeapProp()
 {
-	depthHeapProps->Type = D3D12_HEAP_TYPE_DEFAULT;
-	depthHeapProps->CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	depthHeapProps->MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	depthHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	depthHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	depthHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 }
 
-void BufferHeapCreator::SetDepthResourceDesc(D3D12_RESOURCE_DESC* depthResDesc)
+void BufferHeapCreator::SetDepthResourceDesc()
 {
-	depthResDesc->Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthResDesc->Width = prepareRenderingWindow->GetWindowWidth();
-	depthResDesc->Height = prepareRenderingWindow->GetWindowHeight();
-	depthResDesc->DepthOrArraySize = 1;
-	depthResDesc->Format = DXGI_FORMAT_D32_FLOAT; // 深度値書き込み用
-	depthResDesc->SampleDesc.Count = 1; // 1pixce/1つのサンプル
-	depthResDesc->Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	depthResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthResDesc.Width = prepareRenderingWindow->GetWindowWidth();
+	depthResDesc.Height = prepareRenderingWindow->GetWindowHeight();
+	depthResDesc.DepthOrArraySize = 1;
+	depthResDesc.Format = DXGI_FORMAT_D32_FLOAT; // 深度値書き込み用
+	depthResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
+	depthResDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 }
 
-void BufferHeapCreator::SetClearValue(D3D12_CLEAR_VALUE* depthClearValue)
+void BufferHeapCreator::SetClearValue()
 {
-	depthClearValue->Format = DXGI_FORMAT_D32_FLOAT;
-	depthClearValue->DepthStencil.Depth = 1.0f; // 深さ1.0(最大値)でクリア
+	float clsClr[4] = { 0.5,0.5,0.5,1.0 };
+	depthClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, clsClr);
+	//depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	//depthClearValue.DepthStencil.Depth = 1.0f; // 深さ1.0(最大値)でクリア
+
 }
 
-HRESULT BufferHeapCreator::CreateRTVHeap(ComPtr<ID3D12Device> _dev, D3D12_DESCRIPTOR_HEAP_DESC& rtvHeapDesc)
+HRESULT BufferHeapCreator::CreateRTVHeap(ComPtr<ID3D12Device> _dev)
 {
 	return _dev->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(rtvHeaps.ReleaseAndGetAddressOf()));
 }
 
-HRESULT BufferHeapCreator::CreateDSVHeap(ComPtr<ID3D12Device> _dev)//, D3D12_DESCRIPTOR_HEAP_DESC& dsvHeapDesc)
+HRESULT BufferHeapCreator::CreateDSVHeap(ComPtr<ID3D12Device> _dev)
 {
+	SetDSVHeapDesc();
 	return _dev->CreateDescriptorHeap
 	(
 		&dsvHeapDesc,
@@ -89,8 +95,9 @@ HRESULT BufferHeapCreator::CreateDSVHeap(ComPtr<ID3D12Device> _dev)//, D3D12_DES
 	);
 }
 
-HRESULT BufferHeapCreator::CreateMatrixHeap(ComPtr<ID3D12Device> _dev, D3D12_DESCRIPTOR_HEAP_DESC& matrixHeapDesc)
+HRESULT BufferHeapCreator::CreateMatrixHeap(ComPtr<ID3D12Device> _dev)
 {
+	SetMatrixHeapDesc();
 	return _dev->CreateDescriptorHeap
 	(
 		&matrixHeapDesc,
@@ -98,12 +105,13 @@ HRESULT BufferHeapCreator::CreateMatrixHeap(ComPtr<ID3D12Device> _dev, D3D12_DES
 	);
 }
 
-HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev, 
-	D3D12_HEAP_PROPERTIES& heapProps, D3D12_RESOURCE_DESC& vertresDesc)
+HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev)
 {
+	vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(pmdMaterialInfo->vertices.size());
+
 	return _dev->CreateCommittedResource
 	(
-		&heapProps,
+		&vertexHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&vertresDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ, // リソースの状態。GPUからして読み取り用
@@ -112,12 +120,13 @@ HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev,
 	);
 }
 
-HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev,
-	D3D12_HEAP_PROPERTIES& heapProps, D3D12_RESOURCE_DESC& indicesDesc)
+HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev)
 {
+	indicesDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size());
+
 	return _dev->CreateCommittedResource
 	(
-		&heapProps,
+		&vertexHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&indicesDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -126,8 +135,7 @@ HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev,
 	);
 }
 
-HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev,
-	D3D12_HEAP_PROPERTIES& depthHeapProps, D3D12_RESOURCE_DESC& depthResDesc)
+HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev)
 {
 	return _dev->CreateCommittedResource
 	(
@@ -140,23 +148,28 @@ HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev,
 	);
 }
 
-HRESULT BufferHeapCreator::CreateConstBufferOfMatrix(ComPtr<ID3D12Device> _dev, 
-	D3D12_HEAP_PROPERTIES& constBuffProp, D3D12_RESOURCE_DESC& constBuffResdesc)
+HRESULT BufferHeapCreator::CreateConstBufferOfWVPMatrix(ComPtr<ID3D12Device> _dev)
 {
+	// 一般的なWVP(モデル→world→ビュー→プロジェクション)変換を行うので、流用可能なハズ...
+	wvpHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	wvpResdesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(SceneMatrix) + 0xff) & ~0xff);
+
 	return _dev->CreateCommittedResource
 	(
-		&constBuffProp,
+		&wvpHeapProp,
 		D3D12_HEAP_FLAG_NONE,
-		&constBuffResdesc,
+		&wvpResdesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(matrixBuff.ReleaseAndGetAddressOf())
 	);
 }
 
-HRESULT BufferHeapCreator::CreateConstBufferOfMaterial(ComPtr<ID3D12Device> _dev,
-	D3D12_HEAP_PROPERTIES& materialHeapProp, D3D12_RESOURCE_DESC& materialBuffResDesc)
+HRESULT BufferHeapCreator::CreateConstBufferOfMaterial(ComPtr<ID3D12Device> _dev)
 {
+	materialHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	materialBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * pmdMaterialInfo->materialNum);
+
 	return _dev->CreateCommittedResource
 	(
 		&materialHeapProp,
@@ -169,15 +182,16 @@ HRESULT BufferHeapCreator::CreateConstBufferOfMaterial(ComPtr<ID3D12Device> _dev
 }
 
 HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _dev, D3D12_HEAP_PROPERTIES& mutipassHeapProp,
-	D3D12_RESOURCE_DESC& mutipassResDesc, D3D12_CLEAR_VALUE clearValue)
+	D3D12_RESOURCE_DESC& mutipassResDesc)
 {
+	SetClearValue();
 	return _dev->CreateCommittedResource
 	(
 		&mutipassHeapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&mutipassResDesc,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		&clearValue,
+		&depthClearValue,
 		IID_PPV_ARGS(_peraResource.ReleaseAndGetAddressOf())
 	);
 }
@@ -312,6 +326,11 @@ void BufferHeapCreator::CreateToonUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 		else
 			std::tie(toonUploadBuff[i], toonReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
 	}
+}
+
+unsigned long BufferHeapCreator::GetMaterialBuffSize()
+{
+	return materialBuffSize;
 }
 
 ComPtr<ID3D12DescriptorHeap> BufferHeapCreator::GetRTVHeap()
