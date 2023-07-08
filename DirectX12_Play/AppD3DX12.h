@@ -15,7 +15,6 @@ private:
 	ComPtr<ID3D10Blob> _psBlob = nullptr; // ピクセルシェーダーオブジェクト格納用
 	ComPtr<ID3D12Fence> _fence = nullptr;
 	UINT64 _fenceVal;
-	ComPtr<ID3D12DescriptorHeap> rtvHeaps = nullptr;
 	std::vector<ComPtr<ID3D12Resource>> _backBuffers;
 	D3D12_CPU_DESCRIPTOR_HANDLE handle;
 	HRESULT result;
@@ -27,11 +26,9 @@ private:
 	TextureTransporter* textureTransporter = nullptr;
 
 	D3D12_VERTEX_BUFFER_VIEW vbView;
-	ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
 	D3D12_INDEX_BUFFER_VIEW ibView;
-	ComPtr<ID3D12DescriptorHeap> basicDescHeap = nullptr;
-	D3D12_DESCRIPTOR_HEAP_DESC basicDescHeapDesc;
+	D3D12_DESCRIPTOR_HEAP_DESC matrixHeapDesc;
 
 	ComPtr<ID3D12Resource> whiteBuff = nullptr;
 	ComPtr<ID3D12Resource> BlackBuff = nullptr;
@@ -81,7 +78,7 @@ private:
 	void UpdateVMDMotion(std::map<std::string, BoneNode> bNodeTable, 
 		std::unordered_map<std::string, std::vector<KeyFrame>> motionData);
 
-	ComPtr<ID3D12Resource> _peraResource;
+	
 
 public:
 	///Applicationのシングルトンインスタンスを得る

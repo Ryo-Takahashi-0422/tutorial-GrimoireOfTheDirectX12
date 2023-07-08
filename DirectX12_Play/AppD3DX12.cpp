@@ -148,7 +148,7 @@ bool AppD3DX12::PipelineInit(){
 #ifdef _DEBUG
 	Utility::EnableDebugLayer();
 #endif
-	// 各種デバイスの初期設定
+//初期化処理２：各種デバイスの初期設定
 	D3DX12DeviceInit();
 
 	// カラークリアに関するWarningをフィルタリング(メッセージが埋もれてしまう...)
@@ -172,7 +172,7 @@ bool AppD3DX12::PipelineInit(){
 	// ついでにエラーメッセージでブレークさせる
 	result = infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
 
-	//初期化処理３：コマンドキューの記述用意・作成
+//初期化処理３：コマンドキューの記述用意・作成
 
 		//コマンドキュー生成、詳細obj生成
 	D3D12_COMMAND_QUEUE_DESC cmdQueueDesc = {};
@@ -184,7 +184,7 @@ bool AppD3DX12::PipelineInit(){
 	//コマンドキュー生成
 	result = _dev->CreateCommandQueue(&cmdQueueDesc, IID_PPV_ARGS(_cmdQueue.ReleaseAndGetAddressOf()));
 
-	//初期化処理４：スワップチェーンの生成
+//初期化処理４：スワップチェーンの生成
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.Width = prepareRenderingWindow->GetWindowWidth();
 	swapChainDesc.Height = prepareRenderingWindow->GetWindowHeight();
@@ -206,18 +206,14 @@ bool AppD3DX12::PipelineInit(){
 		nullptr,
 		(IDXGISwapChain1**)_swapChain.ReleaseAndGetAddressOf());
 
-	//初期化処理５：レンダーターゲットビュー(RTV)の記述子ヒープを作成
-			//RTV 記述子ヒープ領域の確保
-	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+//初期化処理５：レンダーターゲットビュー(RTV)の記述子ヒープを作成
+	
+	//RTV 記述子ヒープ領域の確保
+	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+	bufferHeapCreator->SetRTVHeapDesc(&rtvHeapDesc);
 
-	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	heapDesc.NumDescriptors = 2;
-	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	heapDesc.NodeMask = 0;
-
-	//記述子ヒープの生成　ID3D12DescriptorHeap：記述子の連続したコレクション
-	//ComPtr<ID3D12DescriptorHeap> rtvHeaps = nullptr;
-	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(rtvHeaps.ReleaseAndGetAddressOf()));
+	//RTV用記述子ヒープの生成　ID3D12DescriptorHeap：記述子の連続したコレクション
+	result = bufferHeapCreator->CreateRTVHeap(_dev, rtvHeapDesc);
 
 	//以下のように記述することでスワップチェーンの持つ情報を新たなDescオブジェクトにコピーできる
 	//DXGI_SWAP_CHAIN_DESC swcDesc = {};//スワップチェーンの説明
@@ -225,7 +221,7 @@ bool AppD3DX12::PipelineInit(){
 
 //初期化処理６：フレームリソース(各フレームのレンダーターゲットビュー)を作成
 	_backBuffers.resize(swapChainDesc.BufferCount);//リソースバッファー
-	handle = rtvHeaps->GetCPUDescriptorHandleForHeapStart();//ヒープの先頭を表す CPU 記述子ハンドルを取得
+	handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();//ヒープの先頭を表す CPU 記述子ハンドルを取得
 
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -246,7 +242,7 @@ bool AppD3DX12::PipelineInit(){
 		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	}
 
-	//初期化処理７：コマンドアロケーターを作成
+//初期化処理７：コマンドアロケーターを作成
 			//コマンドアロケーター生成>>コマンドリスト作成
 	result = _dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator.ReleaseAndGetAddressOf()));
 
@@ -492,31 +488,17 @@ bool AppD3DX12::ResourceInit() {
 	materialBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * pmdMaterialInfo->materialNum);
 	result = bufferHeapCreator->CreateConstBufferOfMaterial(_dev, materialHeapProp, materialBuffResDesc);
 
-
-
-	// マルチパスレンダリング用
+	// マルチパスレンダリング用に書き込み先リソースの作成
     // 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
-	auto heapDesc2 = rtvHeaps->GetDesc();
-
+	auto mutipassHeapDesc = bufferHeapCreator->GetRTVHeap()->GetDesc();
 	// 使っているバックバッファーの情報を利用する
 	auto& bbuff = _backBuffers[0];
-	auto resDesc2 = bbuff->GetDesc();
-
-	D3D12_HEAP_PROPERTIES heapProp2 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-
+	auto mutipassResDesc = bbuff->GetDesc();
+	D3D12_HEAP_PROPERTIES mutipassHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	// レンダリング時のクリア値と同じ値
 	float clsClr[4] = { 0.5,0.5,0.5,1.0 };
 	D3D12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, clsClr);
-
-	auto result = _dev->CreateCommittedResource
-	(
-		&heapProp2,
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc2,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		&clearValue,
-		IID_PPV_ARGS(_peraResource.ReleaseAndGetAddressOf())
-	);
+	result = bufferHeapCreator->CreateRenderBufferForMultipass(_dev, mutipassHeapProp, mutipassResDesc, clearValue);
 
 
 
@@ -608,30 +590,15 @@ bool AppD3DX12::ResourceInit() {
 	textureTransporter->TransportToonTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal);
 
 	//行列CBV,SRVディスクリプタヒープ作成
-	basicDescHeap = nullptr;
-	basicDescHeapDesc = {};
-	basicDescHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	basicDescHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv,material cbv + テクスチャsrv, sph,spa,toon
-	basicDescHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	basicDescHeapDesc.NodeMask = 0;
-
-	result = _dev->CreateDescriptorHeap
-	(
-		&basicDescHeapDesc,
-		IID_PPV_ARGS(basicDescHeap.GetAddressOf())
-	);
+	matrixHeapDesc = {};
+	bufferHeapCreator->SetMatrixHeapDesc(&matrixHeapDesc);
+	result = bufferHeapCreator->CreateMatrixHeap(_dev, matrixHeapDesc);
 
 	//DSVビュー用にディスクリプタヒープ作成
 	//ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;
 	dsvHeapDesc = {};
-	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	dsvHeapDesc.NumDescriptors = 1;
-
-	result = _dev->CreateDescriptorHeap
-	(
-		&dsvHeapDesc,
-		IID_PPV_ARGS(dsvHeap.ReleaseAndGetAddressOf())
-	);
+	bufferHeapCreator->SetDSVHeapDesc();// &dsvHeapDesc);
+	result = bufferHeapCreator->CreateDSVHeap(_dev);//, dsvHeapDesc);
 
 	// 初期化処理8：各ビューを作成
 
@@ -662,17 +629,17 @@ bool AppD3DX12::ResourceInit() {
 	(
 		bufferHeapCreator->GetDepthBuff().Get(),
 		&dsvDesc,
-		dsvHeap->GetCPUDescriptorHandleForHeapStart()
+		bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart()
 	);
 
 	//行列用cbv,マテリアル情報用cbv,テクスチャ用srvを順番に生成
 	_dev->CreateConstantBufferView
 	(
 		&cbvDesc,
-		basicDescHeap->GetCPUDescriptorHandleForHeapStart()//basicDescHeapHandle
+		bufferHeapCreator->GetMatrixHeap()->GetCPUDescriptorHandleForHeapStart()//basicDescHeapHandle
 	);
 
-	auto basicDescHeapHandle = basicDescHeap->GetCPUDescriptorHandleForHeapStart();
+	auto basicDescHeapHandle = bufferHeapCreator->GetMatrixHeap()->GetCPUDescriptorHandleForHeapStart();
 	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	basicDescHeapHandle.ptr += inc;
 
@@ -817,9 +784,9 @@ void AppD3DX12::Run() {
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
 
 		//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
-		handle = rtvHeaps->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
+		handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
 		handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		auto dsvh = dsvHeap->GetCPUDescriptorHandleForHeapStart();
+		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 		_cmdList->OMSetRenderTargets(1, &handle, true, &dsvh);//レンダーターゲットと深度ステンシルの CPU 記述子ハンドルを設定
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
@@ -839,11 +806,11 @@ void AppD3DX12::Run() {
 		//ディスクリプタヒープ設定および
 		//ディスクリプタヒープとルートパラメータの関連付け
 		//ここでルートシグネチャのテーブルとディスクリプタが関連付く
-		_cmdList->SetDescriptorHeaps(1, basicDescHeap.GetAddressOf());
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMatrixHeap().GetAddressOf());
 		_cmdList->SetGraphicsRootDescriptorTable
 		(
 			0, // バインドのスロット番号
-			basicDescHeap->GetGPUDescriptorHandleForHeapStart()
+			bufferHeapCreator->GetMatrixHeap()->GetGPUDescriptorHandleForHeapStart()
 		);
 
 		//テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
@@ -852,11 +819,11 @@ void AppD3DX12::Run() {
 		//_cmdList->SetGraphicsRootDescriptorTable
 		//(
 		//	1, // バインドのスロット番号
-		//	basicDescHeap->GetGPUDescriptorHandleForHeapStart()
+		//	bufferHeapCreator->GetMatrixHeap()->GetGPUDescriptorHandleForHeapStart()
 		//);
 
 		// マテリアルの
-		auto materialHandle = basicDescHeap->GetGPUDescriptorHandleForHeapStart();
+		auto materialHandle = bufferHeapCreator->GetMatrixHeap()->GetGPUDescriptorHandleForHeapStart();
 		auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		auto materialHInc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 5;
 		materialHandle.ptr += inc;
