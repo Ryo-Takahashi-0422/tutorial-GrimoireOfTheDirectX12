@@ -199,6 +199,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ViewCreator.cpp" />
     <ClCompile Include="VMDMotionInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -245,6 +246,7 @@
     <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="TextureTransporter.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="ViewCreator.h" />
     <ClInclude Include="VMDMotionInfo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

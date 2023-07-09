@@ -25,13 +25,7 @@ private:
 	BufferHeapCreator* bufferHeapCreator = nullptr;
 	TextureTransporter* textureTransporter = nullptr;
 	MappingExecuter* mappingExecuter = nullptr;
-
-	D3D12_VERTEX_BUFFER_VIEW vbView;
-	D3D12_INDEX_BUFFER_VIEW ibView;
-
-	ComPtr<ID3D12Resource> whiteBuff = nullptr;
-	ComPtr<ID3D12Resource> BlackBuff = nullptr;
-	ComPtr<ID3D12Resource> grayTexBuff = nullptr;
+	ViewCreator* viewCreator = nullptr;
 
 	std::vector<DirectX::TexMetadata*> metaData;
 	std::vector<DirectX::Image*> img;

@@ -37,5 +37,6 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 #include <BufferHeapCreator.h>
 #include <TextureTransporter.h>
 #include <MappingExecuter.h>
+#include <ViewCreator.h>
 #include <sstream>
 //#include <AppD3DX12.h>

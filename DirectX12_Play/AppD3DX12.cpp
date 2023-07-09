@@ -112,7 +112,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// PMDActorクラスのインスタンス化
 	pmdActor = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
-	//pmdActor->SolveCCDIK(pmdMaterialInfo->GetpPMDIKData()[0]);
 
 	// GraphicsPipelineSettingクラスのインスタンス化
 	gPLSetting = new GraphicsPipelineSetting;
@@ -137,6 +136,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// MappingExecuterクラスのインスタンス化
 	mappingExecuter = new MappingExecuter(pmdMaterialInfo, bufferHeapCreator);
+
+	// ViewCreatorクラスのインスタンス化
+	viewCreator = new ViewCreator(pmdMaterialInfo, bufferHeapCreator);
 
 	// レンダリングウィンドウ表示
 	ShowWindow(prepareRenderingWindow->GetHWND(), SW_SHOW);
@@ -493,15 +495,11 @@ bool AppD3DX12::ResourceInit() {
 	
 	// テクスチャのアップロード用バッファへのマッピング
 	mappingExecuter->TransferTexUploadToBuff(img);
-
-	// トゥーンテクスチャも同様にマッピング
-	mappingExecuter->TransferToonTexUploadToBuff(toonImg);
-
-	// テクスチャ用転送オブジェクト
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	textureTransporter->TransportTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img, _fence, _fenceVal);
 
-	// トゥーンテクスチャ用転送オブジェクト
+	// トゥーンテクスチャも同様にマッピング
+	mappingExecuter->TransferToonTexUploadToBuff(toonImg);
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	textureTransporter->TransportToonTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal);
 
@@ -513,143 +511,28 @@ bool AppD3DX12::ResourceInit() {
 
 // 初期化処理8：各ビューを作成
 
-	vbView = {};
-	vbView.BufferLocation = bufferHeapCreator->GetVertBuff()->GetGPUVirtualAddress();//バッファの仮想アドレス
-	vbView.SizeInBytes = pmdMaterialInfo->vertices.size();//全バイト数
-	vbView.StrideInBytes = pmdMaterialInfo->pmdvertex_size;//1頂点あたりのバイト数
+	// Vertexビュー作成
+	viewCreator->SetVertexBufferView();
 
-	ibView = {};
-	ibView.BufferLocation = bufferHeapCreator->GetIdxBuff()->GetGPUVirtualAddress();
-	ibView.SizeInBytes = sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size();
-	ibView.Format = DXGI_FORMAT_R16_UINT;
+	// Indexビュー作成
+	viewCreator->SetIndexBufferView();
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; // 行列用
-	cbvDesc.BufferLocation = bufferHeapCreator->GetMatrixBuff()->GetGPUVirtualAddress();
-	cbvDesc.SizeInBytes = bufferHeapCreator->GetMatrixBuff()->GetDesc().Width;
+	// 行列用cbv作成
+	viewCreator->CreateCBV4Matrix(_dev);
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC materialCBVDesc = {}; // マテリアル情報、テクスチャ、sph
-	materialCBVDesc.BufferLocation = bufferHeapCreator->GetMaterialBuff()->GetGPUVirtualAddress();
-	materialCBVDesc.SizeInBytes = bufferHeapCreator->GetMaterialBuffSize();
+	// DSV作成
+	viewCreator->CreateDSVWrapper(_dev);
 
-	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+	// pmdモデルのマテリアル、テクスチャ、sph用ビューを作成。これがないとモデル真っ黒になる。
+	viewCreator->CreateCBV4MateriallTextureSph(_dev);
 
-	_dev->CreateDepthStencilView
-	(
-		bufferHeapCreator->GetDepthBuff().Get(),
-		&dsvDesc,
-		bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart()
-	);
-
-	//行列用cbv,マテリアル情報用cbv,テクスチャ用srvを順番に生成
-	_dev->CreateConstantBufferView
-	(
-		&cbvDesc,
-		bufferHeapCreator->GetMatrixHeap()->GetCPUDescriptorHandleForHeapStart()//basicDescHeapHandle
-	);
-
-	auto basicDescHeapHandle = bufferHeapCreator->GetMatrixHeap()->GetCPUDescriptorHandleForHeapStart();
-	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	basicDescHeapHandle.ptr += inc;
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Texture2D.MipLevels = 1;
-
-	// 白テクスチャバッファ
-	whiteBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0xff);
-	// 黒テクスチャバッファ
-	BlackBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0x00);
-	// グレーグラデーション
-	grayTexBuff = CreateD3DX12ResourceBuffer::CreateGrayGradationTexture(_dev);
-
-	//マテリアル用のcbv,srvを作成
-	for (int i = 0; i < pmdMaterialInfo->materialNum; i++)
-	{
-		_dev->CreateConstantBufferView(&materialCBVDesc, basicDescHeapHandle);
-		basicDescHeapHandle.ptr += inc;
-		materialCBVDesc.BufferLocation += bufferHeapCreator->GetMaterialBuffSize();
-
-		// テクスチャ
-		if (bufferHeapCreator->GetTexReadBuff()[i] == nullptr)
-		{
-			srvDesc.Format = whiteBuff->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(whiteBuff.Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		else
-		{
-			srvDesc.Format = bufferHeapCreator->GetTexReadBuff()[i]->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetTexReadBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		basicDescHeapHandle.ptr += inc;
-
-		// sphファイル
-		if (bufferHeapCreator->GetsphMappedBuff()[i] == nullptr)
-		{
-			srvDesc.Format = whiteBuff->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(whiteBuff.Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		else
-		{
-			srvDesc.Format = bufferHeapCreator->GetsphMappedBuff()[i]->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetsphMappedBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		basicDescHeapHandle.ptr += inc;
-
-		// spaファイル
-		if (bufferHeapCreator->GetspaMappedBuff()[i] == nullptr)
-		{
-			srvDesc.Format = BlackBuff->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(BlackBuff.Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		else
-		{
-			srvDesc.Format = bufferHeapCreator->GetspaMappedBuff()[i]->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetspaMappedBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		basicDescHeapHandle.ptr += inc;
-
-		// トゥーンテクスチャファイル
-		if (bufferHeapCreator->GetToonReadBuff()[i] == nullptr)
-		{
-			srvDesc.Format = grayTexBuff->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(grayTexBuff.Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		else
-		{
-			srvDesc.Format = bufferHeapCreator->GetToonReadBuff()[i]->GetDesc().Format;
-			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetToonReadBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
-		}
-
-		basicDescHeapHandle.ptr += inc;
-	}
-
-	//// 初期化処理9：フェンスの生成
+// 初期化処理9：フェンスの生成
 	//	ID3D12Fence* _fence = nullptr;
 	//	UINT64 _fenceVal = 0;
 	//	result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fence));
 
-	// 初期化処理10：イベントハンドルの作成
-	// 初期化処理11：GPUの処理完了待ち
+// 初期化処理10：イベントハンドルの作成
+// 初期化処理11：GPUの処理完了待ち
 
 	return true;
 }
@@ -709,10 +592,10 @@ void AppD3DX12::Run() {
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		//頂点バッファーのCPU記述子ハンドルを設定
-		_cmdList->IASetVertexBuffers(0, 1, &vbView);
+		_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
 
 		//インデックスバッファーのビューを設定
-		_cmdList->IASetIndexBuffer(&ibView);
+		_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
 
 		//ディスクリプタヒープ設定および
 		//ディスクリプタヒープとルートパラメータの関連付け
@@ -802,6 +685,7 @@ void AppD3DX12::Run() {
 		_swapChain->Present(1, 0);
 	}
 	
+	delete viewCreator;
 	delete mappingExecuter;
 	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
 	
