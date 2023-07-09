@@ -107,6 +107,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// SettingShaderCompileクラスのインスタンス化
 	settingShaderCompile = new SettingShaderCompile;
+
+	// VertexInputLayoutクラスのインスタンス化
+	vertexInputLayout = new VertexInputLayout;
 	
 	// PMDファイルの読み込み
 	pmdMaterialInfo = new PMDMaterialInfo;
@@ -120,7 +123,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	pmdActor = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
 
 	// GraphicsPipelineSettingクラスのインスタンス化
-	gPLSetting = new GraphicsPipelineSetting;
+	gPLSetting = new GraphicsPipelineSetting(vertexInputLayout);
 
 	// アニメーション用の回転・並行移動行列の参照準備
 	boneMatrices = new std::vector<DirectX::XMMATRIX>;
@@ -278,86 +281,9 @@ bool AppD3DX12::ResourceInit() {
 	_vsBlob = blobs.first;
 	_psBlob = blobs.second;
 
-// 初期化処理3：頂点入力レイアウトの作成
-
-	D3D12_INPUT_ELEMENT_DESC inputLayout[] =
-	{
-		//座標
-		{
-			"POSITION",
-			0, // 同じセマンティクスに対するインデックス
-			DXGI_FORMAT_R32G32B32_FLOAT,
-			0, // スロットインデックス
-			D3D12_APPEND_ALIGNED_ELEMENT,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0 // 一度に描画するインスタンス数
-		},
-
-		//法線ベクトル
-		{
-			"NORMAL",
-			0,
-			DXGI_FORMAT_R32G32B32_FLOAT,
-			0,
-			D3D12_APPEND_ALIGNED_ELEMENT,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0
-		},
-
-		//uv
-		{
-			"TEXCOORD",
-			0,
-			DXGI_FORMAT_R32G32_FLOAT,
-			0, // スロットインデックス
-			D3D12_APPEND_ALIGNED_ELEMENT,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0
-		},
-
-		//ボーン番号
-		{
-			"BONE_NO",
-			0,
-			DXGI_FORMAT_R16G16_UINT, // bone[0], bone[1]
-			0,
-			D3D12_APPEND_ALIGNED_ELEMENT,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0
-		},
-
-		//法線ベクトル
-		{
-			"WEIGHT",
-			0,
-			DXGI_FORMAT_R8_UINT,
-			0,
-			D3D12_APPEND_ALIGNED_ELEMENT,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0
-		},
-
-		//法線ベクトル
-		{
-			"EDGE_FLG",
-			0,
-			DXGI_FORMAT_R8_UINT,
-			0,
-			D3D12_APPEND_ALIGNED_ELEMENT,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-			0
-		}
-	};
-
+// 初期化処理3：頂点入力レイアウトの作成及び
 // 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine = {};
-	for (int i = 0; i < sizeof(inputLayout) / sizeof(D3D12_INPUT_ELEMENT_DESC); ++i)
-	{
-		gPLSetting->SetInputlayout(i, inputLayout[i]);
-	}
-
-	gpipeLine = gPLSetting->SetGPL(gpipeLine, _dev, _pipelineState, setRootSignature, _vsBlob, _psBlob);
-	result = _dev->CreateGraphicsPipelineState(&gpipeLine, IID_PPV_ARGS(_pipelineState.ReleaseAndGetAddressOf()));
+	result = gPLSetting->CreateGPStateWrapper(_dev, setRootSignature, _vsBlob, _psBlob);
 
 // 初期化処理5：コマンドリスト生成
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
@@ -517,10 +443,10 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-		//以下は不要。_rootSignatureが_pipelineStateに組み込まれており、SetPipe...でまとめてセットされているから。
+		//以下は不要。_rootSignatureがgPLSetting->GetPipelineState()に組み込まれており、SetPipe...でまとめてセットされているから。
 		//_cmdList->SetGraphicsRootSignature(_rootSignature);
 
-		_cmdList->SetPipelineState(_pipelineState.Get());
+		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
 		_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
 		//_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature());
 		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());

@@ -25,6 +25,7 @@ using namespace DirectX;
 using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata*, ScratchImage&)>;
 
 //#include <AppD3DX12.h>
+#include <VertexInputLayout.h>
 #include <CreateD3DX12ResourceBuffer.h>
 #include <Utility.h>
 #include <PMDMaterialInfo.h>

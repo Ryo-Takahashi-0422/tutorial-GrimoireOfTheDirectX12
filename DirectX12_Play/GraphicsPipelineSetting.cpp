@@ -1,22 +1,30 @@
 #include <stdafx.h>
 #include <GraphicsPipelineSetting.h>
 
+GraphicsPipelineSetting::GraphicsPipelineSetting(VertexInputLayout* _vertexInputLayout) : vertexInputLayout(_vertexInputLayout)
+{
+	for (int i = 0; i < vertexInputLayout->GetInputLayout().size(); ++i)
+	{
+		SetInputlayout(i, vertexInputLayout->GetInputLayout()[i]);
+	}
+}
+
+HRESULT GraphicsPipelineSetting::CreateGPStateWrapper(ComPtr<ID3D12Device> _dev,
+	SetRootSignature* setRootSignature, ComPtr<ID3D10Blob> _vsBlob, ComPtr<ID3D10Blob> _psBlob)
+{
+	gpipeLine = SetGPL(setRootSignature, _vsBlob, _psBlob);
+	return _dev->CreateGraphicsPipelineState(&gpipeLine, IID_PPV_ARGS(_pipelineState.ReleaseAndGetAddressOf()));
+}
+
 void GraphicsPipelineSetting::SetInputlayout(int i, D3D12_INPUT_ELEMENT_DESC inputLayout)
 {
 	inputLayouts[i] = inputLayout;
 }
 
 D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineSetting::SetGPL(
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine,
-	ComPtr<ID3D12Device> _dev,
-	ComPtr<ID3D12PipelineState> _pipelineState,
-	SetRootSignature* setRootSignature,
-	ComPtr<ID3D10Blob> _vsBlob,
-	ComPtr<ID3D10Blob> _psBlob)
+	SetRootSignature* setRootSignature,	ComPtr<ID3D10Blob> _vsBlob,	ComPtr<ID3D10Blob> _psBlob)
 {
-	//D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine = {};
 	gpipeLine.pRootSignature = setRootSignature->GetRootSignature().Get();
-	//gpipeLine.pRootSignature = setRootSignature->GetRootSignature();
 
 	gpipeLine.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
 	gpipeLine.VS.BytecodeLength = _vsBlob->GetBufferSize();
@@ -60,4 +68,9 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineSetting::SetGPL(
 
 	return gpipeLine;
 
+}
+
+ComPtr<ID3D12PipelineState> GraphicsPipelineSetting::GetPipelineState()
+{
+	return _pipelineState;
 }

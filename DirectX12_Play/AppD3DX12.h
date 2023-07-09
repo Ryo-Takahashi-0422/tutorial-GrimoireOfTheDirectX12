@@ -20,7 +20,6 @@ private:
 	HRESULT result;
 	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 
-	ComPtr<ID3D12PipelineState> _pipelineState = nullptr;
 	GraphicsPipelineSetting* gPLSetting = nullptr;
 	BufferHeapCreator* bufferHeapCreator = nullptr;
 	TextureTransporter* textureTransporter = nullptr;
@@ -53,8 +52,8 @@ private:
 
 	SetRootSignature* setRootSignature = nullptr;
 	SettingShaderCompile* settingShaderCompile = nullptr;
+	VertexInputLayout* vertexInputLayout = nullptr;
 	PMDMaterialInfo* pmdMaterialInfo = nullptr;
-	//ComPtr<PMDMaterialInfo> pmdMaterialInfo;
 	VMDMotionInfo* vmdMotionInfo = nullptr;
 	PMDActor* pmdActor = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
