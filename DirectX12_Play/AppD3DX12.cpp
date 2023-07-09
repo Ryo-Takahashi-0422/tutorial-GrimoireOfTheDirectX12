@@ -102,6 +102,12 @@ bool AppD3DX12::PrepareRendering() {
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 #endif
+	// SetRootSignatureクラスのインスタンス化
+	setRootSignature = new SetRootSignature;
+
+	// SettingShaderCompileクラスのインスタンス化
+	settingShaderCompile = new SettingShaderCompile;
+	
 	// PMDファイルの読み込み
 	pmdMaterialInfo = new PMDMaterialInfo;
 	if (FAILED(pmdMaterialInfo->ReadPMDHeaderFile(strModelPath))) return false;
@@ -256,7 +262,7 @@ bool AppD3DX12::ResourceInit() {
 //●リソース初期化
 	
 // 初期化処理1：ルートシグネチャ設定
-	setRootSignature = new SetRootSignature;
+	//setRootSignature = new SetRootSignature;
 	if (FAILED(setRootSignature->SetRootsignatureParam(_dev)))
 	{
 		return false;
@@ -264,56 +270,13 @@ bool AppD3DX12::ResourceInit() {
 	
 	setRootSignature->SetRootsignatureParam(_dev);
 
-// 初期化処理2：シェーダーコンパイル
-
-	result = D3DCompileFromFile
-	(
-		L"BasicVertexShader.hlsl",
-		nullptr,
-		D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		"BasicVS",
-		"vs_5_0",
-		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-		0,
-		_vsBlob.ReleaseAndGetAddressOf()
-		, setRootSignature->GetErrorBlob().GetAddressOf()
-	);
-
-	result = D3DCompileFromFile
-	(
-		L"BasicPixelShader.hlsl",
-		nullptr,
-		D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		"BasicPS",
-		"ps_5_0",
-		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-		0,
-		_psBlob.ReleaseAndGetAddressOf()
-		, setRootSignature->GetErrorBlob().GetAddressOf()
-	);
-
-	//エラーチェック
-	if (FAILED(result))
-	{
-		if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-		{
-			::OutputDebugStringA("ファイルが見つかりません");
-			//return 0;
-			return false;
-		}
-		else
-		{
-			std::string errstr;
-			errstr.resize(setRootSignature->GetErrorBlob()->GetBufferSize());
-
-			std::copy_n((char*)setRootSignature->GetErrorBlob()->GetBufferPointer(),
-				setRootSignature->GetErrorBlob()->GetBufferSize(),
-				errstr.begin());
-			errstr += "\n";
-			OutputDebugStringA(errstr.c_str());
-
-		}
-	}
+// 初期化処理2：シェーダーコンパイル設定
+	
+	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
+	auto blobs = settingShaderCompile->SetShaderCompile(setRootSignature, _vsBlob, _psBlob);
+	if (blobs.first == nullptr or blobs.second == nullptr) return false;
+	_vsBlob = blobs.first;
+	_psBlob = blobs.second;
 
 // 初期化処理3：頂点入力レイアウトの作成
 
@@ -694,7 +657,7 @@ void AppD3DX12::Run() {
 	delete textureLoader;
 
 	delete pmdActor;
-	
+	delete settingShaderCompile;
 	delete setRootSignature;
 	delete gPLSetting;
 

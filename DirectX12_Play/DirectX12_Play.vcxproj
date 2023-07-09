@@ -187,6 +187,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PrepareRenderingWindow.cpp" />
     <ClCompile Include="SetRootSignature.cpp" />
+    <ClCompile Include="SettingShaderCompile.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -242,6 +243,7 @@
     <ClInclude Include="engine.h" />
     <ClInclude Include="PrepareRenderingWindow.h" />
     <ClInclude Include="SetRootSignature.h" />
+    <ClInclude Include="SettingShaderCompile.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="TextureTransporter.h" />

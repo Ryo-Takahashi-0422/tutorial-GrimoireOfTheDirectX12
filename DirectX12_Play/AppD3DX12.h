@@ -51,12 +51,13 @@ private:
 	/// <returns></returns>
 	HRESULT D3DX12DeviceInit();
 
+	SetRootSignature* setRootSignature = nullptr;
+	SettingShaderCompile* settingShaderCompile = nullptr;
 	PMDMaterialInfo* pmdMaterialInfo = nullptr;
 	//ComPtr<PMDMaterialInfo> pmdMaterialInfo;
 	VMDMotionInfo* vmdMotionInfo = nullptr;
 	PMDActor* pmdActor = nullptr;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
-	SetRootSignature* setRootSignature = nullptr;
 	TextureLoader* textureLoader = nullptr;
 
 	std::vector<DirectX::XMMATRIX>* boneMatrices = nullptr;

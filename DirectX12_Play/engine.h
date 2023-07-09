@@ -30,6 +30,7 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 #include <PMDMaterialInfo.h>
 #include <PrepareRenderingWindow.h>
 #include <SetRootSignature.h>
+#include <SettingShaderCompile.h>
 #include <VMDMotionInfo.h>
 #include <PMDActor.h>
 #include <GraphicsPipelineSetting.h>
