@@ -36,15 +36,29 @@ void BufferHeapCreator::SetDSVHeapDesc()
 	dsvHeapDesc.NumDescriptors = 1;
 }
 
-void BufferHeapCreator::SetMatrixHeapDesc()
+void BufferHeapCreator::SetCBVSRVHeapDesc()
 {
-	matrixHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	matrixHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv,material cbv + テクスチャsrv, sph,spa,toon
-	matrixHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	matrixHeapDesc.NodeMask = 0;
+	cbvsrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	cbvsrvHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+	cbvsrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	cbvsrvHeapDesc.NodeMask = 0;
 }
 
-void BufferHeapCreator::SetVertexAndIndexHeapProp()
+void BufferHeapCreator::SetMutipassRTVHeapDesc()
+{
+	mutipassRTVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
+	mutipassRTVHeapDesc.NumDescriptors = 1;
+}
+
+void BufferHeapCreator::SetMutipassSRVHeapDesc()
+{
+	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
+	mutipassSRVHeapDesc.NumDescriptors = 1;
+	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+}
+
+void BufferHeapCreator::SetVertexHeapProp()
 {
 	vertexHeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
 	vertexHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -95,18 +109,41 @@ HRESULT BufferHeapCreator::CreateDSVHeap(ComPtr<ID3D12Device> _dev)
 	);
 }
 
-HRESULT BufferHeapCreator::CreateMatrixHeap(ComPtr<ID3D12Device> _dev)
+HRESULT BufferHeapCreator::CreateCBVSRVHeap(ComPtr<ID3D12Device> _dev)
 {
-	SetMatrixHeapDesc();
+	SetCBVSRVHeapDesc();
 	return _dev->CreateDescriptorHeap
 	(
-		&matrixHeapDesc,
-		IID_PPV_ARGS(matrixHeap.GetAddressOf())
+		&cbvsrvHeapDesc,
+		IID_PPV_ARGS(cbvsrvHeap.GetAddressOf())
+	);
+}
+
+HRESULT BufferHeapCreator::CreateMultipassRTVHeap(ComPtr<ID3D12Device> _dev)
+{
+	SetMutipassRTVHeapDesc();
+
+	return _dev->CreateDescriptorHeap
+	(
+		&mutipassRTVHeapDesc,
+		IID_PPV_ARGS(multipassRTVHeap.ReleaseAndGetAddressOf())
+	);
+}
+
+HRESULT BufferHeapCreator::CreateMultipassSRVHeap(ComPtr<ID3D12Device> _dev)
+{
+	SetMutipassSRVHeapDesc();
+
+	return _dev->CreateDescriptorHeap
+	(
+		&mutipassSRVHeapDesc,
+		IID_PPV_ARGS(multipassSRVHeap.ReleaseAndGetAddressOf())
 	);
 }
 
 HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev)
 {
+	SetVertexHeapProp();
 	vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(pmdMaterialInfo->vertices.size());
 
 	return _dev->CreateCommittedResource
@@ -137,6 +174,9 @@ HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev)
 
 HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev)
 {
+	SetDepthHeapProp();
+	SetDepthResourceDesc();
+
 	return _dev->CreateCommittedResource
 	(
 		&depthHeapProps,
@@ -181,10 +221,11 @@ HRESULT BufferHeapCreator::CreateConstBufferOfMaterial(ComPtr<ID3D12Device> _dev
 	);
 }
 
-HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _dev, D3D12_HEAP_PROPERTIES& mutipassHeapProp,
-	D3D12_RESOURCE_DESC& mutipassResDesc)
+HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _dev, D3D12_RESOURCE_DESC& mutipassResDesc)
 {
+	mutipassHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SetClearValue();
+
 	return _dev->CreateCommittedResource
 	(
 		&mutipassHeapProp,
@@ -192,7 +233,7 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		&mutipassResDesc,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		&depthClearValue,
-		IID_PPV_ARGS(_peraResource.ReleaseAndGetAddressOf())
+		IID_PPV_ARGS(multipassBuff.ReleaseAndGetAddressOf())
 	);
 }
 
@@ -328,6 +369,13 @@ void BufferHeapCreator::CreateToonUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 	}
 }
 
+void BufferHeapCreator::CreateTextureBuffers(ComPtr<ID3D12Device> _dev)
+{
+	whiteTextureBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0xff);
+	blackTextureBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0x00);
+	grayTextureBuff = CreateD3DX12ResourceBuffer::CreateGrayGradationTexture(_dev);
+}
+
 unsigned long BufferHeapCreator::GetMaterialBuffSize()
 {
 	return materialBuffSize;
@@ -343,9 +391,9 @@ ComPtr<ID3D12DescriptorHeap> BufferHeapCreator::GetDSVHeap()
 	return dsvHeap;
 }
 
-ComPtr<ID3D12DescriptorHeap> BufferHeapCreator::GetMatrixHeap()
+ComPtr<ID3D12DescriptorHeap> BufferHeapCreator::GetCBVSRVHeap()
 {
-	return matrixHeap;
+	return cbvsrvHeap;
 }
 
 ComPtr<ID3D12Resource> BufferHeapCreator::GetVertBuff()
@@ -371,6 +419,26 @@ ComPtr<ID3D12Resource> BufferHeapCreator::GetMatrixBuff()
 ComPtr<ID3D12Resource> BufferHeapCreator::GetMaterialBuff()
 {
 	return materialBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetMultipassBuff()
+{
+	return multipassBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetWhiteTextureBuff()
+{
+	return whiteTextureBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetBlackTextureBuff()
+{
+	return blackTextureBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetGrayTextureBuff()
+{
+	return grayTextureBuff;
 }
 
 std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetTexUploadBuff()
@@ -401,4 +469,14 @@ std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetToonUploadBuff()
 std::vector<ComPtr<ID3D12Resource>> BufferHeapCreator::GetToonReadBuff()
 {
 	return toonReadBuff;
+}
+
+ComPtr<ID3D12DescriptorHeap> BufferHeapCreator::GetMultipassRTVHeap()
+{
+	return multipassRTVHeap;
+}
+
+ComPtr<ID3D12DescriptorHeap> BufferHeapCreator::GetMultipassSRVHeap()
+{
+	return multipassSRVHeap;
 }

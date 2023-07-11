@@ -12,8 +12,16 @@ void ViewCreator::CreateCBV4Matrix(ComPtr<ID3D12Device> _dev)
 	_dev->CreateConstantBufferView
 	(
 		&cbvDesc,
-		bufferHeapCreator->GetMatrixHeap()->GetCPUDescriptorHandleForHeapStart()//basicDescHeapHandle
+		bufferHeapCreator->GetCBVSRVHeap()->GetCPUDescriptorHandleForHeapStart()
 	);
+
+	// ﾃﾞｨｽｸﾘﾌﾟﾀﾋｰﾌﾟのﾎﾟｲﾝﾀが初期値なら最初の定数ﾊﾞｯﾌｧﾋﾞｭｰ作成なので、ｱﾄﾞﾚｽ取得する。その後1ﾋﾞｭｰｱﾄﾞﾚｽ分加算する
+	if (basicDescHeapHandle.ptr == 0)
+	{
+		basicDescHeapHandle = bufferHeapCreator->GetCBVSRVHeap()->GetCPUDescriptorHandleForHeapStart();
+	}
+	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	basicDescHeapHandle.ptr += inc;
 }
 
 void ViewCreator::CreateDSVWrapper(ComPtr<ID3D12Device> _dev)
@@ -28,23 +36,26 @@ void ViewCreator::CreateDSVWrapper(ComPtr<ID3D12Device> _dev)
 	);
 }
 
-void ViewCreator::CreateCBV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
+void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 {
-	auto basicDescHeapHandle = bufferHeapCreator->GetMatrixHeap()->GetCPUDescriptorHandleForHeapStart();
+	//  ﾃﾞｨｽｸﾘﾌﾟﾀﾋｰﾌﾟのﾎﾟｲﾝﾀが初期値なら最初の定数ﾊﾞｯﾌｧﾋﾞｭｰ作成なので、ｱﾄﾞﾚｽ取得する。その後1ﾋﾞｭｰｱﾄﾞﾚｽ分加算する
+	if (basicDescHeapHandle.ptr == 0)
+	{
+		basicDescHeapHandle = bufferHeapCreator->GetCBVSRVHeap()->GetCPUDescriptorHandleForHeapStart();
+	}
 	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	basicDescHeapHandle.ptr += inc;
 
-	SetSRVDesc();
+	SetSRVDesc4MaterialAndTextureAndSph();
 	SetCBVDesc4MaterialAndTextureAndSph();
 
+	// 色テクスチャバッファ作成
+	bufferHeapCreator->CreateTextureBuffers(_dev);
 	// 白テクスチャバッファ
-	whiteBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0xff);
-
+	whiteBuff = bufferHeapCreator->GetWhiteTextureBuff();
 	// 黒テクスチャバッファ
-	BlackBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0x00);
-
+	BlackBuff = bufferHeapCreator->GetBlackTextureBuff();
 	// グレーグラデーション
-	grayTexBuff = CreateD3DX12ResourceBuffer::CreateGrayGradationTexture(_dev);
+	grayTexBuff = bufferHeapCreator->GetGrayTextureBuff();
 
 	for (int i = 0; i < pmdMaterialInfo->materialNum; i++)
 	{
@@ -55,16 +66,16 @@ void ViewCreator::CreateCBV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 		// テクスチャ
 		if (bufferHeapCreator->GetTexReadBuff()[i] == nullptr)
 		{
-			srvDesc.Format = whiteBuff->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = whiteBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(whiteBuff.Get(), &srvDesc, basicDescHeapHandle);
+			(whiteBuff.Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		else
 		{
-			srvDesc.Format = bufferHeapCreator->GetTexReadBuff()[i]->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = bufferHeapCreator->GetTexReadBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetTexReadBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetTexReadBuff()[i].Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
@@ -72,16 +83,16 @@ void ViewCreator::CreateCBV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 		// sphファイル
 		if (bufferHeapCreator->GetsphMappedBuff()[i] == nullptr)
 		{
-			srvDesc.Format = whiteBuff->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = whiteBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(whiteBuff.Get(), &srvDesc, basicDescHeapHandle);
+			(whiteBuff.Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		else
 		{
-			srvDesc.Format = bufferHeapCreator->GetsphMappedBuff()[i]->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = bufferHeapCreator->GetsphMappedBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetsphMappedBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetsphMappedBuff()[i].Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
@@ -89,16 +100,16 @@ void ViewCreator::CreateCBV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 		// spaファイル
 		if (bufferHeapCreator->GetspaMappedBuff()[i] == nullptr)
 		{
-			srvDesc.Format = BlackBuff->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = BlackBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(BlackBuff.Get(), &srvDesc, basicDescHeapHandle);
+			(BlackBuff.Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		else
 		{
-			srvDesc.Format = bufferHeapCreator->GetspaMappedBuff()[i]->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = bufferHeapCreator->GetspaMappedBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetspaMappedBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetspaMappedBuff()[i].Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
@@ -106,20 +117,43 @@ void ViewCreator::CreateCBV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 		// トゥーンテクスチャファイル
 		if (bufferHeapCreator->GetToonReadBuff()[i] == nullptr)
 		{
-			srvDesc.Format = grayTexBuff->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = grayTexBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(grayTexBuff.Get(), &srvDesc, basicDescHeapHandle);
+			(grayTexBuff.Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		else
 		{
-			srvDesc.Format = bufferHeapCreator->GetToonReadBuff()[i]->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = bufferHeapCreator->GetToonReadBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetToonReadBuff()[i].Get(), &srvDesc, basicDescHeapHandle);
+			(bufferHeapCreator->GetToonReadBuff()[i].Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;
 	}
+}
+
+void ViewCreator::CreateRTV4Multipass(ComPtr<ID3D12Device> _dev)
+{
+	SetRTVDesc4Multipass();
+
+	_dev->CreateRenderTargetView
+	(
+		bufferHeapCreator->GetMultipassBuff().Get(),
+		&multipassRTVDesc,
+		bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart()
+	);
+}
+
+void ViewCreator::CreateSRV4Multipass(ComPtr<ID3D12Device> _dev)
+{
+	SetSRVDesc4Multipass();
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetMultipassBuff().Get(),
+		&multipassSRVDesc,
+		bufferHeapCreator->GetMultipassSRVHeap().Get()->GetCPUDescriptorHandleForHeapStart()
+	);
 }
 
 void ViewCreator::SetVertexBufferView()
@@ -149,18 +183,32 @@ void ViewCreator::SetDSVDesc()
 	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 }
 
-void ViewCreator::SetSRVDesc()
+void ViewCreator::SetSRVDesc4MaterialAndTextureAndSph()
 {
-	srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc4MaterialAndTextureAndSph.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	srvDesc4MaterialAndTextureAndSph.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc4MaterialAndTextureAndSph.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc4MaterialAndTextureAndSph.Texture2D.MipLevels = 1;
 }
 
 void ViewCreator::SetCBVDesc4MaterialAndTextureAndSph()
 {
 	materialTextureSphCBVDesc.BufferLocation = bufferHeapCreator->GetMaterialBuff()->GetGPUVirtualAddress();
 	materialTextureSphCBVDesc.SizeInBytes = bufferHeapCreator->GetMaterialBuffSize();
+}
+
+void ViewCreator::SetRTVDesc4Multipass()
+{
+	multipassRTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	multipassRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+}
+
+void ViewCreator::SetSRVDesc4Multipass()
+{
+	multipassSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	multipassSRVDesc.Format = multipassRTVDesc.Format;
+	multipassSRVDesc.Texture2D.MipLevels = 1;
+	multipassSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 }
 
 D3D12_VERTEX_BUFFER_VIEW* ViewCreator::GetVbView()

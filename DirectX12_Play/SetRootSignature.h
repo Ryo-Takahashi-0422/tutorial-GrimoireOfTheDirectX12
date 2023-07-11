@@ -6,7 +6,7 @@ private:
 	CD3DX12_STATIC_SAMPLER_DESC stSamplerDesc[2] = {};
 	CD3DX12_DESCRIPTOR_RANGE descTableRange[3] = {};
 	D3D12_ROOT_PARAMETER rootParam[2] = {};
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
 	HRESULT result;
 	ComPtr<ID3DBlob> _rootSigBlob = nullptr; // ルートシグネチャオブジェクト格納用
 	ComPtr<ID3DBlob> _errorBlob = nullptr; // シェーダー関連エラー格納用

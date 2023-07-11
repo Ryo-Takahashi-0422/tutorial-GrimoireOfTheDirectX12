@@ -39,13 +39,12 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineSetting::SetGPL(
 	gpipeLine.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 	gpipeLine.RasterizerState.DepthClipEnable = true;
 
-	D3D12_RENDER_TARGET_BLEND_DESC renderTargetdDesc = {};
-	renderTargetdDesc.BlendEnable = false;//ブレンドを有効にするか無効にするか
-	renderTargetdDesc.LogicOpEnable = false;//論理操作を有効にするか無効にするか
-	renderTargetdDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	renderTargetDesc.BlendEnable = false;//ブレンドを有効にするか無効にするか
+	renderTargetDesc.LogicOpEnable = false;//論理操作を有効にするか無効にするか
+	renderTargetDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 	gpipeLine.BlendState.AlphaToCoverageEnable = false;
 	gpipeLine.BlendState.IndependentBlendEnable = false;
-	gpipeLine.BlendState.RenderTarget[0] = renderTargetdDesc;
+	gpipeLine.BlendState.RenderTarget[0] = renderTargetDesc;
 	gpipeLine.InputLayout.pInputElementDescs = inputLayouts;
 
 	gpipeLine.InputLayout.NumElements = _countof(inputLayouts);

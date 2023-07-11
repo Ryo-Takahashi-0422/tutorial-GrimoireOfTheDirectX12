@@ -21,10 +21,9 @@ HRESULT SetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 
 	rootParam[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[1].DescriptorTable.NumDescriptorRanges = 2; // マテリアルとテクスチャで使う
-	rootParam[1].DescriptorTable.pDescriptorRanges = &descTableRange[1];
+	rootParam[1].DescriptorTable.pDescriptorRanges = &descTableRange[1]; // ここからNumDescriptorRange分、つまり[1]と[2]が該当する。
 	rootParam[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	rootSignatureDesc = {};
 	rootSignatureDesc.NumParameters = 2;
 	rootSignatureDesc.pParameters = rootParam;
 	rootSignatureDesc.NumStaticSamplers = 2;
@@ -39,8 +38,6 @@ HRESULT SetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 		_errorBlob.GetAddressOf()
 	);
 
-	//_rootSignature = {};
-
 	result = _dev->CreateRootSignature
 	(
 		0,
@@ -48,6 +45,7 @@ HRESULT SetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 		_rootSigBlob->GetBufferSize(),
 		IID_PPV_ARGS(_rootSignature.ReleaseAndGetAddressOf())
 	);
+
 	_rootSigBlob->Release();
 
 	return S_OK;

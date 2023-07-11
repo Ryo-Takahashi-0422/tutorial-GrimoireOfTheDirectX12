@@ -265,16 +265,12 @@ bool AppD3DX12::ResourceInit() {
 //●リソース初期化
 	
 // 初期化処理1：ルートシグネチャ設定
-	//setRootSignature = new SetRootSignature;
 	if (FAILED(setRootSignature->SetRootsignatureParam(_dev)))
 	{
 		return false;
 	}
-	
-	setRootSignature->SetRootsignatureParam(_dev);
 
 // 初期化処理2：シェーダーコンパイル設定
-	
 	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
 	auto blobs = settingShaderCompile->SetShaderCompile(setRootSignature, _vsBlob, _psBlob);
 	if (blobs.first == nullptr or blobs.second == nullptr) return false;
@@ -292,15 +288,6 @@ bool AppD3DX12::ResourceInit() {
 	//cmdList->Close();
 
 // 初期化処理7：各バッファーを作成して頂点情報を読み込み
-
-	//頂点バッファーとインデックスバッファー用のヒーププロパティ設定
-	bufferHeapCreator->SetVertexAndIndexHeapProp();
-
-	//深度バッファー用ヒーププロパティ設定
-	bufferHeapCreator->SetDepthHeapProp();
-
-	//深度バッファー用リソースディスクリプタ
-	bufferHeapCreator->SetDepthResourceDesc();
 
 	//頂点バッファーの作成(リソースと暗黙的なヒープの作成) 
 	result = bufferHeapCreator->CreateBufferOfVertex(_dev);
@@ -358,13 +345,13 @@ bool AppD3DX12::ResourceInit() {
 
 	// マルチパスレンダリング用に書き込み先リソースの作成
     // 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
-	auto mutipassHeapDesc = bufferHeapCreator->GetRTVHeap()->GetDesc();
 	// 使っているバックバッファーの情報を利用する
 	auto& bbuff = _backBuffers[0];
 	auto mutipassResDesc = bbuff->GetDesc();
-	D3D12_HEAP_PROPERTIES mutipassHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	// レンダリング時のクリア値と同じ値
-	result = bufferHeapCreator->CreateRenderBufferForMultipass(_dev, mutipassHeapProp, mutipassResDesc);
+	// RTV,SRV用バッファーと各ヒープ作成
+	result = bufferHeapCreator->CreateRenderBufferForMultipass(_dev, mutipassResDesc);
+	bufferHeapCreator->CreateMultipassRTVHeap(_dev);
+	bufferHeapCreator->CreateMultipassSRVHeap(_dev);
 
 	//頂点バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的に頂点データをコピーする。
 	mappingExecuter->MappingVertBuff();
@@ -392,8 +379,8 @@ bool AppD3DX12::ResourceInit() {
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	textureTransporter->TransportToonTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal);
 
-	//行列CBV,SRVディスクリプタヒープ作成
-	result = bufferHeapCreator->CreateMatrixHeap(_dev);
+	//CBV,SRVディスクリプタヒープ作成(行列、テクスチャに利用)
+	result = bufferHeapCreator->CreateCBVSRVHeap(_dev);
 
 	//DSVビュー用にディスクリプタヒープ作成
 	result = bufferHeapCreator->CreateDSVHeap(_dev);
@@ -406,14 +393,17 @@ bool AppD3DX12::ResourceInit() {
 	// Indexビュー作成
 	viewCreator->SetIndexBufferView();
 
-	// 行列用cbv作成
-	viewCreator->CreateCBV4Matrix(_dev);
-
 	// DSV作成
 	viewCreator->CreateDSVWrapper(_dev);
 
+	// 行列用cbv作成
+	viewCreator->CreateCBV4Matrix(_dev);
 	// pmdモデルのマテリアル、テクスチャ、sph用ビューを作成。これがないとモデル真っ黒になる。
-	viewCreator->CreateCBV4MateriallTextureSph(_dev);
+	viewCreator->CreateCBVSRV4MateriallTextureSph(_dev);
+
+	// マルチパス用ビュー作成
+	viewCreator->CreateRTV4Multipass(_dev);
+	viewCreator->CreateSRV4Multipass(_dev);
 
 // 初期化処理9：フェンスの生成
 	//	ID3D12Fence* _fence = nullptr;
@@ -443,12 +433,8 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-		//以下は不要。_rootSignatureがgPLSetting->GetPipelineState()に組み込まれており、SetPipe...でまとめてセットされているから。
-		//_cmdList->SetGraphicsRootSignature(_rootSignature);
-
 		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
 		_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
-		//_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature());
 		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
 		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
@@ -470,9 +456,11 @@ void AppD3DX12::Run() {
 		handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
 		handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
-
-		_cmdList->OMSetRenderTargets(1, &handle, true, &dsvh);//レンダーターゲットと深度ステンシルの CPU 記述子ハンドルを設定
+		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
+		// なのでこの二種類のビューはマッピングしなかった
+		_cmdList->OMSetRenderTargets(1, &handle, true, &dsvh);
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
+
 		//画面クリア
 		float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
@@ -489,11 +477,11 @@ void AppD3DX12::Run() {
 		//ディスクリプタヒープ設定および
 		//ディスクリプタヒープとルートパラメータの関連付け
 		//ここでルートシグネチャのテーブルとディスクリプタが関連付く
-		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMatrixHeap().GetAddressOf());
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
 		_cmdList->SetGraphicsRootDescriptorTable
 		(
 			0, // バインドのスロット番号
-			bufferHeapCreator->GetMatrixHeap()->GetGPUDescriptorHandleForHeapStart()
+			bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
 		);
 
 		//テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
@@ -502,14 +490,15 @@ void AppD3DX12::Run() {
 		//_cmdList->SetGraphicsRootDescriptorTable
 		//(
 		//	1, // バインドのスロット番号
-		//	bufferHeapCreator->GetMatrixHeap()->GetGPUDescriptorHandleForHeapStart()
+		//	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
 		//);
 
-		// マテリアルの
-		auto materialHandle = bufferHeapCreator->GetMatrixHeap()->GetGPUDescriptorHandleForHeapStart();
+		// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
+		// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
+		auto materialHandle = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 		auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		auto materialHInc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 5;
-		materialHandle.ptr += inc;
+		auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+		materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
 		unsigned int idxOffset = 0;
 
 		for (auto m : pmdMaterialInfo->materials)
@@ -532,7 +521,7 @@ void AppD3DX12::Run() {
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
 
-		//初期化処理：コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
+		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();
 
 		//コマンドキューの実行
