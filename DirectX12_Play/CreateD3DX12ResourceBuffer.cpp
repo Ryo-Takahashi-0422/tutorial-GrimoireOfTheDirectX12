@@ -13,7 +13,7 @@ CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMe
 	//メソッド内でimg等動的メモリ確保のポインタを返すことは不可能と理解した
 	ComPtr<ID3D12Resource> texUploadBuff = nullptr;//テクスチャCPUアップロード用バッファー
 
-	//テクスチャバッファー用のCPU特化型ヒーププロパティ設定
+	//テクスチャバッファー用のCPU特化型(ｱｯﾌﾟﾛｰﾄﾞﾀｲﾌﾟ)ヒーププロパティ設定
 	D3D12_HEAP_PROPERTIES texUploadHeapProp;
 	texUploadHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
 	texUploadHeapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -40,7 +40,7 @@ CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMe
 	(&texUploadHeapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&texUploadResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadタイプのヒープにおける推奨設定
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadタイプのヒープにおける推奨設定。CPUのみが書き込みを行っているからとの公式情報。
 		nullptr,
 		IID_PPV_ARGS(texUploadBuff.ReleaseAndGetAddressOf())
 	);

@@ -59,9 +59,9 @@ void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 
 	for (int i = 0; i < pmdMaterialInfo->materialNum; i++)
 	{
-		_dev->CreateConstantBufferView(&materialTextureSphCBVDesc, basicDescHeapHandle);
+		_dev->CreateConstantBufferView(&cbvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		basicDescHeapHandle.ptr += inc;
-		materialTextureSphCBVDesc.BufferLocation += bufferHeapCreator->GetMaterialBuffSize();
+		cbvDesc4MaterialAndTextureAndSph.BufferLocation += bufferHeapCreator->GetMaterialBuffSize();
 
 		// テクスチャ
 		if (bufferHeapCreator->GetTexReadBuff()[i] == nullptr)
@@ -156,14 +156,14 @@ void ViewCreator::CreateSRV4Multipass(ComPtr<ID3D12Device> _dev)
 	);
 }
 
-void ViewCreator::SetVertexBufferView()
+void ViewCreator::CreateVertexBufferView()
 {
 	vbView.BufferLocation = bufferHeapCreator->GetVertBuff()->GetGPUVirtualAddress();//バッファの仮想アドレス
 	vbView.SizeInBytes = pmdMaterialInfo->vertices.size();//全バイト数
 	vbView.StrideInBytes = pmdMaterialInfo->pmdvertex_size;//1頂点あたりのバイト数
 }
 
-void ViewCreator::SetIndexBufferView()
+void ViewCreator::CreateIndexBufferView()
 {
 	ibView.BufferLocation = bufferHeapCreator->GetIdxBuff()->GetGPUVirtualAddress();
 	ibView.SizeInBytes = sizeof(pmdMaterialInfo->indices[0]) * pmdMaterialInfo->indices.size();
@@ -193,8 +193,8 @@ void ViewCreator::SetSRVDesc4MaterialAndTextureAndSph()
 
 void ViewCreator::SetCBVDesc4MaterialAndTextureAndSph()
 {
-	materialTextureSphCBVDesc.BufferLocation = bufferHeapCreator->GetMaterialBuff()->GetGPUVirtualAddress();
-	materialTextureSphCBVDesc.SizeInBytes = bufferHeapCreator->GetMaterialBuffSize();
+	cbvDesc4MaterialAndTextureAndSph.BufferLocation = bufferHeapCreator->GetMaterialBuff()->GetGPUVirtualAddress();
+	cbvDesc4MaterialAndTextureAndSph.SizeInBytes = bufferHeapCreator->GetMaterialBuffSize();
 }
 
 void ViewCreator::SetRTVDesc4Multipass()

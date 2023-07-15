@@ -151,7 +151,7 @@ HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev)
 		&vertexHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&vertresDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, // リソースの状態。GPUからして読み取り用
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
 		nullptr,
 		IID_PPV_ARGS(vertBuff.ReleaseAndGetAddressOf())
 	);
@@ -166,7 +166,7 @@ HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev)
 		&vertexHeapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&indicesDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
 		nullptr,
 		IID_PPV_ARGS(idxBuff.ReleaseAndGetAddressOf())
 	);
@@ -199,7 +199,7 @@ HRESULT BufferHeapCreator::CreateConstBufferOfWVPMatrix(ComPtr<ID3D12Device> _de
 		&wvpHeapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&wvpResdesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
 		nullptr,
 		IID_PPV_ARGS(matrixBuff.ReleaseAndGetAddressOf())
 	);
@@ -215,7 +215,7 @@ HRESULT BufferHeapCreator::CreateConstBufferOfMaterial(ComPtr<ID3D12Device> _dev
 		&materialHeapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&materialBuffResDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
 		nullptr,
 		IID_PPV_ARGS(materialBuff.ReleaseAndGetAddressOf())
 	);

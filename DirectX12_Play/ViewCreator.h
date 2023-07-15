@@ -10,7 +10,7 @@ private:
 	D3D12_INDEX_BUFFER_VIEW ibView = {}; // (Vertex)Indexビュー
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; // 行列用の定数ビュー詳細
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {}; // デプスステンシルビュー詳細
-	D3D12_CONSTANT_BUFFER_VIEW_DESC materialTextureSphCBVDesc = {}; // マテリアル情報、テクスチャ、sph用の定数ビュー詳細
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc4MaterialAndTextureAndSph = {}; // マテリアル情報、テクスチャ、sph用の定数ビュー詳細
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc4MaterialAndTextureAndSph = {}; // シェーダーリソースビュー詳細
 	D3D12_RENDER_TARGET_VIEW_DESC multipassRTVDesc = {}; // マルチパス用レンダーターゲットビュー詳細
 	D3D12_SHADER_RESOURCE_VIEW_DESC multipassSRVDesc = {}; // マルチパス用レンダーターゲットビュー詳細
@@ -35,8 +35,8 @@ public:
 	void CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev); // マテリアル、テクスチャ、sphファイル用のCBV,SRVをまとめて作成
 	void CreateRTV4Multipass(ComPtr<ID3D12Device> _dev); // マルチパス用RTV作成
 	void CreateSRV4Multipass(ComPtr<ID3D12Device> _dev); // マルチパス用SRV作成
-	void SetVertexBufferView();
-	void SetIndexBufferView();
+	void CreateVertexBufferView();
+	void CreateIndexBufferView();
 
 
 	D3D12_VERTEX_BUFFER_VIEW* GetVbView();

@@ -232,7 +232,7 @@ bool AppD3DX12::PipelineInit(){
 	//result = _swapChain->GetDesc(&swcDesc);//SWCの説明を取得する
 
 //初期化処理６：フレームリソース(各フレームのレンダーターゲットビュー)を作成
-	_backBuffers.resize(swapChainDesc.BufferCount);//リソースバッファー
+	_backBuffers.resize(swapChainDesc.BufferCount); // ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧｰのﾘｻｲｽﾞ
 	handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();//ヒープの先頭を表す CPU 記述子ハンドルを取得
 
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
@@ -388,10 +388,10 @@ bool AppD3DX12::ResourceInit() {
 // 初期化処理8：各ビューを作成
 
 	// Vertexビュー作成
-	viewCreator->SetVertexBufferView();
+	viewCreator->CreateVertexBufferView();
 
 	// Indexビュー作成
-	viewCreator->SetIndexBufferView();
+	viewCreator->CreateIndexBufferView();
 
 	// DSV作成
 	viewCreator->CreateDSVWrapper(_dev);
@@ -440,7 +440,8 @@ void AppD3DX12::Run() {
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 
-		//リソースバリアの準備
+		// ★あとで戻す
+		//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。
 		D3D12_RESOURCE_BARRIER BarrierDesc = {};
 		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -448,9 +449,27 @@ void AppD3DX12::Run() {
 		BarrierDesc.Transition.Subresource = 0;
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
 		//リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
+
+
+
+
+		//// マルチパス1パス目
+		//auto rtvHeapPointer = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+		//auto dsvHeapHandle = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		//_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, &dsvHeapHandle);
+		//_cmdList->ClearDepthStencilView(dsvHeapHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
+
+		//D3D12_RESOURCE_BARRIER barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
+		//(
+		//	bufferHeapCreator->GetMultipassBuff().Get(),
+		//	D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		//	D3D12_RESOURCE_STATE_RENDER_TARGET
+		//);
+		//_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
+
+
 
 		//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
 		handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
@@ -458,12 +477,13 @@ void AppD3DX12::Run() {
 		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
+		// ★戻す
 		_cmdList->OMSetRenderTargets(1, &handle, true, &dsvh);
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 		//画面クリア
 		float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+		_cmdList->ClearRenderTargetView(handle/*rtvHeapPointer*/, clearColor, 0, nullptr);
 
 		//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -484,14 +504,14 @@ void AppD3DX12::Run() {
 			bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
 		);
 
-		//テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
-		// 二つ目のセットによりNS300/Hではモデルが表示されなくなった。
-		//_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
-		//_cmdList->SetGraphicsRootDescriptorTable
-		//(
-		//	1, // バインドのスロット番号
-		//	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
-		//);
+		//////テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
+		////// 二つ目のセットによりNS300/Hではモデルが表示されなくなった。
+		//////_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
+		//////_cmdList->SetGraphicsRootDescriptorTable
+		//////(
+		//////	1, // バインドのスロット番号
+		//////	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		//////);
 
 		// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
 		// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
@@ -517,9 +537,23 @@ void AppD3DX12::Run() {
 		//コマンドリストクローズ後は、コマンドリストが特定の呼び出し(Reset())以外は受け付けず、以下3行はエラーになる
 		//クローズ後にコマンドキューを実行しているが、ここでリソースの状態が適用される。ここまでにCOMMONから状態を
 		//変更させておく必要があるが、実質は●●●から～クローズまでに変更させる必要がある。
+		//★戻す
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
+
+
+
+
+		//barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
+		//(
+		//	bufferHeapCreator->GetMultipassBuff().Get(),
+		//	D3D12_RESOURCE_STATE_RENDER_TARGET,
+		//	D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		//);
+		//_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
+
+
 
 		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();

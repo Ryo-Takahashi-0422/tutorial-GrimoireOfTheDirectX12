@@ -13,6 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="シェーダー">
+      <UniqueIdentifier>{cfee6b42-7518-4982-8a39-44e438eff274}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\Multipass">
+      <UniqueIdentifier>{f2d87e19-ff99-4857-a183-256377a9ebb7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\Multipass">
+      <UniqueIdentifier>{6710782a-3ac3-41b9-b4b7-507a7ce076aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\InterFace">
+      <UniqueIdentifier>{5cc61186-93f4-4943-9880-4bd213066e19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\InterFace">
+      <UniqueIdentifier>{e9e8df83-f484-4616-aaea-a074f88cfcd2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -69,18 +84,42 @@
     <ClCompile Include="VertexInputLayout.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="PeraPolygon.cpp">
+      <Filter>ソース ファイル\Multipass</Filter>
+    </ClCompile>
+    <ClCompile Include="PeraLayout.cpp">
+      <Filter>ソース ファイル\Multipass</Filter>
+    </ClCompile>
+    <ClCompile Include="PeraShaderCompile.cpp">
+      <Filter>ソース ファイル\Multipass</Filter>
+    </ClCompile>
+    <ClCompile Include="PeraGraphicsPipelineSetting.cpp">
+      <Filter>ソース ファイル\Multipass</Filter>
+    </ClCompile>
+    <ClCompile Include="IGraphicsPipelineSetting.cpp">
+      <Filter>ソース ファイル\InterFace</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="PeraPixel.hlsl">
+      <Filter>シェーダー</Filter>
+    </FxCompile>
+    <FxCompile Include="PeraVertex.hlsl">
+      <Filter>シェーダー</Filter>
+    </FxCompile>
     <FxCompile Include="BasicVertexShader.hlsl">
-      <Filter>ソース ファイル</Filter>
+      <Filter>シェーダー</Filter>
     </FxCompile>
     <FxCompile Include="BasicPixelShader.hlsl">
-      <Filter>ソース ファイル</Filter>
+      <Filter>シェーダー</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="PeraHeader.hlsli">
+      <Filter>シェーダー</Filter>
+    </None>
     <None Include="BasicShaderHeader.hlsli">
-      <Filter>ソース ファイル</Filter>
+      <Filter>シェーダー</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -137,6 +176,21 @@
     </ClInclude>
     <ClInclude Include="VertexInputLayout.h">
       <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="PeraPolygon.h">
+      <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="PeraLayout.h">
+      <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="PeraShaderCompile.h">
+      <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="PeraGraphicsPipelineSetting.h">
+      <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="IGraphicsPipelineSetting.h">
+      <Filter>ヘッダー ファイル\InterFace</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

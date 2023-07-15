@@ -180,7 +180,12 @@
     <ClCompile Include="AppD3DX12.cpp" />
     <ClCompile Include="BufferHeapCreator.cpp" />
     <ClCompile Include="GraphicsPipelineSetting.cpp" />
+    <ClCompile Include="IGraphicsPipelineSetting.cpp" />
     <ClCompile Include="MappingExecuter.cpp" />
+    <ClCompile Include="PeraGraphicsPipelineSetting.cpp" />
+    <ClCompile Include="PeraLayout.cpp" />
+    <ClCompile Include="PeraPolygon.cpp" />
+    <ClCompile Include="PeraShaderCompile.cpp" />
     <ClCompile Include="PMDActor.cpp" />
     <ClCompile Include="PMDMaterialInfo.cpp" />
     <ClCompile Include="CreateD3DX12ResourceBuffer.cpp" />
@@ -229,15 +234,35 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">BasicVS</EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="PeraPixel.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ps</EntryPointName>
+    </FxCompile>
+    <FxCompile Include="PeraVertex.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vs</EntryPointName>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="BasicShaderHeader.hlsli" />
+    <None Include="PeraHeader.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppD3DX12.h" />
     <ClInclude Include="BufferHeapCreator.h" />
     <ClInclude Include="GraphicsPipelineSetting.h" />
+    <ClInclude Include="IGraphicsPipelineSetting.h" />
     <ClInclude Include="MappingExecuter.h" />
+    <ClInclude Include="PeraGraphicsPipelineSetting.h" />
+    <ClInclude Include="PeraLayout.h" />
+    <ClInclude Include="PeraPolygon.h" />
+    <ClInclude Include="PeraShaderCompile.h" />
     <ClInclude Include="PMDActor.h" />
     <ClInclude Include="PMDMaterialInfo.h" />
     <ClInclude Include="CreateD3DX12ResourceBuffer.h" />

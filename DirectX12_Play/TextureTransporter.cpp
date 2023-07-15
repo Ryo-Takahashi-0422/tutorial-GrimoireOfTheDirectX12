@@ -63,14 +63,17 @@ void TextureTransporter::TransportTexture(
 			//コマンドリストの実行
 			ID3D12CommandList* cmdlists[] = { _cmdList.Get() };
 			_cmdQueue->ExecuteCommandLists(1, cmdlists);
-			////待ち
+			//コマンドリスト実行完了したかフェンスが通知するまで待機
+			
+			// 実行中ｺﾏﾝﾄﾞﾘｽﾄ完了後に、指定ﾌｪﾝｽ値をﾌｪﾝｽに書き込むよう設定。ここではｲﾝｸﾘﾒﾝﾄしたfenceValをﾌｪﾝｽに書き込むこととなる。
 			_cmdQueue->Signal(_fence.Get(), ++_fenceVal);
 
-			if (_fence->GetCompletedValue() != _fenceVal) {
+			if (_fence->GetCompletedValue() < _fenceVal) // フェンス現在値が_fenceVal未満ならコマンド実行未完了なので以下待機処理
+			{
 				auto event = CreateEvent(nullptr, false, false, nullptr);
-				_fence->SetEventOnCompletion(_fenceVal, event);
-				WaitForSingleObject(event, INFINITE);
-				CloseHandle(event);
+				_fence->SetEventOnCompletion(_fenceVal, event); // フェンスが第一引数に達したらevent発火(シグナル状態にする)
+				WaitForSingleObject(event, INFINITE); // eventがシグナル状態になるまで待機する
+				CloseHandle(event); // eventハンドルを閉じる(終了させる)
 			}
 			_cmdAllocator->Reset();//キューをクリア
 			_cmdList->Reset(_cmdAllocator.Get(), nullptr);

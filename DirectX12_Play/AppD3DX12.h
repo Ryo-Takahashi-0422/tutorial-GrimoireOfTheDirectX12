@@ -15,7 +15,7 @@ private:
 	ComPtr<ID3D10Blob> _psBlob = nullptr; // ピクセルシェーダーオブジェクト格納用
 	ComPtr<ID3D12Fence> _fence = nullptr;
 	UINT64 _fenceVal;
-	std::vector<ComPtr<ID3D12Resource>> _backBuffers;
+	std::vector<ComPtr<ID3D12Resource>> _backBuffers; // ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧｰ D3D12_RESOURCE_STATE_COMMONに設定するルール。
 	D3D12_CPU_DESCRIPTOR_HANDLE handle;
 	HRESULT result;
 	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;

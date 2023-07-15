@@ -34,6 +34,7 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 #include <SettingShaderCompile.h>
 #include <VMDMotionInfo.h>
 #include <PMDActor.h>
+#include <IGraphicsPipelineSetting.h>
 #include <GraphicsPipelineSetting.h>
 #include <TextureLoader.h>
 #include <BufferHeapCreator.h>
@@ -42,3 +43,8 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 #include <ViewCreator.h>
 #include <sstream>
 //#include <AppD3DX12.h>
+
+#include <PeraPolygon.h> // ﾏﾙﾁﾊﾟｽテスト用
+#include <PeraLayout.h>
+#include <PeraShaderCompile.h>
+#include <PeraGraphicsPipelineSetting.h>

@@ -1,7 +1,7 @@
 #include <stdafx.h>
 #include <GraphicsPipelineSetting.h>
 
-GraphicsPipelineSetting::GraphicsPipelineSetting(VertexInputLayout* _vertexInputLayout) : vertexInputLayout(_vertexInputLayout)
+GraphicsPipelineSetting::GraphicsPipelineSetting(VertexInputLayout* _vertexInputLayout) : /*vertexInputLayout*/IGraphicsPipelineSetting(_vertexInputLayout)
 {
 	for (int i = 0; i < vertexInputLayout->GetInputLayout().size(); ++i)
 	{
@@ -53,7 +53,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineSetting::SetGPL(
 
 	gpipeLine.NumRenderTargets = 1;
 
-	gpipeLine.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	gpipeLine.RTVFormats[0] = /*DXGI_FORMAT_R8G8B8A8_UNORM*/DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
 	gpipeLine.SampleDesc.Count = 1; //1サンプル/ピクセル
 	gpipeLine.SampleDesc.Quality = 0;
