@@ -1,11 +1,13 @@
 #pragma once
 
-class PeraLayout
+class PeraLayout : public InputLayoutBase
 {
-private:
-	std::vector<D3D12_INPUT_ELEMENT_DESC> peraLayout;
+//private:
+//	std::vector<D3D12_INPUT_ELEMENT_DESC> peraLayout;
 
 public:
 	PeraLayout();
-	std::vector<D3D12_INPUT_ELEMENT_DESC> GetPeraLayout();
+	~PeraLayout();
+	//std::vector<D3D12_INPUT_ELEMENT_DESC> GetInputLayout();
+	//size_t GetInputSize();
 };

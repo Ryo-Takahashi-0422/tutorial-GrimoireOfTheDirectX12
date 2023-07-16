@@ -25,11 +25,13 @@ using namespace DirectX;
 using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata*, ScratchImage&)>;
 
 //#include <AppD3DX12.h>
+#include <InputLayoutBase.h>
 #include <VertexInputLayout.h>
 #include <CreateD3DX12ResourceBuffer.h>
 #include <Utility.h>
 #include <PMDMaterialInfo.h>
 #include <PrepareRenderingWindow.h>
+#include <SetRootSignatureBase.h>
 #include <SetRootSignature.h>
 #include <SettingShaderCompile.h>
 #include <VMDMotionInfo.h>
@@ -48,3 +50,4 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 #include <PeraLayout.h>
 #include <PeraShaderCompile.h>
 #include <PeraGraphicsPipelineSetting.h>
+#include <PeraSetRootSignature.h>

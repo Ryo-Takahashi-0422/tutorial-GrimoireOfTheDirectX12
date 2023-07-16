@@ -13,13 +13,15 @@ private:
 	ComPtr<ID3D12CommandQueue> _cmdQueue = nullptr;
 	ComPtr<ID3D10Blob> _vsBlob = nullptr; // 頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _psBlob = nullptr; // ピクセルシェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _vsMBlob = nullptr; // ﾏﾙﾁﾊﾟｽ用頂点シェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _psMBlob = nullptr; // ﾏﾙﾁﾊﾟｽ用頂点ピクセルシェーダーオブジェクト格納用
 	ComPtr<ID3D12Fence> _fence = nullptr;
 	UINT64 _fenceVal;
 	std::vector<ComPtr<ID3D12Resource>> _backBuffers; // ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧｰ D3D12_RESOURCE_STATE_COMMONに設定するルール。
 	D3D12_CPU_DESCRIPTOR_HANDLE handle;
 	HRESULT result;
-	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 
+	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 	GraphicsPipelineSetting* gPLSetting = nullptr;
 	BufferHeapCreator* bufferHeapCreator = nullptr;
 	TextureTransporter* textureTransporter = nullptr;
@@ -67,7 +69,12 @@ private:
 	void UpdateVMDMotion(std::map<std::string, BoneNode> bNodeTable, 
 		std::unordered_map<std::string, std::vector<KeyFrame>> motionData);
 
-	
+	// ﾏﾙﾁﾊﾟｽ関連
+	PeraGraphicsPipelineSetting* peraGPLSetting = nullptr;
+	PeraLayout* peraLayout = nullptr;
+	PeraPolygon* peraPolygon = nullptr;
+	PeraSetRootSignature* peraSetRootSignature = nullptr;
+	PeraShaderCompile* peraShaderCompile = nullptr;
 
 public:
 	///Applicationのシングルトンインスタンスを得る

@@ -28,6 +28,12 @@
     <Filter Include="ヘッダー ファイル\InterFace">
       <UniqueIdentifier>{e9e8df83-f484-4616-aaea-a074f88cfcd2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ヘッダー ファイル\Inheritance">
+      <UniqueIdentifier>{0081f8b9-86af-4e1e-8602-fe4f91e47470}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\Inheritance">
+      <UniqueIdentifier>{eb557f49-81e3-488c-a34d-f816413a4227}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -98,6 +104,15 @@
     </ClCompile>
     <ClCompile Include="IGraphicsPipelineSetting.cpp">
       <Filter>ソース ファイル\InterFace</Filter>
+    </ClCompile>
+    <ClCompile Include="SetRootSignatureBase.cpp">
+      <Filter>ソース ファイル\Inheritance</Filter>
+    </ClCompile>
+    <ClCompile Include="PeraSetRootSignature.cpp">
+      <Filter>ソース ファイル\Multipass</Filter>
+    </ClCompile>
+    <ClCompile Include="InputLayoutBase.cpp">
+      <Filter>ソース ファイル\Inheritance</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -191,6 +206,15 @@
     </ClInclude>
     <ClInclude Include="IGraphicsPipelineSetting.h">
       <Filter>ヘッダー ファイル\InterFace</Filter>
+    </ClInclude>
+    <ClInclude Include="SetRootSignatureBase.h">
+      <Filter>ヘッダー ファイル\Inheritance</Filter>
+    </ClInclude>
+    <ClInclude Include="PeraSetRootSignature.h">
+      <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="InputLayoutBase.h">
+      <Filter>ヘッダー ファイル\Inheritance</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

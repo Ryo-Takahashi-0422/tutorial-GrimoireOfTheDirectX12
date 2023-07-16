@@ -8,5 +8,5 @@ private:
 
 public:
 	std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> SetPeraShaderCompile
-	(SetRootSignature* setPeraRootSignature, ComPtr<ID3D10Blob> _vsBlob, ComPtr<ID3D10Blob> _psBlob);
+	(SetRootSignatureBase* setPeraRootSignature, ComPtr<ID3D10Blob> _vsBlob, ComPtr<ID3D10Blob> _psBlob);
 };

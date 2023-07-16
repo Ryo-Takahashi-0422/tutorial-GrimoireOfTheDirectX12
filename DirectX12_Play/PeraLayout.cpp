@@ -3,7 +3,7 @@
 
 PeraLayout::PeraLayout()
 {
-	peraLayout =
+	inputLayout =
 	{
 		//À•W
 		{
@@ -30,7 +30,8 @@ PeraLayout::PeraLayout()
 
 }
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> PeraLayout::GetPeraLayout()
+
+PeraLayout::~PeraLayout()
 {
-	return peraLayout;
+	delete this;
 }

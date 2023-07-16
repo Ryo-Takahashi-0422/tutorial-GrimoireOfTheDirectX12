@@ -181,10 +181,12 @@
     <ClCompile Include="BufferHeapCreator.cpp" />
     <ClCompile Include="GraphicsPipelineSetting.cpp" />
     <ClCompile Include="IGraphicsPipelineSetting.cpp" />
+    <ClCompile Include="InputLayoutBase.cpp" />
     <ClCompile Include="MappingExecuter.cpp" />
     <ClCompile Include="PeraGraphicsPipelineSetting.cpp" />
     <ClCompile Include="PeraLayout.cpp" />
     <ClCompile Include="PeraPolygon.cpp" />
+    <ClCompile Include="PeraSetRootSignature.cpp" />
     <ClCompile Include="PeraShaderCompile.cpp" />
     <ClCompile Include="PMDActor.cpp" />
     <ClCompile Include="PMDMaterialInfo.cpp" />
@@ -192,6 +194,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PrepareRenderingWindow.cpp" />
     <ClCompile Include="SetRootSignature.cpp" />
+    <ClCompile Include="SetRootSignatureBase.cpp" />
     <ClCompile Include="SettingShaderCompile.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -240,6 +243,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ps</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="PeraVertex.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
@@ -247,6 +251,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vs</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -258,10 +263,12 @@
     <ClInclude Include="BufferHeapCreator.h" />
     <ClInclude Include="GraphicsPipelineSetting.h" />
     <ClInclude Include="IGraphicsPipelineSetting.h" />
+    <ClInclude Include="InputLayoutBase.h" />
     <ClInclude Include="MappingExecuter.h" />
     <ClInclude Include="PeraGraphicsPipelineSetting.h" />
     <ClInclude Include="PeraLayout.h" />
     <ClInclude Include="PeraPolygon.h" />
+    <ClInclude Include="PeraSetRootSignature.h" />
     <ClInclude Include="PeraShaderCompile.h" />
     <ClInclude Include="PMDActor.h" />
     <ClInclude Include="PMDMaterialInfo.h" />
@@ -269,6 +276,7 @@
     <ClInclude Include="engine.h" />
     <ClInclude Include="PrepareRenderingWindow.h" />
     <ClInclude Include="SetRootSignature.h" />
+    <ClInclude Include="SetRootSignatureBase.h" />
     <ClInclude Include="SettingShaderCompile.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TextureLoader.h" />

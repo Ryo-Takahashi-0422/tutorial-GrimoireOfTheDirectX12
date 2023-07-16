@@ -73,7 +73,17 @@ VertexInputLayout::VertexInputLayout()
 	};
 }
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> VertexInputLayout::GetInputLayout()
+VertexInputLayout::~VertexInputLayout()
 {
-	return inputLayout;
+	delete this;
 }
+//
+//std::vector<D3D12_INPUT_ELEMENT_DESC> VertexInputLayout::GetInputLayout()
+//{
+//	return inputLayout;
+//}
+//
+//size_t VertexInputLayout::GetInputSize()
+//{
+//	return inputLayout.size();
+//}

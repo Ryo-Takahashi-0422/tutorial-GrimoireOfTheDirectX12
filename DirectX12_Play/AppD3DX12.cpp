@@ -102,7 +102,7 @@ bool AppD3DX12::PrepareRendering() {
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
 #endif
-	// SetRootSignatureクラスのインスタンス化
+	// SetRootSignatureBaseクラスのインスタンス化
 	setRootSignature = new SetRootSignature;
 
 	// SettingShaderCompileクラスのインスタンス化
@@ -154,6 +154,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// ビューポートとシザー領域の設定
 	prepareRenderingWindow->SetViewportAndRect();
+
+	// ﾏﾙﾁﾊﾟｽ関連ｸﾗｽ群
+	peraLayout = new PeraLayout;
+	peraGPLSetting = new PeraGraphicsPipelineSetting(peraLayout); //TODO PeraLayout,VertexInputLayoutｸﾗｽの基底クラスを作ってそれに対応させる
+	peraPolygon = new PeraPolygon;
+	peraSetRootSignature = new PeraSetRootSignature;
+	peraShaderCompile = new PeraShaderCompile;
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -270,6 +277,12 @@ bool AppD3DX12::ResourceInit() {
 		return false;
 	}
 
+	// ﾏﾙﾁﾊﾟｽ用
+	if (FAILED(peraSetRootSignature->SetRootsignatureParam(_dev)))
+	{
+		return false;
+	}
+
 // 初期化処理2：シェーダーコンパイル設定
 	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
 	auto blobs = settingShaderCompile->SetShaderCompile(setRootSignature, _vsBlob, _psBlob);
@@ -277,9 +290,18 @@ bool AppD3DX12::ResourceInit() {
 	_vsBlob = blobs.first;
 	_psBlob = blobs.second;
 
+	// ﾏﾙﾁﾊﾟｽ用
+	auto mBlobs = peraShaderCompile->SetPeraShaderCompile(peraSetRootSignature, _vsMBlob, _psMBlob);
+	if (mBlobs.first == nullptr or mBlobs.second == nullptr) return false;
+	_vsMBlob = mBlobs.first;
+	_psMBlob = mBlobs.second;
+
 // 初期化処理3：頂点入力レイアウトの作成及び
 // 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
 	result = gPLSetting->CreateGPStateWrapper(_dev, setRootSignature, _vsBlob, _psBlob);
+
+	// ﾏﾙﾁﾊﾟｽ用
+	result = peraGPLSetting->CreateGPStateWrapper(_dev, peraSetRootSignature, _vsMBlob, _psMBlob);
 
 // 初期化処理5：コマンドリスト生成
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
@@ -402,6 +424,7 @@ bool AppD3DX12::ResourceInit() {
 	viewCreator->CreateCBVSRV4MateriallTextureSph(_dev);
 
 	// マルチパス用ビュー作成
+	peraPolygon->CreatePeraView(_dev);
 	viewCreator->CreateRTV4Multipass(_dev);
 	viewCreator->CreateSRV4Multipass(_dev);
 
@@ -613,4 +636,10 @@ void AppD3DX12::Run() {
 	delete vmdMotionInfo;
 	delete prepareRenderingWindow;
 	delete pmdMaterialInfo;
+
+	delete peraGPLSetting;
+	delete peraLayout;
+	delete peraPolygon;
+	delete peraSetRootSignature;
+	delete peraShaderCompile;
 }

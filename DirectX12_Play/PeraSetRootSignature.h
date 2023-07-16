@@ -1,6 +1,6 @@
 #pragma once
 
-class SetRootSignature : public SetRootSignatureBase
+class PeraSetRootSignature : public SetRootSignatureBase
 {
 private:
 	CD3DX12_STATIC_SAMPLER_DESC stSamplerDesc[2] = {};
@@ -9,5 +9,5 @@ private:
 
 public:
 	HRESULT SetRootsignatureParam(ComPtr<ID3D12Device> _dev);
-	~SetRootSignature();
+	~PeraSetRootSignature();
 };

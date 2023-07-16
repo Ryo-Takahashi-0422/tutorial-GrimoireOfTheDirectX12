@@ -2,14 +2,14 @@
 #include <PeraShaderCompile.h>
 
 std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> PeraShaderCompile::SetPeraShaderCompile
-(SetRootSignature* setPeraRootSignature, ComPtr<ID3D10Blob> _vsBlob, ComPtr<ID3D10Blob> _psBlob)
+(SetRootSignatureBase* setPeraRootSignature, ComPtr<ID3D10Blob> _vsBlob, ComPtr<ID3D10Blob> _psBlob)
 {
 	result = D3DCompileFromFile
 	(
 		L"PeraVertex.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		"BasicVS",
+		"vs",
 		"vs_5_0",
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,
@@ -22,7 +22,7 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> PeraShaderCompile::SetPeraShad
 		L"PeraPixel.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		"BasicPS",
+		"ps",
 		"ps_5_0",
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,

@@ -1,10 +1,10 @@
 #pragma once
 
-class VertexInputLayout
+class VertexInputLayout : public  InputLayoutBase
 {
-private:
-	std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout;
 public:
 	VertexInputLayout();
-	std::vector<D3D12_INPUT_ELEMENT_DESC> GetInputLayout();
+	~VertexInputLayout();
+	//std::vector<D3D12_INPUT_ELEMENT_DESC> GetInputLayout();
+	//size_t GetInputSize();
 };

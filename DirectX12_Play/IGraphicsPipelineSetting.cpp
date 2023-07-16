@@ -1,7 +1,7 @@
 #include <stdafx.h>
 #include <IGraphicsPipelineSetting.h>
 
-IGraphicsPipelineSetting::IGraphicsPipelineSetting(VertexInputLayout* _vertexInputLayout)
+IGraphicsPipelineSetting::IGraphicsPipelineSetting(InputLayoutBase* _vertexInputLayout)
 {
 	vertexInputLayout = _vertexInputLayout;
 }

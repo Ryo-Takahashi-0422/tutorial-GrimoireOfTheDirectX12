@@ -1,7 +1,7 @@
 #include <stdafx.h>
-#include <SetRootSignature.h>
+#include <PeraSetRootSignature.h>
 
-HRESULT SetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
+HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	//●リソース初期化
 	// 初期化処理1：ルートシグネチャ設定
 
@@ -52,7 +52,7 @@ HRESULT SetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	return S_OK;
 }
 
-SetRootSignature::~SetRootSignature()
+PeraSetRootSignature::~PeraSetRootSignature()
 {
 	delete this;
 }
