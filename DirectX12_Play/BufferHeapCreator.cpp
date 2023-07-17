@@ -47,13 +47,13 @@ void BufferHeapCreator::SetCBVSRVHeapDesc()
 void BufferHeapCreator::SetMutipassRTVHeapDesc()
 {
 	mutipassRTVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassRTVHeapDesc.NumDescriptors = 1;
+	mutipassRTVHeapDesc.NumDescriptors = 2; // マルチパス対象数で変動する
 }
 
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 1;
+	mutipassSRVHeapDesc.NumDescriptors = 2; // マルチパス対象数で変動する
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -226,7 +226,7 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 	mutipassHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SetClearValue();
 
-	return _dev->CreateCommittedResource
+	result = _dev->CreateCommittedResource
 	(
 		&mutipassHeapProp,
 		D3D12_HEAP_FLAG_NONE,
@@ -234,6 +234,16 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		&depthClearValue,
 		IID_PPV_ARGS(multipassBuff.ReleaseAndGetAddressOf())
+	);
+
+	return _dev->CreateCommittedResource
+	(
+		&mutipassHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&mutipassResDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		&depthClearValue,
+		IID_PPV_ARGS(multipassBuff2.ReleaseAndGetAddressOf())
 	);
 }
 
@@ -424,6 +434,11 @@ ComPtr<ID3D12Resource> BufferHeapCreator::GetMaterialBuff()
 ComPtr<ID3D12Resource> BufferHeapCreator::GetMultipassBuff()
 {
 	return multipassBuff;
+}
+
+ComPtr<ID3D12Resource> BufferHeapCreator::GetMultipassBuff2()
+{
+	return multipassBuff2;
 }
 
 ComPtr<ID3D12Resource> BufferHeapCreator::GetWhiteTextureBuff()

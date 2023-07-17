@@ -33,8 +33,8 @@ public:
 	void CreateCBV4Matrix(ComPtr<ID3D12Device> _dev); // 行列用cbvを生成 戻り値がvoidなのに注意
 	void CreateDSVWrapper(ComPtr<ID3D12Device> _dev); //デプスステンシルビュー作成
 	void CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev); // マテリアル、テクスチャ、sphファイル用のCBV,SRVをまとめて作成
-	void CreateRTV4Multipass(ComPtr<ID3D12Device> _dev); // マルチパス用RTV作成
-	void CreateSRV4Multipass(ComPtr<ID3D12Device> _dev); // マルチパス用SRV作成
+	void CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev); // まとめてマルチパス用RTV作成
+	void CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev); // まとめてマルチパス用SRV作成
 	void CreateVertexBufferView();
 	void CreateIndexBufferView();
 

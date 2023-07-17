@@ -69,6 +69,8 @@ private:
 	void UpdateVMDMotion(std::map<std::string, BoneNode> bNodeTable, 
 		std::unordered_map<std::string, std::vector<KeyFrame>> motionData);
 
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
 	// œŸ¡ ﬂΩä÷òA
 	PeraGraphicsPipelineSetting* peraGPLSetting = nullptr;
 	PeraLayout* peraLayout = nullptr;

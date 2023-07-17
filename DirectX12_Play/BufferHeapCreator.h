@@ -38,6 +38,7 @@ private:
 	ComPtr<ID3D12Resource> matrixBuff = nullptr; // 行列用定数バッファー
 	ComPtr<ID3D12Resource> materialBuff = nullptr; // マテリアル用定数バッファー
 	ComPtr<ID3D12Resource> multipassBuff = nullptr; // マルチパスレンダリング用書き込み先バッファー
+	ComPtr<ID3D12Resource> multipassBuff2 = nullptr; // マルチパスレンダリング用書き込み先バッファーその2
 	ComPtr<ID3D12Resource> whiteTextureBuff = nullptr; // 白テクスチャ用バッファー
 	ComPtr<ID3D12Resource> blackTextureBuff = nullptr; // 黒テクスチャ用バッファー
 	ComPtr<ID3D12Resource> grayTextureBuff = nullptr; // グレーテクスチャ用バッファー
@@ -141,6 +142,7 @@ public:
 	ComPtr<ID3D12Resource> GetMatrixBuff();
 	ComPtr<ID3D12Resource> GetMaterialBuff();
 	ComPtr<ID3D12Resource> GetMultipassBuff();
+	ComPtr<ID3D12Resource> GetMultipassBuff2();
 	ComPtr<ID3D12Resource> GetWhiteTextureBuff();
 	ComPtr<ID3D12Resource> GetBlackTextureBuff();
 	ComPtr<ID3D12Resource> GetGrayTextureBuff();

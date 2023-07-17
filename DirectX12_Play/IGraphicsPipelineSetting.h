@@ -7,6 +7,7 @@ protected:
 	ComPtr<ID3D12PipelineState> _pipelineState = nullptr;
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeLine = {};
 	D3D12_RENDER_TARGET_BLEND_DESC renderTargetDesc = {};
+	HRESULT result;
 	int count = 0;
 
 //public:

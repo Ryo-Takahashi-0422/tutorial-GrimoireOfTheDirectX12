@@ -133,26 +133,52 @@ void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 	}
 }
 
-void ViewCreator::CreateRTV4Multipass(ComPtr<ID3D12Device> _dev)
+void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 {
 	SetRTVDesc4Multipass();
+	auto handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 
+	// ˆêŒÂ–Ú
 	_dev->CreateRenderTargetView
 	(
 		bufferHeapCreator->GetMultipassBuff().Get(),
 		&multipassRTVDesc,
-		bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart()
+		handle
+	);
+
+	multipassRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// ƒjŒÂ–Ú
+	_dev->CreateRenderTargetView
+	(
+		bufferHeapCreator->GetMultipassBuff2().Get(),
+		&multipassRTVDesc,
+		handle
 	);
 }
 
-void ViewCreator::CreateSRV4Multipass(ComPtr<ID3D12Device> _dev)
+void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 {
 	SetSRVDesc4Multipass();
+	auto handle = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
+
+	// ˆêŒÂ–Ú
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff().Get(),
 		&multipassSRVDesc,
-		bufferHeapCreator->GetMultipassSRVHeap().Get()->GetCPUDescriptorHandleForHeapStart()
+		handle
+	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// ƒjŒÂ–Ú
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetMultipassBuff2().Get(),
+		&multipassSRVDesc,
+		handle
 	);
 }
 

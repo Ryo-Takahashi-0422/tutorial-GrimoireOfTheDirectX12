@@ -23,8 +23,12 @@ void PeraPolygon::CreatePeraView(ComPtr<ID3D12Device> _dev)
 	peraVBV.StrideInBytes = sizeof(PeraVertex);
 
 	// マッピング
-	PeraVertex* mappedPera = nullptr;
 	peraBuff->Map(0, nullptr, (void**)&mappedPera);
 	std::copy(std::begin(pv), std::end(pv), mappedPera);
 	peraBuff->Unmap(0, nullptr);
+}
+
+D3D12_VERTEX_BUFFER_VIEW* PeraPolygon::GetVBView()
+{
+	return &peraVBV;
 }

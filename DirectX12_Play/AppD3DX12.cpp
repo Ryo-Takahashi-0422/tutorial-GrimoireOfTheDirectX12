@@ -425,8 +425,8 @@ bool AppD3DX12::ResourceInit() {
 
 	// マルチパス用ビュー作成
 	peraPolygon->CreatePeraView(_dev);
-	viewCreator->CreateRTV4Multipass(_dev);
-	viewCreator->CreateSRV4Multipass(_dev);
+	viewCreator->CreateRTV4Multipasses(_dev);
+	viewCreator->CreateSRV4Multipasses(_dev);
 
 // 初期化処理9：フェンスの生成
 	//	ID3D12Fence* _fence = nullptr;
@@ -435,6 +435,9 @@ bool AppD3DX12::ResourceInit() {
 
 // 初期化処理10：イベントハンドルの作成
 // 初期化処理11：GPUの処理完了待ち
+
+
+
 
 	return true;
 }
@@ -456,6 +459,51 @@ void AppD3DX12::Run() {
 			break;
 		}
 
+
+
+
+
+
+		//// マルチパス1パス目
+
+		D3D12_RESOURCE_BARRIER barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetMultipassBuff().Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_RENDER_TARGET
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
+
+		auto rtvHeapPointer = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+		//auto dsvHeapHandle = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		//rtvHeapPointer.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, nullptr);
+		_cmdList->ClearRenderTargetView(rtvHeapPointer, clearColor, 0, nullptr);
+		//_cmdList->ClearDepthStencilView(dsvHeapHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
+		_cmdList->SetGraphicsRootSignature(peraSetRootSignature->GetRootSignature().Get());
+		
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
+		auto mHandle = bufferHeapCreator->GetMultipassSRVHeap().Get()->GetGPUDescriptorHandleForHeapStart();
+		_cmdList->SetGraphicsRootDescriptorTable(0, mHandle);
+
+		_cmdList->SetPipelineState(peraGPLSetting->GetPipelineState().Get());
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
+		_cmdList->DrawInstanced(4, 1, 0, 0);
+
+
+		// ﾏﾙﾁﾊﾟｽﾘｿｰｽﾊﾞﾘｱ元に戻す
+		barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetMultipassBuff().Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
+
+
+
+		// モデル描画
 		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
 		_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
 		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
@@ -468,45 +516,27 @@ void AppD3DX12::Run() {
 		D3D12_RESOURCE_BARRIER BarrierDesc = {};
 		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		BarrierDesc.Transition.pResource = _backBuffers[bbIdx].Get();
+		BarrierDesc.Transition.pResource = /*_backBuffers[bbIdx].Get()*/bufferHeapCreator->GetMultipassBuff2().Get();
 		BarrierDesc.Transition.Subresource = 0;
-		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+		BarrierDesc.Transition.StateBefore = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		//リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
 
-
-
-
-		//// マルチパス1パス目
-		//auto rtvHeapPointer = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
-		//auto dsvHeapHandle = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
-		//_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, &dsvHeapHandle);
-		//_cmdList->ClearDepthStencilView(dsvHeapHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
-
-		//D3D12_RESOURCE_BARRIER barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
-		//(
-		//	bufferHeapCreator->GetMultipassBuff().Get(),
-		//	D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		//	D3D12_RESOURCE_STATE_RENDER_TARGET
-		//);
-		//_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
-
-
-
 		//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
-		handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
-		handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		handle = bufferHeapCreator->/*GetRTVHeap()*/GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
+		//handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
 		// ★戻す
-		_cmdList->OMSetRenderTargets(1, &handle, true, &dsvh);
+		_cmdList->OMSetRenderTargets(1, &handle, false, &dsvh);
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 		//画面クリア
-		float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		_cmdList->ClearRenderTargetView(handle/*rtvHeapPointer*/, clearColor, 0, nullptr);
+		//float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 
 		//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -562,19 +592,10 @@ void AppD3DX12::Run() {
 		//変更させておく必要があるが、実質は●●●から～クローズまでに変更させる必要がある。
 		//★戻す
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+		BarrierDesc.Transition.StateAfter = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
 
 
-
-
-		//barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
-		//(
-		//	bufferHeapCreator->GetMultipassBuff().Get(),
-		//	D3D12_RESOURCE_STATE_RENDER_TARGET,
-		//	D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-		//);
-		//_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
 
 
 

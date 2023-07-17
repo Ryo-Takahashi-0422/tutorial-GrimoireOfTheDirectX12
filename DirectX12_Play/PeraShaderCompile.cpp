@@ -11,7 +11,7 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> PeraShaderCompile::SetPeraShad
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"vs",
 		"vs_5_0",
-		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		/*D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION*/0,
 		0,
 		_vsBlob.ReleaseAndGetAddressOf()
 		, setPeraRootSignature->GetErrorBlob().GetAddressOf()
@@ -24,7 +24,7 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> PeraShaderCompile::SetPeraShad
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"ps",
 		"ps_5_0",
-		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		/*D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION*/0,
 		0,
 		_psBlob.ReleaseAndGetAddressOf()
 		, setPeraRootSignature->GetErrorBlob().GetAddressOf()

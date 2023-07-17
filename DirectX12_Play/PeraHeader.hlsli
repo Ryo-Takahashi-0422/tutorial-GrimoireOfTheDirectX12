@@ -3,6 +3,6 @@ SamplerState smp : register(s0); // ƒTƒ“ƒvƒ‰[
 
 struct Output
 {
-    float4 svpos : SV_Position;
+    float4 svpos : SV_POSITION;
     float2 uv : TEXCOORD;
 };
