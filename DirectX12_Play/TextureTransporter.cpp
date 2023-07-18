@@ -68,7 +68,7 @@ void TextureTransporter::TransportTexture(
 			// 実行中ｺﾏﾝﾄﾞﾘｽﾄ完了後に、指定ﾌｪﾝｽ値をﾌｪﾝｽに書き込むよう設定。ここではｲﾝｸﾘﾒﾝﾄしたfenceValをﾌｪﾝｽに書き込むこととなる。
 			_cmdQueue->Signal(_fence.Get(), ++_fenceVal);
 
-			if (_fence->GetCompletedValue() < _fenceVal) // フェンス現在値が_fenceVal未満ならコマンド実行未完了なので以下待機処理
+			if (_fence->GetCompletedValue() != _fenceVal) // フェンス現在値が_fenceVal未満ならコマンド実行未完了なので以下待機処理
 			{
 				auto event = CreateEvent(nullptr, false, false, nullptr);
 				_fence->SetEventOnCompletion(_fenceVal, event); // フェンスが第一引数に達したらevent発火(シグナル状態にする)

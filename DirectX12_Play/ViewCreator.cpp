@@ -146,8 +146,9 @@ void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 		handle
 	);
 
-	multipassRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	//★★★後で試す
+	//multipassRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB; // パスの二つ目はモデル描画なのでそれに合わせて変更する
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV/*D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV*/);
 
 	// ニ個目
 	_dev->CreateRenderTargetView

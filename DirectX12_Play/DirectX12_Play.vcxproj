@@ -179,6 +179,7 @@
   <ItemGroup>
     <ClCompile Include="AppD3DX12.cpp" />
     <ClCompile Include="BufferHeapCreator.cpp" />
+    <ClCompile Include="BufferShaderCompile.cpp" />
     <ClCompile Include="GraphicsPipelineSetting.cpp" />
     <ClCompile Include="IGraphicsPipelineSetting.cpp" />
     <ClCompile Include="InputLayoutBase.cpp" />
@@ -237,6 +238,22 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">BasicVS</EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="BufferPixel.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">psBuffer</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="BufferVertex.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vsBuffer</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="PeraPixel.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
@@ -256,11 +273,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="BasicShaderHeader.hlsli" />
+    <None Include="BufferHeader.hlsli" />
     <None Include="PeraHeader.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppD3DX12.h" />
     <ClInclude Include="BufferHeapCreator.h" />
+    <ClInclude Include="BufferShaderCompile.h" />
     <ClInclude Include="GraphicsPipelineSetting.h" />
     <ClInclude Include="IGraphicsPipelineSetting.h" />
     <ClInclude Include="InputLayoutBase.h" />

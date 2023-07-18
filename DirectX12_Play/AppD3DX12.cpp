@@ -161,6 +161,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	peraPolygon = new PeraPolygon;
 	peraSetRootSignature = new PeraSetRootSignature;
 	peraShaderCompile = new PeraShaderCompile;
+	bufferGPLSetting = new PeraGraphicsPipelineSetting(peraLayout);
+	bufferSetRootSignature = new PeraSetRootSignature;
+	bufferShaderCompile = new BufferShaderCompile;
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -243,7 +246,7 @@ bool AppD3DX12::PipelineInit(){
 	handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();//ヒープの先頭を表す CPU 記述子ハンドルを取得
 
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM/*_SRGB*/;
 	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 	for (int idx = 0; idx < swapChainDesc.BufferCount; idx++)
@@ -283,6 +286,12 @@ bool AppD3DX12::ResourceInit() {
 		return false;
 	}
 
+	// 表示用
+	if (FAILED(bufferSetRootSignature->SetRootsignatureParam(_dev)))
+	{
+		return false;
+	}
+
 // 初期化処理2：シェーダーコンパイル設定
 	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
 	auto blobs = settingShaderCompile->SetShaderCompile(setRootSignature, _vsBlob, _psBlob);
@@ -290,11 +299,17 @@ bool AppD3DX12::ResourceInit() {
 	_vsBlob = blobs.first;
 	_psBlob = blobs.second;
 
-	// ﾏﾙﾁﾊﾟｽ用
+	// ﾏﾙﾁﾊﾟｽ1枚目用
 	auto mBlobs = peraShaderCompile->SetPeraShaderCompile(peraSetRootSignature, _vsMBlob, _psMBlob);
 	if (mBlobs.first == nullptr or mBlobs.second == nullptr) return false;
 	_vsMBlob = mBlobs.first;
 	_psMBlob = mBlobs.second;
+
+	// 表示用
+	auto bufferBlobs = bufferShaderCompile->SetPeraShaderCompile(bufferSetRootSignature, _vsBackbufferBlob, _psBackbufferBlob);
+	if (bufferBlobs.first == nullptr or bufferBlobs.second == nullptr) return false;
+	_vsBackbufferBlob = bufferBlobs.first;
+	_psBackbufferBlob = bufferBlobs.second;
 
 // 初期化処理3：頂点入力レイアウトの作成及び
 // 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
@@ -302,6 +317,9 @@ bool AppD3DX12::ResourceInit() {
 
 	// ﾏﾙﾁﾊﾟｽ用
 	result = peraGPLSetting->CreateGPStateWrapper(_dev, peraSetRootSignature, _vsMBlob, _psMBlob);
+
+	// 表示用
+	result = bufferGPLSetting->CreateGPStateWrapper(_dev, bufferSetRootSignature, _vsBackbufferBlob, _psBackbufferBlob);
 
 // 初期化処理5：コマンドリスト生成
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
@@ -461,8 +479,7 @@ void AppD3DX12::Run() {
 
 
 
-
-
+		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 		//// マルチパス1パス目
 
@@ -477,11 +494,11 @@ void AppD3DX12::Run() {
 		auto rtvHeapPointer = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 		//auto dsvHeapHandle = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 		//rtvHeapPointer.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, nullptr);
+		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, &dsvh);
 		_cmdList->ClearRenderTargetView(rtvHeapPointer, clearColor, 0, nullptr);
 		//_cmdList->ClearDepthStencilView(dsvHeapHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 		_cmdList->SetGraphicsRootSignature(peraSetRootSignature->GetRootSignature().Get());
-		
+
 		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
 		auto mHandle = bufferHeapCreator->GetMultipassSRVHeap().Get()->GetGPUDescriptorHandleForHeapStart();
 		_cmdList->SetGraphicsRootDescriptorTable(0, mHandle);
@@ -503,97 +520,142 @@ void AppD3DX12::Run() {
 
 
 
-		// モデル描画
-		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
-		_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
-		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
-		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
+
+
+		//// ﾏﾙﾁﾊﾟｽ2パス目
+		////リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。
+		//D3D12_RESOURCE_BARRIER BarrierDesc = {};
+		//BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		//BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		//BarrierDesc.Transition.pResource = /*_backBuffers[bbIdx]*/bufferHeapCreator->GetMultipassBuff2().Get();
+		//BarrierDesc.Transition.Subresource = 0;
+		//BarrierDesc.Transition.StateBefore = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		//BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		////リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
+		//_cmdList->ResourceBarrier(1, &BarrierDesc);
+
+		//// モデル描画
+		//_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
+		//_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
+		//_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
+		//_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
+
+		////ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
+		//handle = bufferHeapCreator->/*GetRTVHeap()*/GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
+		////handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		////auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		//// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
+		//// なのでこの二種類のビューはマッピングしなかった
+		//// ★戻す
+		//_cmdList->OMSetRenderTargets(1, &handle, false, &dsvh);
+		//_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
+
+		////画面クリア
+		////float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		//_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+
+		////プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
+		//_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		////頂点バッファーのCPU記述子ハンドルを設定
+		//_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
+
+		////インデックスバッファーのビューを設定
+		//_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
+
+		////ディスクリプタヒープ設定および
+		////ディスクリプタヒープとルートパラメータの関連付け
+		////ここでルートシグネチャのテーブルとディスクリプタが関連付く
+		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
+		//_cmdList->SetGraphicsRootDescriptorTable
+		//(
+		//	0, // バインドのスロット番号
+		//	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		//);
+
+		////////テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
+		//////// 二つ目のセットによりNS300/Hではモデルが表示されなくなった。
+		////////_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
+		////////_cmdList->SetGraphicsRootDescriptorTable
+		////////(
+		////////	1, // バインドのスロット番号
+		////////	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		////////);
+
+		//// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
+		//// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
+		//auto materialHandle = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		//auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+		//materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
+		//unsigned int idxOffset = 0;
+
+		//for (auto m : pmdMaterialInfo->materials)
+		//{
+		//	_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
+		//	//インデックス付きインスタンス化されたプリミティブを描画
+		//	_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
+
+		//	materialHandle.ptr += materialHInc;
+		//	idxOffset += m.indiceNum;
+		//}
+
+		////_cmdList->DrawInstanced(vertNum ,1, 0, 0);
+
+		////ﾊﾞｯｸﾊﾞｯﾌｧ表示前にリソースをCOMMON状態に移行
+		////コマンドリストクローズ後は、コマンドリストが特定の呼び出し(Reset())以外は受け付けず、以下3行はエラーになる
+		////クローズ後にコマンドキューを実行しているが、ここでリソースの状態が適用される。ここまでにCOMMONから状態を
+		////変更させておく必要があるが、実質は●●●から～クローズまでに変更させる必要がある。
+		////★戻す
+		//BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		//BarrierDesc.Transition.StateAfter = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		//_cmdList->ResourceBarrier(1, &BarrierDesc);
+
+
+
+
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 
-		// ★あとで戻す
-		//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。
-		D3D12_RESOURCE_BARRIER BarrierDesc = {};
-		BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		BarrierDesc.Transition.pResource = /*_backBuffers[bbIdx].Get()*/bufferHeapCreator->GetMultipassBuff2().Get();
-		BarrierDesc.Transition.Subresource = 0;
-		BarrierDesc.Transition.StateBefore = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		//リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
-		_cmdList->ResourceBarrier(1, &BarrierDesc);
-
-		//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
-		handle = bufferHeapCreator->/*GetRTVHeap()*/GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
-		//handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
-		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
-		// なのでこの二種類のビューはマッピングしなかった
-		// ★戻す
-		_cmdList->OMSetRenderTargets(1, &handle, false, &dsvh);
-		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
-
-		//画面クリア
-		//float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
-
-		//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
-		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		//頂点バッファーのCPU記述子ハンドルを設定
-		_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
-
-		//インデックスバッファーのビューを設定
-		_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
-
-		//ディスクリプタヒープ設定および
-		//ディスクリプタヒープとルートパラメータの関連付け
-		//ここでルートシグネチャのテーブルとディスクリプタが関連付く
-		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
-		_cmdList->SetGraphicsRootDescriptorTable
+		// ﾊﾞｯｸﾊﾞｯﾌｧに描画する
+		// ﾊﾞｯｸﾊﾞｯﾌｧ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
+		D3D12_RESOURCE_BARRIER barrierDesc4BackBuffer = CD3DX12_RESOURCE_BARRIER::Transition
 		(
-			0, // バインドのスロット番号
-			bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+			_backBuffers[bbIdx].Get(),
+			D3D12_RESOURCE_STATE_PRESENT,
+			D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4BackBuffer);
 
-		//////テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
-		////// 二つ目のセットによりNS300/Hではモデルが表示されなくなった。
-		//////_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
-		//////_cmdList->SetGraphicsRootDescriptorTable
-		//////(
-		//////	1, // バインドのスロット番号
-		//////	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
-		//////);
+		rtvHeapPointer = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+		rtvHeapPointer.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, /*&dsvh*/nullptr);
 
-		// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
-		// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
-		auto materialHandle = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
-		materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
-		unsigned int idxOffset = 0;
+		float clsClr[4] = { 0.2,0.5,0.5,1.0 };
+		_cmdList->ClearRenderTargetView(rtvHeapPointer, clsClr, 0, nullptr);
 
-		for (auto m : pmdMaterialInfo->materials)
-		{
-			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
-			//インデックス付きインスタンス化されたプリミティブを描画
-			_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
+		// 作成したﾃｸｽﾁｬの利用処理
+		_cmdList->SetGraphicsRootSignature(peraSetRootSignature/*bufferSetRootSignature*/->GetRootSignature().Get());
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->/*GetCBVSRVHeap()*/GetMultipassSRVHeap().GetAddressOf());
 
-			materialHandle.ptr += materialHInc;
-			idxOffset += m.indiceNum;
-		}
+		auto gHandle = bufferHeapCreator->/*GetCBVSRVHeap()*/GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		_cmdList->SetGraphicsRootDescriptorTable(0, gHandle);
+		_cmdList->SetPipelineState(peraGPLSetting/*bufferGPLSetting*/->GetPipelineState().Get());
 
-		//_cmdList->DrawInstanced(vertNum ,1, 0, 0);
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
 
-		//ﾊﾞｯｸﾊﾞｯﾌｧ表示前にリソースをCOMMON状態に移行
-		//コマンドリストクローズ後は、コマンドリストが特定の呼び出し(Reset())以外は受け付けず、以下3行はエラーになる
-		//クローズ後にコマンドキューを実行しているが、ここでリソースの状態が適用される。ここまでにCOMMONから状態を
-		//変更させておく必要があるが、実質は●●●から～クローズまでに変更させる必要がある。
-		//★戻す
-		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		BarrierDesc.Transition.StateAfter = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		_cmdList->ResourceBarrier(1, &BarrierDesc);
+		//auto gHandle2 = bufferHeapCreator->GetMultipassSRVHeap()/*GetCBVSRVHeap()*/->GetGPUDescriptorHandleForHeapStart();
+		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap()/*GetCBVSRVHeap()*/.GetAddressOf());
+		//_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2); // GetCBVSRVHeap()のときPeraPixelのreturnでsmp利用→fenceが無限ループ
+
+		_cmdList->DrawInstanced(4, 1, 0, 0);
+
+		// ﾊﾞｯｸﾊﾞｯﾌｧ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄから元に戻す
+		barrierDesc4BackBuffer.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrierDesc4BackBuffer.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		_cmdList->ResourceBarrier(1, &barrierDesc4BackBuffer);
 
 
 
@@ -613,12 +675,14 @@ void AppD3DX12::Run() {
 
 		while (_fence->GetCompletedValue() != _fenceVal)
 		{
+			printf("%d\n", _fence->GetCompletedValue());
 			auto event = CreateEvent(nullptr, false, false, nullptr);
 			_fence->SetEventOnCompletion(_fenceVal, event);
 			//イベント発生待ち
 			WaitForSingleObject(event, INFINITE);
 			//イベントハンドルを閉じる
 			CloseHandle(event);
+			printf("%d\n", _fence->GetCompletedValue());
 		}
 
 		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
@@ -633,18 +697,18 @@ void AppD3DX12::Run() {
 		// モーション用行列の更新と書き込み
 		pmdActor->MotionUpdate(pmdActor->GetDuration());
 		pmdActor->UpdateVMDMotion();
-	    //pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
+		//pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
 		//pmdActor->IKSolve();
 		std::copy(boneMatrices->begin(), boneMatrices->end(), pmdMaterialInfo->mapMatrix->bones);
 
 		//フリップしてレンダリングされたイメージをユーザーに表示
 		_swapChain->Present(1, 0);
 	}
-	
+
 	delete viewCreator;
 	delete mappingExecuter;
 	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
-	
+
 	delete bufferHeapCreator;
 	delete textureTransporter;
 	delete textureLoader;
@@ -663,4 +727,8 @@ void AppD3DX12::Run() {
 	delete peraPolygon;
 	delete peraSetRootSignature;
 	delete peraShaderCompile;
+
+	delete bufferGPLSetting;
+	delete bufferSetRootSignature;
+	delete bufferShaderCompile;
 }

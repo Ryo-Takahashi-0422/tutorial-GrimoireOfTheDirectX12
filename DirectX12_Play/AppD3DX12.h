@@ -15,6 +15,8 @@ private:
 	ComPtr<ID3D10Blob> _psBlob = nullptr; // ピクセルシェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _vsMBlob = nullptr; // ﾏﾙﾁﾊﾟｽ用頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _psMBlob = nullptr; // ﾏﾙﾁﾊﾟｽ用頂点ピクセルシェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _vsBackbufferBlob = nullptr; // 表示用頂点シェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _psBackbufferBlob = nullptr; // 表示用頂点ピクセルシェーダーオブジェクト格納用
 	ComPtr<ID3D12Fence> _fence = nullptr;
 	UINT64 _fenceVal;
 	std::vector<ComPtr<ID3D12Resource>> _backBuffers; // ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧｰ D3D12_RESOURCE_STATE_COMMONに設定するルール。
@@ -77,6 +79,10 @@ private:
 	PeraPolygon* peraPolygon = nullptr;
 	PeraSetRootSignature* peraSetRootSignature = nullptr;
 	PeraShaderCompile* peraShaderCompile = nullptr;
+
+	PeraGraphicsPipelineSetting* bufferGPLSetting = nullptr;
+	PeraSetRootSignature* bufferSetRootSignature = nullptr;
+	BufferShaderCompile* bufferShaderCompile = nullptr;
 
 public:
 	///Applicationのシングルトンインスタンスを得る
