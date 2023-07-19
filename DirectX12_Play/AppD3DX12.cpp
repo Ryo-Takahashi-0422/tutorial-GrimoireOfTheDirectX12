@@ -649,9 +649,11 @@ void AppD3DX12::Run() {
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
 
-		//auto gHandle2 = bufferHeapCreator->/*GetMultipassSRVHeap()*/GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->/*GetMultipassSRVHeap()*/GetCBVSRVHeap().GetAddressOf());
-		//_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2); // GetCBVSRVHeap()のときPeraPixelのreturnでsmp利用→fenceが無限ループ
+		auto gHandle2 = bufferHeapCreator->GetMultipassSRVHeap()/*GetCBVSRVHeap()*/->GetGPUDescriptorHandleForHeapStart();
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2); // 第一引数が0は有効だが1が無効になっている...なぜ？
+		
 
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 

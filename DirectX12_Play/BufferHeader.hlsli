@@ -1,4 +1,5 @@
-Texture2D<float4> tex : register(t0); // 通常テクスチャ
+Texture2D<float4> tex : register(t0); // マルチパス1テクスチャ
+Texture2D<float4> model : register(t1); // マルチパス2テクスチャ(モデル)
 SamplerState smp : register(s0); // サンプラー
 
 struct Output

@@ -11,8 +11,16 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 
 	//サンプラーのスロット設定
-	descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+	//descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	//descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+	
+	descTableRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descTableRange[0].BaseShaderRegister = 0;
+	descTableRange[0].NumDescriptors = 1;
+
+	descTableRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descTableRange[1].BaseShaderRegister = 1;
+	descTableRange[1].NumDescriptors = 1;
 
 	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[0].DescriptorTable.NumDescriptorRanges = 1;
