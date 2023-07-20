@@ -4,3 +4,5 @@ model/
 .vs/
 DirectX12_Play.sln
 .git
+.xls
+.xlsx
