@@ -181,6 +181,17 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 		&multipassSRVDesc,
 		handle
 	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// ŽOŒÂ–Ú
+	effectCBVDesc.BufferLocation = bufferHeapCreator->GetGaussianBuff()->GetGPUVirtualAddress();
+	effectCBVDesc.SizeInBytes = bufferHeapCreator->GetGaussianBuff()->GetDesc().Width;
+	_dev->CreateConstantBufferView
+	(
+		&effectCBVDesc,
+		handle
+	);
 }
 
 void ViewCreator::CreateVertexBufferView()

@@ -31,4 +31,10 @@ namespace Utility
 	// @param splitter 文字列
 	// @return 分離前後の文字列ペア
 	std::pair<std::string, std::string> SplitFileName(const std::string& path, const char splitter = '*');
+
+	// ガウシアンぼかしの横方向用ウェイトを計算
+	// @param count 計算回数
+	// @param disp 分散
+	// @return ウェイト
+	std::vector<float> GetGaussianWeight(size_t count, float disp);
 };

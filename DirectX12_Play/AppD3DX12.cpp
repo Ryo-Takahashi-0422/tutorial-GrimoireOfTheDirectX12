@@ -441,6 +441,13 @@ bool AppD3DX12::ResourceInit() {
 	// pmdモデルのマテリアル、テクスチャ、sph用ビューを作成。これがないとモデル真っ黒になる。
 	viewCreator->CreateCBVSRV4MateriallTextureSph(_dev);
 
+	// ガウシアンぼかし用ウェイト、バッファー作成、マッピング、ディスクリプタヒープ作成、ビュー作成まで
+	auto weights = Utility::GetGaussianWeight(8, 5.0f);
+	bufferHeapCreator->CreateConstBufferOfGaussian(_dev, weights);
+	mappingExecuter->MappingGaussianWeight(weights);
+	//bufferHeapCreator->CreateEffectHeap(_dev);
+	//viewCreator->CreateCBV4GaussianView(_dev);
+
 	// マルチパス用ビュー作成
 	peraPolygon->CreatePeraView(_dev);
 	viewCreator->CreateRTV4Multipasses(_dev);
@@ -493,11 +500,11 @@ void AppD3DX12::Run() {
 
 		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer()); // 実は重要
 		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer()); // 実は重要
-
+		
 		auto rtvHeapPointer = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 		//auto dsvHeapHandle = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 		//rtvHeapPointer.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, &dsvh);
+		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, /*&dsvh*/nullptr);
 		_cmdList->ClearRenderTargetView(rtvHeapPointer, clearColor, 0, nullptr);
 		//_cmdList->ClearDepthStencilView(dsvHeapHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 		_cmdList->SetGraphicsRootSignature(peraSetRootSignature->GetRootSignature().Get());
@@ -649,11 +656,12 @@ void AppD3DX12::Run() {
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
 
-		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->/*GetMultipassSRVHeap()*/GetCBVSRVHeap().GetAddressOf());
-		auto gHandle2 = bufferHeapCreator->GetMultipassSRVHeap()/*GetCBVSRVHeap()*/->GetGPUDescriptorHandleForHeapStart();
+		auto gHandle2 = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2); // 第一引数が0は有効だが1が無効になっている...なぜ？
+		_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2);
 		
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(2, gHandle2);
 
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 
@@ -680,14 +688,12 @@ void AppD3DX12::Run() {
 
 		while (_fence->GetCompletedValue() != _fenceVal)
 		{
-			printf("%d\n", _fence->GetCompletedValue());
 			auto event = CreateEvent(nullptr, false, false, nullptr);
 			_fence->SetEventOnCompletion(_fenceVal, event);
 			//イベント発生待ち
 			WaitForSingleObject(event, INFINITE);
 			//イベントハンドルを閉じる
 			CloseHandle(event);
-			printf("%d\n", _fence->GetCompletedValue());
 		}
 
 		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する

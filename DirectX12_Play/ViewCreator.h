@@ -14,7 +14,7 @@ private:
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc4MaterialAndTextureAndSph = {}; // シェーダーリソースビュー詳細
 	D3D12_RENDER_TARGET_VIEW_DESC multipassRTVDesc = {}; // マルチパス用レンダーターゲットビュー詳細
 	D3D12_SHADER_RESOURCE_VIEW_DESC multipassSRVDesc = {}; // マルチパス用レンダーターゲットビュー詳細
-
+	D3D12_CONSTANT_BUFFER_VIEW_DESC effectCBVDesc = {}; // 画面エフェクト用CBV詳細
 	D3D12_CPU_DESCRIPTOR_HANDLE basicDescHeapHandle;
 
 	ComPtr<ID3D12Resource> whiteBuff = nullptr;
@@ -37,7 +37,6 @@ public:
 	void CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev); // まとめてマルチパス用SRV作成
 	void CreateVertexBufferView();
 	void CreateIndexBufferView();
-
 
 	D3D12_VERTEX_BUFFER_VIEW* GetVbView();
 	D3D12_INDEX_BUFFER_VIEW* GetIbView();

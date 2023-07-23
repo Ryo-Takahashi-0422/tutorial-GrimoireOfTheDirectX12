@@ -78,3 +78,10 @@ void MappingExecuter::TransferToonTexUploadToBuff(std::vector<DirectX::Image*> t
 		bufferHeapCreator->GetToonUploadBuff()[matNum]->Unmap(0, nullptr);
 	}
 }
+
+void MappingExecuter::MappingGaussianWeight(std::vector<float> weights)
+{
+	bufferHeapCreator->GetGaussianBuff()->Map(0, nullptr, (void**)&mappedweight);
+	std::copy(weights.begin(), weights.end(), mappedweight);
+	bufferHeapCreator->GetGaussianBuff()->Unmap(0, nullptr);
+}

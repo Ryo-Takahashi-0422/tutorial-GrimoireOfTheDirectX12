@@ -75,3 +75,26 @@ std::pair<std::string, std::string> Utility::SplitFileName(
 
 	return ret;
 }
+
+std::vector<float> Utility::GetGaussianWeight(size_t count, float disp)
+{
+	std::vector<float> weight(count); // ウェイト配列返却用
+	float x = 0.0f;
+	float total = 0.0f;
+	for (auto& wgt : weight)
+	{
+		wgt = expf(-(x * x) / (2 * disp * disp));
+		total += wgt;
+		x += 1.0f;
+	}
+
+	total = total * 2 - 1;
+
+	// 足して1になるようにする
+	for (auto& wgt : weight)
+	{
+		wgt /= total;
+	}
+
+	return weight;
+}

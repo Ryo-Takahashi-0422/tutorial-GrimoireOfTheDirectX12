@@ -24,6 +24,7 @@ private:
 	D3D12_HEAP_PROPERTIES wvpHeapProp = {}; // 行列用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES materialHeapProp = {};  // PMDMaterialInfo->MaterialForHlsl定義に合わせている
 	D3D12_HEAP_PROPERTIES mutipassHeapProp = {}; // マルチパス用ヒーププロパティ
+	D3D12_HEAP_PROPERTIES gaussianHeapProp = {}; // ガウスぼかし用ヒーププロパティ
 
 	D3D12_RESOURCE_DESC vertresDesc; // 頂点用リソース詳細
 	D3D12_RESOURCE_DESC indicesDesc; // 頂点インデックス用リソース詳細
@@ -31,6 +32,7 @@ private:
 	D3D12_RESOURCE_DESC wvpResdesc = {}; // 行列用リソース詳細
 	D3D12_RESOURCE_DESC materialBuffResDesc = {}; // PMDMaterialInfo->MaterialForHlsl定義に合わせている
 	// ﾏﾙﾁﾊﾟｽﾊﾞｯﾌｧ用のオブジェクトはAppD3DX12が生成しているため保持しない
+	D3D12_RESOURCE_DESC gaussianBuffResDesc = {}; // ガウスぼかし用
 
 	ComPtr<ID3D12Resource> vertBuff = nullptr; // 頂点用バッファ
 	ComPtr<ID3D12Resource> idxBuff = nullptr; // 頂点インデックス用バッファ
@@ -42,6 +44,7 @@ private:
 	ComPtr<ID3D12Resource> whiteTextureBuff = nullptr; // 白テクスチャ用バッファー
 	ComPtr<ID3D12Resource> blackTextureBuff = nullptr; // 黒テクスチャ用バッファー
 	ComPtr<ID3D12Resource> grayTextureBuff = nullptr; // グレーテクスチャ用バッファー
+	ComPtr<ID3D12Resource> gaussianBuff = nullptr; // ガウスぼかし用バッファー
 
 	std::vector<ComPtr<ID3D12Resource>> texUploadBuff;//テクスチャCPUアップロード用バッファー
 	std::vector<ComPtr<ID3D12Resource>> texReadBuff;//テクスチャGPU読み取り用バッファー
@@ -114,6 +117,9 @@ public:
 	// マルチパスレンダリング用のバッファ作成
 	HRESULT CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _dev, D3D12_RESOURCE_DESC& mutipassResDesc);
 
+	// ガウスぼかし用定数バッファーの作成。
+	HRESULT CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev, std::vector<float> weights);
+
 	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
 	void CreateUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 		std::string strModelPath,
@@ -146,6 +152,7 @@ public:
 	ComPtr<ID3D12Resource> GetWhiteTextureBuff() { return whiteTextureBuff; };
 	ComPtr<ID3D12Resource> GetBlackTextureBuff() { return blackTextureBuff; };
 	ComPtr<ID3D12Resource> GetGrayTextureBuff() { return grayTextureBuff; };
+	ComPtr<ID3D12Resource> GetGaussianBuff() { return gaussianBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetTexUploadBuff() { return texUploadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetTexReadBuff() { return texReadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetsphMappedBuff() { return sphMappedBuff; };

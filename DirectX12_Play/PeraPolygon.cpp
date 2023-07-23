@@ -16,7 +16,7 @@ void PeraPolygon::CreatePeraView(ComPtr<ID3D12Device> _dev)
 		nullptr,
 		IID_PPV_ARGS(peraBuff.ReleaseAndGetAddressOf())
 	);
-
+	
 	// ƒrƒ…[ì¬
 	peraVBV.BufferLocation = peraBuff->GetGPUVirtualAddress();
 	peraVBV.SizeInBytes = sizeof(pv);

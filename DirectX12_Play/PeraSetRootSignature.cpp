@@ -9,8 +9,9 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 
 	//サンプラーのスロット設定
-	descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+	descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // multipassBuff1
+	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // multipassBuff2
+	descTableRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // effect用
 	
 	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[0].DescriptorTable.NumDescriptorRanges = 1;
@@ -22,7 +23,12 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	rootParam[1].DescriptorTable.pDescriptorRanges = &descTableRange[1];
 	rootParam[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	rootSignatureDesc.NumParameters = 2;
+	rootParam[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParam[2].DescriptorTable.NumDescriptorRanges = 1;
+	rootParam[2].DescriptorTable.pDescriptorRanges = &descTableRange[2];
+	rootParam[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	rootSignatureDesc.NumParameters = 3;
 	rootSignatureDesc.pParameters = rootParam;
 	rootSignatureDesc.NumStaticSamplers = 1;
 	rootSignatureDesc.pStaticSamplers = &sampler;

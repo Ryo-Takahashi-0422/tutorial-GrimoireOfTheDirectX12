@@ -12,8 +12,10 @@ private:
 	char* mapMaterial = nullptr;
 	uint8_t* mapforImg = nullptr;
 	uint8_t* toonmapforImg = nullptr;
+	float* mappedweight = nullptr;
 
 	HRESULT result;
+
 public:
 	MappingExecuter(PMDMaterialInfo* _pmdMaterialInfo, BufferHeapCreator* _bufferHeapCreator);
 
@@ -31,6 +33,9 @@ public:
 	void TransferTexUploadToBuff(std::vector<DirectX::Image*> img);
 	// トゥーンテクスチャアップロード用バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
 	void TransferToonTexUploadToBuff(std::vector<DirectX::Image*> toonImg);
+
+	// ガウシアンぼかしバッファーへのウェイト値マッピング
+	void MappingGaussianWeight(std::vector<float> weights);
 
 
 };

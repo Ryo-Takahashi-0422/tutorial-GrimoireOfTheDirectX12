@@ -53,7 +53,7 @@ void BufferHeapCreator::SetMutipassRTVHeapDesc()
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 2; // マルチパス対象数で変動する
+	mutipassSRVHeapDesc.NumDescriptors = 3; // マルチパス対象数で変動する + effect
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -97,6 +97,7 @@ void BufferHeapCreator::SetClearValue()
 HRESULT BufferHeapCreator::CreateRTVHeap(ComPtr<ID3D12Device> _dev)
 {
 	return _dev->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(rtvHeaps.ReleaseAndGetAddressOf()));
+	
 }
 
 HRESULT BufferHeapCreator::CreateDSVHeap(ComPtr<ID3D12Device> _dev)
@@ -145,7 +146,7 @@ HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev)
 {
 	SetVertexHeapProp();
 	vertresDesc = CD3DX12_RESOURCE_DESC::Buffer(pmdMaterialInfo->vertices.size());
-
+	
 	return _dev->CreateCommittedResource
 	(
 		&vertexHeapProps,
@@ -244,6 +245,21 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		&depthClearValue,
 		IID_PPV_ARGS(multipassBuff2.ReleaseAndGetAddressOf())
+	);
+}
+
+HRESULT BufferHeapCreator::CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev, std::vector<float> weights)
+{
+	gaussianHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	gaussianBuffResDesc = CD3DX12_RESOURCE_DESC::Buffer(Utility::AlignmentSize(sizeof(weights[0]) * weights.size(), 256));
+	return _dev->CreateCommittedResource
+	(
+		&gaussianHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&gaussianBuffResDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(gaussianBuff.ReleaseAndGetAddressOf())
 	);
 }
 
