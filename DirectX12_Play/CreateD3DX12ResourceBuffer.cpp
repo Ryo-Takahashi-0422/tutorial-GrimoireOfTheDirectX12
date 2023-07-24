@@ -9,7 +9,7 @@ CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMe
 	if (iterator != _resourceTable.end()) {
 		return iterator->second;
 	};
-
+	
 	//メソッド内でimg等動的メモリ確保のポインタを返すことは不可能と理解した
 	ComPtr<ID3D12Resource> texUploadBuff = nullptr;//テクスチャCPUアップロード用バッファー
 

@@ -345,7 +345,7 @@ bool AppD3DX12::ResourceInit() {
 	metaData.resize(pmdMaterialInfo->materialNum);
 	img.resize(pmdMaterialInfo->materialNum);
 	ScratchImage scratchImg = {};
-	bufferHeapCreator->CreateUploadAndReadBuff(_dev, strModelPath, metaData, img); // バッファ作成
+	bufferHeapCreator->CreateUploadAndReadBuff4PmdTexture(_dev, strModelPath, metaData, img); // バッファ作成
 	
 	// トゥーンテクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
 	toonMetaData.resize(pmdMaterialInfo->materialNum);
@@ -412,12 +412,12 @@ bool AppD3DX12::ResourceInit() {
 	// テクスチャのアップロード用バッファへのマッピング
 	mappingExecuter->TransferTexUploadToBuff(img);
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	textureTransporter->TransportTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img, _fence, _fenceVal);
+	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img, _fence, _fenceVal, bufferHeapCreator->GetPMDTexUploadBuff(), bufferHeapCreator->GetPMDTexReadBuff());
 
 	// トゥーンテクスチャも同様にマッピング
 	mappingExecuter->TransferToonTexUploadToBuff(toonImg);
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	textureTransporter->TransportToonTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal);
+	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal, bufferHeapCreator->GetToonUploadBuff(), bufferHeapCreator->GetToonReadBuff());
 
 	//CBV,SRVディスクリプタヒープ作成(行列、テクスチャに利用)
 	result = bufferHeapCreator->CreateCBVSRVHeap(_dev);

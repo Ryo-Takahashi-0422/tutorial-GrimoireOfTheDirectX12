@@ -39,11 +39,11 @@ void MappingExecuter::TransferTexUploadToBuff(std::vector<DirectX::Image*> img)
 {
 	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
 	{
-		if (bufferHeapCreator->GetTexUploadBuff()[matNum] == nullptr) continue;
+		if (bufferHeapCreator->GetPMDTexUploadBuff()[matNum] == nullptr) continue;
 
 		auto srcAddress = img[matNum]->pixels;
 		auto rowPitch = Utility::AlignmentSize(img[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-		result = bufferHeapCreator->GetTexUploadBuff()[matNum]->Map(0, nullptr, (void**)&mapforImg);
+		result = bufferHeapCreator->GetPMDTexUploadBuff()[matNum]->Map(0, nullptr, (void**)&mapforImg);
 
 		// img:元データの初期アドレス(srcAddress)を元ピッチ分オフセットしながら、補正したピッチ個分(rowPitch)のアドレスを
 		// mapforImgにその数分(rowPitch)オフセットを繰り返しつつコピーしていく
@@ -54,7 +54,7 @@ void MappingExecuter::TransferTexUploadToBuff(std::vector<DirectX::Image*> img)
 			mapforImg += rowPitch;
 		}
 
-		bufferHeapCreator->GetTexUploadBuff()[matNum]->Unmap(0, nullptr);
+		bufferHeapCreator->GetPMDTexUploadBuff()[matNum]->Unmap(0, nullptr);
 	}
 }
 

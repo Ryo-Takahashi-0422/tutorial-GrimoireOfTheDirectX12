@@ -121,7 +121,7 @@ public:
 	HRESULT CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev, std::vector<float> weights);
 
 	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
-	void CreateUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
+	void CreateUploadAndReadBuff4PmdTexture(ComPtr<ID3D12Device> _dev,
 		std::string strModelPath,
 		std::vector<DirectX::TexMetadata*>& metaData,
 		std::vector<DirectX::Image*>& img);
@@ -153,8 +153,8 @@ public:
 	ComPtr<ID3D12Resource> GetBlackTextureBuff() { return blackTextureBuff; };
 	ComPtr<ID3D12Resource> GetGrayTextureBuff() { return grayTextureBuff; };
 	ComPtr<ID3D12Resource> GetGaussianBuff() { return gaussianBuff; };
-	std::vector<ComPtr<ID3D12Resource>> GetTexUploadBuff() { return texUploadBuff; };
-	std::vector<ComPtr<ID3D12Resource>> GetTexReadBuff() { return texReadBuff; };
+	std::vector<ComPtr<ID3D12Resource>> GetPMDTexUploadBuff() { return texUploadBuff; };
+	std::vector<ComPtr<ID3D12Resource>> GetPMDTexReadBuff() { return texReadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetsphMappedBuff() { return sphMappedBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetspaMappedBuff() { return spaMappedBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetToonUploadBuff() { return toonUploadBuff; };

@@ -4,7 +4,7 @@ float4 psBuffer(Output input) : SV_TARGET
 {
     float4 col = model.Sample(smp, input.uv) + tex.Sample(smp, input.uv);
     // buffer[0] + buffer[1]による出力
-    //return col;
+    return model.Sample(smp, input.uv); //col;
     
     
     // PAL(RGBからグレースケールYを得る企画)

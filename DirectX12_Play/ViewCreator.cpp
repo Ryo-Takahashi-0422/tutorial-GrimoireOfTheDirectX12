@@ -64,7 +64,7 @@ void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 		cbvDesc4MaterialAndTextureAndSph.BufferLocation += bufferHeapCreator->GetMaterialBuffSize();
 
 		// テクスチャ
-		if (bufferHeapCreator->GetTexReadBuff()[i] == nullptr)
+		if (bufferHeapCreator->GetPMDTexReadBuff()[i] == nullptr)
 		{
 			srvDesc4MaterialAndTextureAndSph.Format = whiteBuff->GetDesc().Format;
 			_dev->CreateShaderResourceView
@@ -73,9 +73,9 @@ void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 
 		else
 		{
-			srvDesc4MaterialAndTextureAndSph.Format = bufferHeapCreator->GetTexReadBuff()[i]->GetDesc().Format;
+			srvDesc4MaterialAndTextureAndSph.Format = bufferHeapCreator->GetPMDTexReadBuff()[i]->GetDesc().Format;
 			_dev->CreateShaderResourceView
-			(bufferHeapCreator->GetTexReadBuff()[i].Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
+			(bufferHeapCreator->GetPMDTexReadBuff()[i].Get(), &srvDesc4MaterialAndTextureAndSph, basicDescHeapHandle);
 		}
 
 		basicDescHeapHandle.ptr += inc;

@@ -263,7 +263,7 @@ HRESULT BufferHeapCreator::CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev
 	);
 }
 
-void BufferHeapCreator::CreateUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
+void BufferHeapCreator::CreateUploadAndReadBuff4PmdTexture(ComPtr<ID3D12Device> _dev,
 	std::string strModelPath, std::vector<DirectX::TexMetadata*>& metaData, std::vector<DirectX::Image*>& img)
 {
 	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
