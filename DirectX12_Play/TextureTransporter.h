@@ -14,16 +14,8 @@ private:
 public:
 	TextureTransporter(PMDMaterialInfo* _pmdMaterialInfo, BufferHeapCreator* _bufferHeapCreator);
 
-	// 任意のテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	void TransportTexture(ComPtr<ID3D12GraphicsCommandList> _cmdList,
-		ComPtr<ID3D12CommandAllocator> _cmdAllocator,
-		ComPtr<ID3D12CommandQueue> _cmdQueue,
-		std::vector<DirectX::TexMetadata*> metaData,
-		std::vector<DirectX::Image*> img,
-		ComPtr<ID3D12Fence> _fence,
-		UINT64& _fenceVal);
-
-	// PMDテクスチャをマテリアル数分まとめてGPUのUpload用バッファからGPUのRead用バッファへデータコピー
+	// テクスチャをitCount数分まとめてGPUのUpload用バッファからGPUのRead用バッファへデータコピー
+	// 元はpmdマテリアル数分まとめて処理していたメソッドを共通化した
 	void TransportPMDMaterialTexture(ComPtr<ID3D12GraphicsCommandList> _cmdList,
 		ComPtr<ID3D12CommandAllocator> _cmdAllocator,
 		ComPtr<ID3D12CommandQueue> _cmdQueue,
@@ -32,5 +24,6 @@ public:
 		ComPtr<ID3D12Fence> _fence,
 		UINT64& _fenceVal,
 		std::vector<ComPtr<ID3D12Resource>> uploadBuff,
-		std::vector<ComPtr<ID3D12Resource>> readBuff);
+		std::vector<ComPtr<ID3D12Resource>> readBuff,
+		unsigned int itCount);
 };

@@ -18,44 +18,45 @@ void TextureTransporter::TransportPMDMaterialTexture(
 	ComPtr<ID3D12Fence> _fence,
 	UINT64& _fenceVal,
 	std::vector<ComPtr<ID3D12Resource>> uploadBuff,
-	std::vector<ComPtr<ID3D12Resource>> readBuff)
+	std::vector<ComPtr<ID3D12Resource>> readBuff,
+	unsigned int itCount)
 {
 	// テクスチャ用転送オブジェクトのリサイズ
 	pmdSource.resize(pmdMaterialInfo->materialNum);
 	pmdDestination.resize(pmdMaterialInfo->materialNum);
 	texBarriierDesc.resize(pmdMaterialInfo->materialNum);
 
-	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
+	for (int count = 0; count < itCount; count++)
 	{
-		if (/*bufferHeapCreator->GetPMDTexUploadBuff()*/uploadBuff[matNum] == nullptr || /*bufferHeapCreator->GetPMDTexReadBuff()*/readBuff[matNum] == nullptr) continue;
+		if (uploadBuff[count] == nullptr || readBuff[count] == nullptr) continue;
 
-		pmdSource[matNum].pResource = /*bufferHeapCreator->GetPMDTexUploadBuff()*/uploadBuff[matNum].Get();
-		pmdSource[matNum].Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		pmdSource[matNum].PlacedFootprint.Offset = 0;
-		pmdSource[matNum].PlacedFootprint.Footprint.Width = metaData[matNum]->width;
-		pmdSource[matNum].PlacedFootprint.Footprint.Height = metaData[matNum]->height;
-		pmdSource[matNum].PlacedFootprint.Footprint.Depth = metaData[matNum]->depth;
-		pmdSource[matNum].PlacedFootprint.Footprint.RowPitch =
-			Utility::AlignmentSize(img[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT); // R8G8B8A8:4bit * widthの値は256の倍数であること
-		pmdSource[matNum].PlacedFootprint.Footprint.Format = img[matNum]->format;//metaData.format;
+		pmdSource[count].pResource = uploadBuff[count].Get();
+		pmdSource[count].Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		pmdSource[count].PlacedFootprint.Offset = 0;
+		pmdSource[count].PlacedFootprint.Footprint.Width = metaData[count]->width;
+		pmdSource[count].PlacedFootprint.Footprint.Height = metaData[count]->height;
+		pmdSource[count].PlacedFootprint.Footprint.Depth = metaData[count]->depth;
+		pmdSource[count].PlacedFootprint.Footprint.RowPitch =
+			Utility::AlignmentSize(img[count]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT); // R8G8B8A8:4bit * widthの値は256の倍数であること
+		pmdSource[count].PlacedFootprint.Footprint.Format = img[count]->format;//metaData.format;
 
 		//コピー先設定
-		pmdDestination[matNum].pResource = /*bufferHeapCreator->GetPMDTexReadBuff()*/readBuff[matNum].Get();
-		pmdDestination[matNum].Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		pmdDestination[matNum].SubresourceIndex = 0;
+		pmdDestination[count].pResource = readBuff[count].Get();
+		pmdDestination[count].Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		pmdDestination[count].SubresourceIndex = 0;
 
 		{
-			_cmdList->CopyTextureRegion(&pmdDestination[matNum], 0, 0, 0, &pmdSource[matNum], nullptr);
+			_cmdList->CopyTextureRegion(&pmdDestination[count], 0, 0, 0, &pmdSource[count], nullptr);
 
 			//バリア設定
-			texBarriierDesc[matNum].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			texBarriierDesc[matNum].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			texBarriierDesc[matNum].Transition.pResource = /*bufferHeapCreator->GetPMDTexReadBuff()*/readBuff[matNum].Get();
-			texBarriierDesc[matNum].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			texBarriierDesc[matNum].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			texBarriierDesc[matNum].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			texBarriierDesc[count].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			texBarriierDesc[count].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			texBarriierDesc[count].Transition.pResource = readBuff[count].Get();
+			texBarriierDesc[count].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			texBarriierDesc[count].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			texBarriierDesc[count].Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-			_cmdList->ResourceBarrier(1, &texBarriierDesc[matNum]);
+			_cmdList->ResourceBarrier(1, &texBarriierDesc[count]);
 			_cmdList->Close();
 			//コマンドリストの実行
 			ID3D12CommandList* cmdlists[] = { _cmdList.Get() };

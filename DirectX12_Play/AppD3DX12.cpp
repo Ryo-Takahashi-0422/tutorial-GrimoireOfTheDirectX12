@@ -412,12 +412,14 @@ bool AppD3DX12::ResourceInit() {
 	// テクスチャのアップロード用バッファへのマッピング
 	mappingExecuter->TransferTexUploadToBuff(img);
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img, _fence, _fenceVal, bufferHeapCreator->GetPMDTexUploadBuff(), bufferHeapCreator->GetPMDTexReadBuff());
+	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img,
+		_fence, _fenceVal, bufferHeapCreator->GetPMDTexUploadBuff(), bufferHeapCreator->GetPMDTexReadBuff(), pmdMaterialInfo->materialNum);
 
 	// トゥーンテクスチャも同様にマッピング
 	mappingExecuter->TransferToonTexUploadToBuff(toonImg);
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg, _fence, _fenceVal, bufferHeapCreator->GetToonUploadBuff(), bufferHeapCreator->GetToonReadBuff());
+	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg,
+		_fence, _fenceVal, bufferHeapCreator->GetToonUploadBuff(), bufferHeapCreator->GetToonReadBuff(), pmdMaterialInfo->materialNum);
 
 	//CBV,SRVディスクリプタヒープ作成(行列、テクスチャに利用)
 	result = bufferHeapCreator->CreateCBVSRVHeap(_dev);
