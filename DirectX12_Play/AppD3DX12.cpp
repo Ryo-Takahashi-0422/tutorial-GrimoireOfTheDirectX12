@@ -410,13 +410,13 @@ bool AppD3DX12::ResourceInit() {
 	mappingExecuter->MappingMaterialBuff();
 	
 	// テクスチャのアップロード用バッファへのマッピング
-	mappingExecuter->TransferTexUploadToBuff(img);
+	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetPMDTexUploadBuff(), img, pmdMaterialInfo->materialNum);
 	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img,
 		_fence, _fenceVal, bufferHeapCreator->GetPMDTexUploadBuff(), bufferHeapCreator->GetPMDTexReadBuff(), pmdMaterialInfo->materialNum);
 
 	// トゥーンテクスチャも同様にマッピング
-	mappingExecuter->TransferToonTexUploadToBuff(toonImg);
+	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetToonUploadBuff(), toonImg, pmdMaterialInfo->materialNum);
 	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
 	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg,
 		_fence, _fenceVal, bufferHeapCreator->GetToonUploadBuff(), bufferHeapCreator->GetToonReadBuff(), pmdMaterialInfo->materialNum);

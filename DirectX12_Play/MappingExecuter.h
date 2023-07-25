@@ -11,7 +11,6 @@ private:
 	unsigned short* mappedIdx = nullptr;
 	char* mapMaterial = nullptr;
 	uint8_t* mapforImg = nullptr;
-	uint8_t* toonmapforImg = nullptr;
 	float* mappedweight = nullptr;
 
 	HRESULT result;
@@ -28,11 +27,8 @@ public:
 	//マテリアル用バッファーへのマッピング
 	void MappingMaterialBuff();
 
-	// 以下二つはマッピング先が違うのみで他は同じ処理。どうにかして統一したいが...
 	// テクスチャアップロード用バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
-	void TransferTexUploadToBuff(std::vector<DirectX::Image*> img);
-	// トゥーンテクスチャアップロード用バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
-	void TransferToonTexUploadToBuff(std::vector<DirectX::Image*> toonImg);
+	void TransferTexUploadToBuff(std::vector<ComPtr<ID3D12Resource>> uploadBuff, std::vector<DirectX::Image*> img, unsigned int itCount);
 
 	// ガウシアンぼかしバッファーへのウェイト値マッピング
 	void MappingGaussianWeight(std::vector<float> weights);

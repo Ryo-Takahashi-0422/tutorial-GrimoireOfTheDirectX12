@@ -35,47 +35,26 @@ void MappingExecuter::MappingMaterialBuff()
 	bufferHeapCreator->GetMaterialBuff()->Unmap(0, nullptr);
 }
 
-void MappingExecuter::TransferTexUploadToBuff(std::vector<DirectX::Image*> img)
+void MappingExecuter::TransferTexUploadToBuff(std::vector<ComPtr<ID3D12Resource>> uploadBuff, std::vector<DirectX::Image*> img, unsigned int itCount)
 {
-	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
+	for (int count = 0; count < itCount; count++)
 	{
-		if (bufferHeapCreator->GetPMDTexUploadBuff()[matNum] == nullptr) continue;
+		if (uploadBuff[count] == nullptr) continue;
 
-		auto srcAddress = img[matNum]->pixels;
-		auto rowPitch = Utility::AlignmentSize(img[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-		result = bufferHeapCreator->GetPMDTexUploadBuff()[matNum]->Map(0, nullptr, (void**)&mapforImg);
+		auto srcAddress = img[count]->pixels;
+		auto rowPitch = Utility::AlignmentSize(img[count]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+		result = uploadBuff[count]->Map(0, nullptr, (void**)&mapforImg);
 
 		// img:元データの初期アドレス(srcAddress)を元ピッチ分オフセットしながら、補正したピッチ個分(rowPitch)のアドレスを
 		// mapforImgにその数分(rowPitch)オフセットを繰り返しつつコピーしていく
-		for (int i = 0; i < img[matNum]->height; ++i)
+		for (int i = 0; i < img[count]->height; ++i)
 		{
 			std::copy_n(srcAddress, rowPitch, mapforImg);
-			srcAddress += img[matNum]->rowPitch;
+			srcAddress += img[count]->rowPitch;
 			mapforImg += rowPitch;
 		}
 
-		bufferHeapCreator->GetPMDTexUploadBuff()[matNum]->Unmap(0, nullptr);
-	}
-}
-
-void MappingExecuter::TransferToonTexUploadToBuff(std::vector<DirectX::Image*> toonImg)
-{
-	for (int matNum = 0; matNum < pmdMaterialInfo->materialNum; matNum++)
-	{
-		if (bufferHeapCreator->GetToonUploadBuff()[matNum] == nullptr) continue;
-
-		auto toonSrcAddress = toonImg[matNum]->pixels;
-		auto toonrowPitch = Utility::AlignmentSize(toonImg[matNum]->rowPitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-		result = bufferHeapCreator->GetToonUploadBuff()[matNum]->Map(0, nullptr, (void**)&toonmapforImg);
-
-		for (int i = 0; i < toonImg[matNum]->height; ++i)
-		{
-			std::copy_n(toonSrcAddress, toonrowPitch, toonmapforImg);
-			toonSrcAddress += toonImg[matNum]->rowPitch;
-			toonmapforImg += toonrowPitch;
-		}
-
-		bufferHeapCreator->GetToonUploadBuff()[matNum]->Unmap(0, nullptr);
+		uploadBuff[count]->Unmap(0, nullptr);
 	}
 }
 

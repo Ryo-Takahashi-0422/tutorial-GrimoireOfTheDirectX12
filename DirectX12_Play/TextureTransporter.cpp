@@ -48,7 +48,7 @@ void TextureTransporter::TransportPMDMaterialTexture(
 		{
 			_cmdList->CopyTextureRegion(&pmdDestination[count], 0, 0, 0, &pmdSource[count], nullptr);
 
-			//バリア設定
+			//バリア設定...せずとも、StateAfterを...Generic_Readなどにしても実行可能。公式記載見当たらず詳細不明。
 			texBarriierDesc[count].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			texBarriierDesc[count].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			texBarriierDesc[count].Transition.pResource = readBuff[count].Get();
