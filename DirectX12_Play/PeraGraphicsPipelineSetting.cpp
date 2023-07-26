@@ -35,12 +35,8 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC PeraGraphicsPipelineSetting::SetGPL(
 {
 	gpipeLine.pRootSignature = setRootSignature->GetRootSignature().Get();
 
-	//gpipeLine.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
-	//gpipeLine.VS.BytecodeLength = _vsBlob->GetBufferSize();
 	gpipeLine.VS = CD3DX12_SHADER_BYTECODE(_vsBlob.Get());
 
-	//gpipeLine.PS.pShaderBytecode = _psBlob->GetBufferPointer();
-	//gpipeLine.PS.BytecodeLength = _psBlob->GetBufferSize();
 	gpipeLine.PS = CD3DX12_SHADER_BYTECODE(_psBlob.Get());
 
 	gpipeLine.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;

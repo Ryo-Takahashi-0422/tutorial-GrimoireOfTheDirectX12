@@ -164,7 +164,7 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 	SetSRVDesc4Multipass();
 	auto handle = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
 
-	// ˆêŒÂ–Ú
+	// 1ŒÂ–Ú
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff().Get(),
@@ -174,7 +174,7 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 
 	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// ƒjŒÂ–Ú
+	// 2ŒÂ–Ú
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff2().Get(),
@@ -184,12 +184,26 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 
 	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// ŽOŒÂ–Ú
+	// 3ŒÂ–Ú
 	effectCBVDesc.BufferLocation = bufferHeapCreator->GetGaussianBuff()->GetGPUVirtualAddress();
 	effectCBVDesc.SizeInBytes = bufferHeapCreator->GetGaussianBuff()->GetDesc().Width;
 	_dev->CreateConstantBufferView
 	(
 		&effectCBVDesc,
+		handle
+	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// 4ŒÂ–Ú
+	normalMapSRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	normalMapSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	normalMapSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	normalMapSRVDesc.Texture2D.MipLevels = 1;
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetNormalMapReadBuff()[0].Get(),
+		&normalMapSRVDesc,
 		handle
 	);
 }
@@ -223,7 +237,7 @@ void ViewCreator::SetDSVDesc()
 
 void ViewCreator::SetSRVDesc4MaterialAndTextureAndSph()
 {
-	srvDesc4MaterialAndTextureAndSph.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	srvDesc4MaterialAndTextureAndSph.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc4MaterialAndTextureAndSph.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc4MaterialAndTextureAndSph.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc4MaterialAndTextureAndSph.Texture2D.MipLevels = 1;

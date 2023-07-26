@@ -408,6 +408,14 @@ bool AppD3DX12::ResourceInit() {
 
 	//マテリアル用バッファーへのマッピング
 	mappingExecuter->MappingMaterialBuff();
+
+	// TODO:strMoodelPathをリスト化してまとめて処理出来るようにする。BufferHeapCreatorにMappngExecuterを握らせる。
+	// ノーマルマップ読み込み、バッファ作成、マッピング
+	bufferHeapCreator->CreateUploadAndReadBuff4Normalmap(_dev, strModelPath, "jpg", 1);
+	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetNormalMapUploadBuff(), bufferHeapCreator->GetNormalMapImg(), 1);
+	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, 
+		bufferHeapCreator->GetNormalMapMetadata(), bufferHeapCreator->GetNormalMapImg(),
+		_fence, _fenceVal, bufferHeapCreator->GetNormalMapUploadBuff(), bufferHeapCreator->GetNormalMapReadBuff(), 1);
 	
 	// テクスチャのアップロード用バッファへのマッピング
 	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetPMDTexUploadBuff(), img, pmdMaterialInfo->materialNum);
@@ -664,6 +672,9 @@ void AppD3DX12::Run() {
 		
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		_cmdList->SetGraphicsRootDescriptorTable(2, gHandle2);
+
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(3, gHandle2);
 
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 

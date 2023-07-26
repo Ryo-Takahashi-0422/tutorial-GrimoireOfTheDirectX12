@@ -12,8 +12,8 @@ BufferHeapCreator::BufferHeapCreator(PMDMaterialInfo* _pmdMaterialInfo,  Prepare
 	textureLoader = new TextureLoader;
 	textureLoader = _textureLoader;
 
-	texUploadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャCPUアップロード用バッファー
-	texReadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャGPU読み取り用バッファー
+	pmdTexUploadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャCPUアップロード用バッファー
+	pmdTexReadBuff.resize(pmdMaterialInfo->materialNum);//テクスチャGPU読み取り用バッファー
 	sphMappedBuff.resize(pmdMaterialInfo->materialNum);//sph用バッファー
 	spaMappedBuff.resize(pmdMaterialInfo->materialNum);//spa用バッファー
 	toonUploadBuff.resize(pmdMaterialInfo->materialNum);//トゥーン用アップロードバッファー
@@ -53,7 +53,7 @@ void BufferHeapCreator::SetMutipassRTVHeapDesc()
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 3; // マルチパス対象数で変動する + effect
+	mutipassSRVHeapDesc.NumDescriptors = 4; // マルチパス対象数で変動する + effectCBV + normalmapSRV
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -263,6 +263,63 @@ HRESULT BufferHeapCreator::CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev
 	);
 }
 
+void BufferHeapCreator::CreateUploadAndReadBuff4Normalmap(ComPtr<ID3D12Device> _dev,
+	std::string strModelPath,
+	std::string fileType, 
+	unsigned int texNum)
+{
+	// TODO:汎用性持たせる。モデルパスと以下データのmapを作成してモデル毎に管理したい
+	// このようにバッファーなど一括でリサイズする方法が好ましい
+	normalMapUploadBuff.resize(texNum);
+	normalMapReadBuff.resize(texNum);
+	normalMapMetaData.resize(texNum);
+	normalMapImg.resize(texNum);
+
+	for (int i = 0; i < texNum; i++)
+	{
+		filePath = "";
+
+		//トゥーンリソースの読み込み
+		char fileName[32];
+		sprintf(fileName, "texture\\normal%d.%s", i + 1, fileType.c_str());
+		filePath += fileName;
+		filePath = Utility::GetTexPathFromModeAndTexlPath(strModelPath, filePath.c_str());
+
+		auto wTexPath = Utility::GetWideStringFromSring(filePath);
+		auto extention = Utility::GetExtension(filePath);
+
+		if (!textureLoader->GetTable().count(extention))
+		{
+			std::cout << "読み込めないテクスチャが存在します" << std::endl;
+			//return 0;
+			break;
+		}
+
+		normalMapMetaData[i] = new TexMetadata;
+		result = textureLoader->GetTable()[extention](wTexPath, normalMapMetaData[i], normalMapScratchImg);
+
+		if (normalMapScratchImg.GetImage(0, 0, 0) == nullptr) continue;
+
+		// std::vector の型にconst適用するとコンパイラにより挙動が変化するため禁止
+		normalMapImg[i] = new Image;
+		normalMapImg[i]->pixels = normalMapScratchImg.GetImage(0, 0, 0)->pixels;
+		normalMapImg[i]->rowPitch = normalMapScratchImg.GetImage(0, 0, 0)->rowPitch;
+		normalMapImg[i]->format = normalMapScratchImg.GetImage(0, 0, 0)->format;
+		normalMapImg[i]->width = normalMapScratchImg.GetImage(0, 0, 0)->width;
+		normalMapImg[i]->height = normalMapScratchImg.GetImage(0, 0, 0)->height;
+		normalMapImg[i]->slicePitch = normalMapScratchImg.GetImage(0, 0, 0)->slicePitch;
+
+		// ノーマルマップが存在する場合
+		if (_stat(filePath.c_str(), &s) == 0)
+		{
+			std::tie(normalMapUploadBuff[i], normalMapReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, normalMapMetaData[i], normalMapImg[i], filePath);
+		}
+
+		else
+			std::tie(normalMapUploadBuff[i], normalMapReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
+	}
+}
+
 void BufferHeapCreator::CreateUploadAndReadBuff4PmdTexture(ComPtr<ID3D12Device> _dev,
 	std::string strModelPath, std::vector<DirectX::TexMetadata*>& metaData, std::vector<DirectX::Image*>& img)
 {
@@ -271,8 +328,8 @@ void BufferHeapCreator::CreateUploadAndReadBuff4PmdTexture(ComPtr<ID3D12Device> 
 	{
 		if (strlen(pmdMaterialInfo->materials[i].addtional.texPath.c_str()) == 0)
 		{
-			texUploadBuff[i] = nullptr;
-			texReadBuff[i] = nullptr;
+			pmdTexUploadBuff[i] = nullptr;
+			pmdTexReadBuff[i] = nullptr;
 			continue;
 		}
 
@@ -326,20 +383,20 @@ void BufferHeapCreator::CreateUploadAndReadBuff4PmdTexture(ComPtr<ID3D12Device> 
 		if (Utility::GetExtension(texFileName) == "sph")
 		{
 			sphMappedBuff[i] = CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(_dev, metaData[i], img[i], texFilePath);
-			std::tie(texUploadBuff[i], texReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
+			std::tie(pmdTexUploadBuff[i], pmdTexReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
 			spaMappedBuff[i] = nullptr;
 		}
 
 		else if (Utility::GetExtension(texFileName) == "spa")
 		{
 			spaMappedBuff[i] = CreateD3DX12ResourceBuffer::CreateMappedSphSpaTexResource(_dev, metaData[i], img[i], texFilePath);
-			std::tie(texUploadBuff[i], texReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
+			std::tie(pmdTexUploadBuff[i], pmdTexReadBuff[i]) = std::forward_as_tuple(nullptr, nullptr);
 			sphMappedBuff[i] = nullptr;
 		}
 
 		else
 		{
-			std::tie(texUploadBuff[i], texReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, metaData[i], img[i], texFilePath);
+			std::tie(pmdTexUploadBuff[i], pmdTexReadBuff[i]) = CreateD3DX12ResourceBuffer::LoadTextureFromFile(_dev, metaData[i], img[i], texFilePath);
 			sphMappedBuff[i] = nullptr;
 			spaMappedBuff[i] = nullptr;
 		}
@@ -354,6 +411,8 @@ void BufferHeapCreator::CreateToonUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 
 	for (int i = 0; i < pmdMaterialInfo->materials.size(); i++)
 	{
+		toonFilePath = "";
+
 		//トゥーンリソースの読み込み
 		char toonFileName[16];
 		sprintf(toonFileName, "toon%02d.bmp", pmdMaterialInfo->materials[i].addtional.toonIdx + 1);
@@ -377,12 +436,12 @@ void BufferHeapCreator::CreateToonUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 
 		// std::vector の型にconst適用するとコンパイラにより挙動が変化するため禁止
 		toonImg[i] = new Image;
-		toonImg[i]->pixels = scratchImg.GetImage(0, 0, 0)->pixels;
-		toonImg[i]->rowPitch = scratchImg.GetImage(0, 0, 0)->rowPitch;
-		toonImg[i]->format = scratchImg.GetImage(0, 0, 0)->format;
-		toonImg[i]->width = scratchImg.GetImage(0, 0, 0)->width;
-		toonImg[i]->height = scratchImg.GetImage(0, 0, 0)->height;
-		toonImg[i]->slicePitch = scratchImg.GetImage(0, 0, 0)->slicePitch;
+		toonImg[i]->pixels = toonScratchImg.GetImage(0, 0, 0)->pixels;
+		toonImg[i]->rowPitch = toonScratchImg.GetImage(0, 0, 0)->rowPitch;
+		toonImg[i]->format = toonScratchImg.GetImage(0, 0, 0)->format;
+		toonImg[i]->width = toonScratchImg.GetImage(0, 0, 0)->width;
+		toonImg[i]->height = toonScratchImg.GetImage(0, 0, 0)->height;
+		toonImg[i]->slicePitch = toonScratchImg.GetImage(0, 0, 0)->slicePitch;
 
 		// tooIdx指定(+1)のtoonファイルが存在する場合
 		if (_stat(toonFilePath.c_str(), &s) == 0)

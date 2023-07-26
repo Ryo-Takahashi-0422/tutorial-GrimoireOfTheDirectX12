@@ -25,7 +25,7 @@ CreateD3DX12ResourceBuffer::LoadTextureFromFile(ComPtr<ID3D12Device> _dev, TexMe
 	D3D12_RESOURCE_DESC texUploadResourceDesc = {};
 	texUploadResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	texUploadResourceDesc.Alignment = 0;
-	texUploadResourceDesc.Width = Utility::AlignmentSize(img->slicePitch, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) * img->height;// *5;
+	texUploadResourceDesc.Width = Utility::AlignmentSize(img->rowPitch/*slicePitch*/, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) * img->height;// *5;
 	texUploadResourceDesc.Height = 1;
 	texUploadResourceDesc.DepthOrArraySize = 1;
 	texUploadResourceDesc.MipLevels = 1;

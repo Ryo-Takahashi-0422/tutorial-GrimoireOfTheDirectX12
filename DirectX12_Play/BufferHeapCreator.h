@@ -46,18 +46,26 @@ private:
 	ComPtr<ID3D12Resource> grayTextureBuff = nullptr; // グレーテクスチャ用バッファー
 	ComPtr<ID3D12Resource> gaussianBuff = nullptr; // ガウスぼかし用バッファー
 
-	std::vector<ComPtr<ID3D12Resource>> texUploadBuff;//テクスチャCPUアップロード用バッファー
-	std::vector<ComPtr<ID3D12Resource>> texReadBuff;//テクスチャGPU読み取り用バッファー
-	std::vector<ComPtr<ID3D12Resource>> sphMappedBuff;//sph用バッファー
-	std::vector<ComPtr<ID3D12Resource>> spaMappedBuff;//spa用バッファー
-	std::vector<ComPtr<ID3D12Resource>> toonUploadBuff;//トゥーン用アップロードバッファー
-	std::vector<ComPtr<ID3D12Resource>> toonReadBuff;//トゥーン用リードバッファー
+	std::vector<ComPtr<ID3D12Resource>> normalMapUploadBuff; // ノーマルマップ用アップロードバッファー
+	std::vector<ComPtr<ID3D12Resource>> normalMapReadBuff; // ノーマルマップ用リードバッファー
+	// PMDモデル用のメンバー
+	std::vector<ComPtr<ID3D12Resource>> pmdTexUploadBuff; // PMDモデルのテクスチャCPUアップロード用バッファー
+	std::vector<ComPtr<ID3D12Resource>> pmdTexReadBuff; // PMDモデルのテクスチャGPU読み取り用バッファー
+	std::vector<ComPtr<ID3D12Resource>> sphMappedBuff; // sph用バッファー
+	std::vector<ComPtr<ID3D12Resource>> spaMappedBuff; // spa用バッファー
+	std::vector<ComPtr<ID3D12Resource>> toonUploadBuff; // トゥーン用アップロードバッファー
+	std::vector<ComPtr<ID3D12Resource>> toonReadBuff; // トゥーン用リードバッファー
 
 	D3D12_CLEAR_VALUE depthClearValue = {}; // 深度クリアバリュー
 
+	std::string textureFolader = "texture";
+	std::vector<DirectX::TexMetadata*> normalMapMetaData;
+	std::vector<DirectX::Image*> normalMapImg;
 	struct _stat s = {};
 	ScratchImage scratchImg = {};
+	ScratchImage normalMapScratchImg = {};
 	ScratchImage toonScratchImg = {};
+	std::string filePath; // テクスチャ保存フォルダのパス
 	std::string toonFilePath; // トゥーンテクスチャ保存フォルダのパス
 	HRESULT result;
 
@@ -120,13 +128,19 @@ public:
 	// ガウスぼかし用定数バッファーの作成。
 	HRESULT CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev, std::vector<float> weights);
 
-	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
+	// 任意ファイル形式のノーマルマップ用CPU_Upload用、GPU_Read用バッファの作成
+	void CreateUploadAndReadBuff4Normalmap(ComPtr<ID3D12Device> _dev,
+		std::string strModelPath,
+		std::string fileType,
+		unsigned int texNum);
+
+	// PMDモデルのテクスチャ用CPU_Upload用、GPU_Read用バッファの作成
 	void CreateUploadAndReadBuff4PmdTexture(ComPtr<ID3D12Device> _dev,
 		std::string strModelPath,
 		std::vector<DirectX::TexMetadata*>& metaData,
 		std::vector<DirectX::Image*>& img);
 
-	// Toonテクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
+	// PMDモデルのToonテクスチャ用CPU_Upload用、GPU_Read用バッファの作成
 	void CreateToonUploadAndReadBuff(ComPtr<ID3D12Device> _dev,
 		std::string strModelPath,
 		std::vector<DirectX::TexMetadata*>& toonMetaData,
@@ -142,6 +156,7 @@ public:
 	ComPtr<ID3D12DescriptorHeap> GetCBVSRVHeap() { return cbvsrvHeap; };
 	ComPtr<ID3D12DescriptorHeap> GetMultipassRTVHeap() { return multipassRTVHeap; };
 	ComPtr<ID3D12DescriptorHeap> GetMultipassSRVHeap() { return multipassSRVHeap; };
+
 	ComPtr<ID3D12Resource> GetVertBuff() { return vertBuff; };
 	ComPtr<ID3D12Resource> GetIdxBuff() { return idxBuff; };
 	ComPtr<ID3D12Resource> GetDepthBuff() { return depthBuff; };
@@ -153,10 +168,18 @@ public:
 	ComPtr<ID3D12Resource> GetBlackTextureBuff() { return blackTextureBuff; };
 	ComPtr<ID3D12Resource> GetGrayTextureBuff() { return grayTextureBuff; };
 	ComPtr<ID3D12Resource> GetGaussianBuff() { return gaussianBuff; };
-	std::vector<ComPtr<ID3D12Resource>> GetPMDTexUploadBuff() { return texUploadBuff; };
-	std::vector<ComPtr<ID3D12Resource>> GetPMDTexReadBuff() { return texReadBuff; };
+
+	std::vector<ComPtr<ID3D12Resource>> GetNormalMapUploadBuff() { return normalMapUploadBuff; };
+	std::vector<ComPtr<ID3D12Resource>> GetNormalMapReadBuff() { return normalMapReadBuff; };
+	// 以下はPMDファイル用
+	std::vector<ComPtr<ID3D12Resource>> GetPMDTexUploadBuff() { return pmdTexUploadBuff; };
+	std::vector<ComPtr<ID3D12Resource>> GetPMDTexReadBuff() { return pmdTexReadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetsphMappedBuff() { return sphMappedBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetspaMappedBuff() { return spaMappedBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetToonUploadBuff() { return toonUploadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetToonReadBuff() { return toonReadBuff; };
+	
+	// texture情報群
+	std::vector<DirectX::TexMetadata*> GetNormalMapMetadata() { return normalMapMetaData; };
+	std::vector<DirectX::Image*> GetNormalMapImg() { return normalMapImg; };
 };

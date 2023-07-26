@@ -4,7 +4,7 @@ float4 psBuffer(Output input) : SV_TARGET
 {
     float4 col = model.Sample(smp, input.uv) + tex.Sample(smp, input.uv);
     // buffer[0] + buffer[1]による出力
-    return col;
+    //return col;
     
     
     // PAL(RGBからグレースケールYを得る企画)
@@ -121,23 +121,40 @@ float4 psBuffer(Output input) : SV_TARGET
     ret += bkweights[0] * col; //0000, 0
     
     // 横方向
-    for (int i = 1; i < 8;++i)
-    {
-        ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(i * dx, 0));        
-        //0000, 1
-        //0000, 2
-        //0000, 3
-        //0001, 0
-        //0001, 1
-        //0001, 2
-        //0001, 3の並び。次の行は-iより-1～-8まで
-        ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(-i * dx, 0));
-    }
+    //for (int i = 1; i < 8;++i)
+    //{
+    //    ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(i * dx, 0));        
+    //    //0000, 1
+    //    //0000, 2
+    //    //0000, 3
+    //    //0001, 0
+    //    //0001, 1
+    //    //0001, 2
+    //    //0001, 3の並び。次の行は-iより-1～-8まで
+    //    ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(-i * dx, 0));
+    //}
     
-    // 縦方向
+    //// 縦方向
+    //for (int i = 1; i < 8; ++i)
+    //{
+    //    ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(0, 1 * dy));
+    //    //0000, 1
+    //    //0000, 2
+    //    //0000, 3
+    //    //0001, 0
+    //    //0001, 1
+    //    //0001, 2
+    //    //0001, 3の並び。次の行は-iより-1～-8まで
+    //    ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(0, -i * dy));
+    //}
+   
+    // 脳線マップ利用：画面にひび
+    float2 normalTex = normalmap.Sample(smp, input.uv);
+    normalTex = normalTex * 2.0f - 1.0f; // 法線マップは法線方向Nx,Ny,Nzをそれぞれ(1+Nx,y,z)/2として画像データとしているので、法線方向データに戻す
+    
     for (int i = 1; i < 8; ++i)
     {
-        ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(0, 1 * dy));
+        ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + normalTex * 0.1f);
         //0000, 1
         //0000, 2
         //0000, 3
@@ -145,9 +162,13 @@ float4 psBuffer(Output input) : SV_TARGET
         //0001, 1
         //0001, 2
         //0001, 3の並び。次の行は-iより-1～-8まで
-        ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + float2(0, -i * dy));
+        ret += bkweights[i >> 2][i % 4] * model.Sample(smp, input.uv + normalTex * 0.1f);
     }
     
-    return float4(ret.rgb/2, ret.a);
+    //return float4(ret.rgb / 2, ret.a);
+    
+    col = model.Sample(smp, input.uv + normalTex * 0.1f) + tex.Sample(smp, input.uv/* + normalTex * 0.5f*/);
+    
+    return col;
 
 }

@@ -12,7 +12,17 @@ void Utility::EnableDebugLayer() {
 size_t
 Utility::AlignmentSize(size_t size, size_t alignment)
 {
-	return size + alignment - size % alignment;
+	// sizeがalignmentの倍数で、alignment以上ならば調整不要
+	if (size >= alignment && size % alignment == 0)
+	{
+		return size;
+	}
+	// sizeがアラインメント256byte未満なら256byteに調整する。
+	// またはsizeがアラインメント256byteより大きければ、それより1つ分大きな256byteの倍数に調整する
+	else
+	{
+		return size + alignment - size % alignment;
+	}
 }
 
 std::string Utility::GetTexPathFromModeAndTexlPath

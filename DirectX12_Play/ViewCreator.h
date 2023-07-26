@@ -15,6 +15,7 @@ private:
 	D3D12_RENDER_TARGET_VIEW_DESC multipassRTVDesc = {}; // マルチパス用レンダーターゲットビュー詳細
 	D3D12_SHADER_RESOURCE_VIEW_DESC multipassSRVDesc = {}; // マルチパス用レンダーターゲットビュー詳細
 	D3D12_CONSTANT_BUFFER_VIEW_DESC effectCBVDesc = {}; // 画面エフェクト用CBV詳細
+	D3D12_SHADER_RESOURCE_VIEW_DESC normalMapSRVDesc = {}; // ノーマルマップ用SRV詳細
 	D3D12_CPU_DESCRIPTOR_HANDLE basicDescHeapHandle;
 
 	ComPtr<ID3D12Resource> whiteBuff = nullptr;
