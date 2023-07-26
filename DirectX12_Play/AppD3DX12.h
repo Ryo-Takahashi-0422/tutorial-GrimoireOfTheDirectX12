@@ -84,6 +84,10 @@ private:
 	PeraSetRootSignature* bufferSetRootSignature = nullptr;
 	BufferShaderCompile* bufferShaderCompile = nullptr;
 
+	// ライト座標
+	XMFLOAT4 _planeNormalVec;
+	XMFLOAT3 _parallelLightVec;
+
 public:
 	///Applicationのシングルトンインスタンスを得る
 	static AppD3DX12& Instance();

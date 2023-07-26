@@ -32,6 +32,7 @@ using namespace DirectX;
 		XMMATRIX world; // モデル本体の回転・移動行列
 		XMMATRIX view; // ビュー行列
 		XMMATRIX proj; // プロジェクション行列
+		XMMATRIX shadow; // 影
 		XMFLOAT3 eye; // 視点座標
 		XMMATRIX bones[256]; // ボーン行列
 	};

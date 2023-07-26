@@ -164,6 +164,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	bufferGPLSetting = new PeraGraphicsPipelineSetting(peraLayout);
 	bufferSetRootSignature = new PeraSetRootSignature;
 	bufferShaderCompile = new BufferShaderCompile;
+
+	// 平面、ライト座標
+	_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
+	_parallelLightVec = XMFLOAT3(1, -1, 1);
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -404,6 +408,7 @@ bool AppD3DX12::ResourceInit() {
 	pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 	pmdMaterialInfo->mapMatrix->view = viewMat;
 	pmdMaterialInfo->mapMatrix->proj = projMat;
+	pmdMaterialInfo->mapMatrix->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&_parallelLightVec));
 	pmdMaterialInfo->mapMatrix->eye = eye;
 
 	//マテリアル用バッファーへのマッピング
@@ -494,8 +499,6 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-
-
 		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 		//// マルチパス1パス目
@@ -538,10 +541,6 @@ void AppD3DX12::Run() {
 		);
 		_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
 
-
-
-
-
 		// ﾏﾙﾁﾊﾟｽ2パス目
 		//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。
 		D3D12_RESOURCE_BARRIER BarrierDesc = {};
@@ -553,6 +552,7 @@ void AppD3DX12::Run() {
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		//リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
+
 
 		// モデル描画
 		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
@@ -572,7 +572,7 @@ void AppD3DX12::Run() {
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 		//画面クリア
-		//float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		float clearColor[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 
 		//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
@@ -615,7 +615,7 @@ void AppD3DX12::Run() {
 		{
 			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
 			//インデックス付きインスタンス化されたプリミティブを描画
-			_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
+			_cmdList->DrawIndexedInstanced(m.indiceNum, 2, idxOffset, 0, 0); // instanceid 0:通常、1:影
 
 			materialHandle.ptr += materialHInc;
 			idxOffset += m.indiceNum;
@@ -631,10 +631,6 @@ void AppD3DX12::Run() {
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
-
-
-
-
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 

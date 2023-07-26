@@ -6,6 +6,7 @@ struct Output
     float4 vnormal : NORMAL1; // ビュー変換後の法線ベクトル
     float2 uv : TEXCOORD; // uv値
     float3 ray : VECTOR; // 視点ベクトル
+    uint instNo : SV_InstanceID; // DrawIndexedInstancedのinstance id
 };
 
 cbuffer SceneBuffer : register(b0) // 変換行列
@@ -13,6 +14,7 @@ cbuffer SceneBuffer : register(b0) // 変換行列
     matrix world; // ワールド行列
     matrix view; // ビュー行列
     matrix proj; // プロジェクション行列
+    matrix shadow; // 影
     float3 eye; // 視点
     matrix bones[256]; // ボーン行列
 };
