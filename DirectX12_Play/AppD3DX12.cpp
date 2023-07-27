@@ -499,7 +499,7 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		//auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 		//// マルチパス1パス目
 
@@ -564,7 +564,7 @@ void AppD3DX12::Run() {
 		handle = bufferHeapCreator->/*GetRTVHeap()*/GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
 		//handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		//auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
 		// ★戻す
@@ -634,6 +634,15 @@ void AppD3DX12::Run() {
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 
+		// デプスマップ用バッファの状態を読み込み可能に変える
+		D3D12_RESOURCE_BARRIER barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+
+
 		// ﾊﾞｯｸﾊﾞｯﾌｧに描画する
 		// ﾊﾞｯｸﾊﾞｯﾌｧ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
 		D3D12_RESOURCE_BARRIER barrierDesc4BackBuffer = CD3DX12_RESOURCE_BARRIER::Transition
@@ -647,6 +656,7 @@ void AppD3DX12::Run() {
 		rtvHeapPointer = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 		rtvHeapPointer.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, /*&dsvh*/nullptr);
+		//_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 		float clsClr[4] = { 0.2,0.5,0.5,1.0 };
 		_cmdList->ClearRenderTargetView(rtvHeapPointer, clsClr, 0, nullptr);
@@ -667,10 +677,13 @@ void AppD3DX12::Run() {
 		_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2);
 		
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		_cmdList->SetGraphicsRootDescriptorTable(2, gHandle2);
+		_cmdList->SetGraphicsRootDescriptorTable(2, gHandle2); // ぼかし定数
 
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		_cmdList->SetGraphicsRootDescriptorTable(3, gHandle2);
+		_cmdList->SetGraphicsRootDescriptorTable(3, gHandle2); // 法線マップ
+
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(4, gHandle2); // 深度マップ
 
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 
@@ -679,7 +692,13 @@ void AppD3DX12::Run() {
 		barrierDesc4BackBuffer.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		_cmdList->ResourceBarrier(1, &barrierDesc4BackBuffer);
 
-
+		// デプスマップ用バッファの状態を書き込み可能に戻す
+		barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE			
+		);
 
 
 

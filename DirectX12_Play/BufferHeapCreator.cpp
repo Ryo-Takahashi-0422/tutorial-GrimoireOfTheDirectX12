@@ -53,7 +53,7 @@ void BufferHeapCreator::SetMutipassRTVHeapDesc()
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 4; // マルチパス対象数で変動する + effectCBV + normalmapSRV
+	mutipassSRVHeapDesc.NumDescriptors = 5; // マルチパス対象数で変動する + effectCBV + normalmapSRV
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -177,14 +177,29 @@ HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev)
 {
 	SetDepthHeapProp();
 	SetDepthResourceDesc();
+	D3D12_CLEAR_VALUE depthClearValue2 = {};
+	depthClearValue2.DepthStencil.Depth = 1.0f;
+	depthClearValue2.Format = DXGI_FORMAT_D32_FLOAT;
+
+	// こちらは深度マップ用
+	depthMapHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	depthMapHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	depthMapHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	depthMapResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthMapResDesc.Width = prepareRenderingWindow->GetWindowWidth();
+	depthMapResDesc.Height = prepareRenderingWindow->GetWindowHeight();
+	depthMapResDesc.DepthOrArraySize = 1;
+	depthMapResDesc.Format = DXGI_FORMAT_R32_TYPELESS; // 深度値書き込み用
+	depthMapResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
+	depthMapResDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
 	return _dev->CreateCommittedResource
 	(
 		&depthHeapProps,
 		D3D12_HEAP_FLAG_NONE,
-		&depthResDesc,
+		&/*depthResDesc*/depthMapResDesc,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		nullptr,
+		&depthClearValue2,
 		IID_PPV_ARGS(depthBuff.ReleaseAndGetAddressOf())
 	);
 }

@@ -21,6 +21,7 @@ private:
 
 	D3D12_HEAP_PROPERTIES vertexHeapProps = {}; // 頂点、頂点インデックス用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES depthHeapProps = {}; // 深度用ヒーププロパティ
+	D3D12_HEAP_PROPERTIES depthMapHeapProps = {}; // 深度マップバッファー用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES wvpHeapProp = {}; // 行列用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES materialHeapProp = {};  // PMDMaterialInfo->MaterialForHlsl定義に合わせている
 	D3D12_HEAP_PROPERTIES mutipassHeapProp = {}; // マルチパス用ヒーププロパティ
@@ -29,6 +30,7 @@ private:
 	D3D12_RESOURCE_DESC vertresDesc; // 頂点用リソース詳細
 	D3D12_RESOURCE_DESC indicesDesc; // 頂点インデックス用リソース詳細
 	D3D12_RESOURCE_DESC depthResDesc = {}; // 深度リソース詳細
+	D3D12_RESOURCE_DESC depthMapResDesc = {}; // 深度マップ用バッファー詳細
 	D3D12_RESOURCE_DESC wvpResdesc = {}; // 行列用リソース詳細
 	D3D12_RESOURCE_DESC materialBuffResDesc = {}; // PMDMaterialInfo->MaterialForHlsl定義に合わせている
 	// ﾏﾙﾁﾊﾟｽﾊﾞｯﾌｧ用のオブジェクトはAppD3DX12が生成しているため保持しない

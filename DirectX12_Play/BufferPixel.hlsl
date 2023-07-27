@@ -2,9 +2,12 @@
 
 float4 psBuffer(Output input) : SV_TARGET
 {
-    float4 col = model.Sample(smp, input.uv) * tex.Sample(smp, input.uv);
+    float4 col = model.Sample(smp, input.uv) + tex.Sample(smp, input.uv);
     // buffer[0] + buffer[1]による出力
-    return col;
+    float dep = pow(depthmap.Sample(smp, input.uv), 20);
+    float4 dep4 = float4(dep, dep, dep, 1);
+    float4 dmap = depthmap.Sample(smp, input.uv);
+    return dep4;
     
     
     // PAL(RGBからグレースケールYを得る企画)

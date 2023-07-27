@@ -206,6 +206,20 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 		&normalMapSRVDesc,
 		handle
 	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// 5ŒÂ–Ú
+	depthSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	depthSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	depthSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	depthSRVDesc.Texture2D.MipLevels = 1;
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->/*GetDepthMapBuff()*/GetDepthBuff().Get(),
+		&depthSRVDesc,
+		handle
+	);
 }
 
 void ViewCreator::CreateVertexBufferView()

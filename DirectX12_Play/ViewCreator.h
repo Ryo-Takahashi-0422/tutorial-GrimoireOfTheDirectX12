@@ -10,6 +10,7 @@ private:
 	D3D12_INDEX_BUFFER_VIEW ibView = {}; // (Vertex)Indexビュー
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {}; // 行列用の定数ビュー詳細
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {}; // デプスステンシルビュー詳細
+	D3D12_SHADER_RESOURCE_VIEW_DESC depthSRVDesc = {}; // 深度マップ用シェーダーリソースビュー詳細
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc4MaterialAndTextureAndSph = {}; // マテリアル情報、テクスチャ、sph用の定数ビュー詳細
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc4MaterialAndTextureAndSph = {}; // シェーダーリソースビュー詳細
 	D3D12_RENDER_TARGET_VIEW_DESC multipassRTVDesc = {}; // マルチパス用レンダーターゲットビュー詳細

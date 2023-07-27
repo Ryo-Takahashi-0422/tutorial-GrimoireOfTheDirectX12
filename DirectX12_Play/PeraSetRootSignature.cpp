@@ -13,7 +13,8 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // multipassBuff2
 	descTableRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // effect—p
 	descTableRange[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2); // normalMapReadBuff
-	
+	descTableRange[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3); // depthBuff4DepthMap
+
 	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[0].DescriptorTable.NumDescriptorRanges = 1;
 	rootParam[0].DescriptorTable.pDescriptorRanges = &descTableRange[0];
@@ -34,7 +35,12 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	rootParam[3].DescriptorTable.pDescriptorRanges = &descTableRange[3];
 	rootParam[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	rootSignatureDesc.NumParameters = 4;
+	rootParam[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParam[4].DescriptorTable.NumDescriptorRanges = 1;
+	rootParam[4].DescriptorTable.pDescriptorRanges = &descTableRange[4];
+	rootParam[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	rootSignatureDesc.NumParameters = 5;
 	rootSignatureDesc.pParameters = rootParam;
 	rootSignatureDesc.NumStaticSamplers = 1;
 	rootSignatureDesc.pStaticSamplers = &sampler;
