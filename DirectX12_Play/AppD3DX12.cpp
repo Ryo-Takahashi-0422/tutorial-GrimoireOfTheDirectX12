@@ -167,7 +167,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// ライトマップ関連
 	lightMapGPLSetting = new LightMapGraphicsPipelineSetting(vertexInputLayout);
-	lightMapRootSignature = new PeraSetRootSignature;
+	lightMapRootSignature = new SetRootSignature;
 	lightMapShaderCompile = new LightMapShaderCompile;
 }
 
@@ -657,6 +657,7 @@ void AppD3DX12::Run() {
 			idxOffset += m.indiceNum;
 		}
 
+		//_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
 		//_cmdList->DrawInstanced(vertNum ,1, 0, 0);
 
 		//ﾊﾞｯｸﾊﾞｯﾌｧ表示前にリソースをCOMMON状態に移行
@@ -701,6 +702,29 @@ void AppD3DX12::Run() {
 		_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
 		_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
 
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
+		_cmdList->SetGraphicsRootDescriptorTable
+		(
+			0, // バインドのスロット番号
+			bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		);
+
+		auto materialHandle2 = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		auto inc2 = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto materialHInc2 = inc2 * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+		materialHandle2.ptr += inc2; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
+		unsigned int idxOffset2 = 0;
+
+		for (auto m : pmdMaterialInfo->materials)
+		{
+			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle2);
+			//インデックス付きインスタンス化されたプリミティブを描画
+			_cmdList->DrawIndexedInstanced(m.indiceNum, 2, idxOffset2, 0, 0); // instanceid 0:通常、1:影
+
+			materialHandle2.ptr += materialHInc2;
+			idxOffset2 += m.indiceNum;
+		}
+
 		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
 		//auto lightHandle = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 		//auto linc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 5;
@@ -722,6 +746,7 @@ void AppD3DX12::Run() {
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 		);
 		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
+
 
 
 

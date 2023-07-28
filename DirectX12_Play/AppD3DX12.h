@@ -86,7 +86,7 @@ private:
 
 	// ライトマップ関連
 	LightMapGraphicsPipelineSetting* lightMapGPLSetting = nullptr;
-	PeraSetRootSignature* lightMapRootSignature = nullptr;
+	SetRootSignature* lightMapRootSignature = nullptr;
 	LightMapShaderCompile* lightMapShaderCompile = nullptr;
 	ComPtr<ID3D10Blob> _lightMapVSBlob = nullptr; // ライトマップ用頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _lightMapPSBlob = nullptr; // ライトマップ用ピクセルシェーダーオブジェクト格納用

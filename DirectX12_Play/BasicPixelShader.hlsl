@@ -24,6 +24,9 @@ float4 BasicPS(Output input) : SV_TARGET
     
     // テクスチャカラー
         float4 texColor = tex.Sample(smp, input.uv);
+    
+    return toonDif;
+    
    
     float4 result = max(saturate(
     toonDif

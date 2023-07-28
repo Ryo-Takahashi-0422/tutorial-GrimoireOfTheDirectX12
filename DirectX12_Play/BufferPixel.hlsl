@@ -7,12 +7,13 @@ float4 psBuffer(Output input) : SV_TARGET
     float dep = pow(depthmap.Sample(smp, input.uv), 20);
     float4 dep4 = float4(dep, dep, dep, 1);
     
-    float lmap = pow(lightmap.Sample(smp, input.uv), 20);
+    float lmap = pow(lightmap.Sample(smp, input.uv), 0.3);
     float4 lmap4 = float4(lmap, lmap, lmap, 1);
     
-    //return lmap4;
+    return lmap4;
     //return dep4;
-    return col;
+    //return col;
+    //return model.Sample(smp, input.uv);
 
     
     
