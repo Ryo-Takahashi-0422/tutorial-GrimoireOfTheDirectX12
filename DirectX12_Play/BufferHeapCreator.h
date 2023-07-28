@@ -21,7 +21,7 @@ private:
 
 	D3D12_HEAP_PROPERTIES vertexHeapProps = {}; // 頂点、頂点インデックス用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES depthHeapProps = {}; // 深度用ヒーププロパティ
-	D3D12_HEAP_PROPERTIES depthMapHeapProps = {}; // 深度マップバッファー用ヒーププロパティ
+	D3D12_HEAP_PROPERTIES lightMapHeapProps = {}; // ライトマップバッファー用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES wvpHeapProp = {}; // 行列用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES materialHeapProp = {};  // PMDMaterialInfo->MaterialForHlsl定義に合わせている
 	D3D12_HEAP_PROPERTIES mutipassHeapProp = {}; // マルチパス用ヒーププロパティ
@@ -30,7 +30,7 @@ private:
 	D3D12_RESOURCE_DESC vertresDesc; // 頂点用リソース詳細
 	D3D12_RESOURCE_DESC indicesDesc; // 頂点インデックス用リソース詳細
 	D3D12_RESOURCE_DESC depthResDesc = {}; // 深度リソース詳細
-	D3D12_RESOURCE_DESC depthMapResDesc = {}; // 深度マップ用バッファー詳細
+	D3D12_RESOURCE_DESC lightMapResDesc = {}; // ライトマップ用バッファー詳細
 	D3D12_RESOURCE_DESC wvpResdesc = {}; // 行列用リソース詳細
 	D3D12_RESOURCE_DESC materialBuffResDesc = {}; // PMDMaterialInfo->MaterialForHlsl定義に合わせている
 	// ﾏﾙﾁﾊﾟｽﾊﾞｯﾌｧ用のオブジェクトはAppD3DX12が生成しているため保持しない
@@ -39,7 +39,9 @@ private:
 	ComPtr<ID3D12Resource> vertBuff = nullptr; // 頂点用バッファ
 	ComPtr<ID3D12Resource> idxBuff = nullptr; // 頂点インデックス用バッファ
 	ComPtr<ID3D12Resource> depthBuff = nullptr; // デプスバッファー
+	ComPtr<ID3D12Resource> lightMapBuff = nullptr; // ライトマップバッファー
 	ComPtr<ID3D12Resource> matrixBuff = nullptr; // 行列用定数バッファー
+	ComPtr<ID3D12Resource> matrixBuff4Multipass = nullptr; // ﾏﾙﾁﾊﾟｽ用行列用定数バッファー
 	ComPtr<ID3D12Resource> materialBuff = nullptr; // マテリアル用定数バッファー
 	ComPtr<ID3D12Resource> multipassBuff = nullptr; // マルチパスレンダリング用書き込み先バッファー
 	ComPtr<ID3D12Resource> multipassBuff2 = nullptr; // マルチパスレンダリング用書き込み先バッファーその2
@@ -116,7 +118,7 @@ public:
 	HRESULT CreateBufferOfIndex(ComPtr<ID3D12Device> _dev);
 
 	// デプスバッファーの作成
-	HRESULT CreateBufferOfDepth(ComPtr<ID3D12Device> _dev);
+	HRESULT CreateBufferOfDepthAndLightMap(ComPtr<ID3D12Device> _dev);
 
 	// 行列用定数バッファーの作成 WVP:World,View,Projection
 	HRESULT CreateConstBufferOfWVPMatrix(ComPtr<ID3D12Device> _dev);
@@ -162,7 +164,9 @@ public:
 	ComPtr<ID3D12Resource> GetVertBuff() { return vertBuff; };
 	ComPtr<ID3D12Resource> GetIdxBuff() { return idxBuff; };
 	ComPtr<ID3D12Resource> GetDepthBuff() { return depthBuff; };
+	ComPtr<ID3D12Resource> GetLightMapBuff() { return lightMapBuff; };
 	ComPtr<ID3D12Resource> GetMatrixBuff() { return matrixBuff; };
+	ComPtr<ID3D12Resource> GetMatrixBuff4Multipass() { return matrixBuff4Multipass; };
 	ComPtr<ID3D12Resource> GetMaterialBuff() { return materialBuff; };
 	ComPtr<ID3D12Resource> GetMultipassBuff() { return multipassBuff; };
 	ComPtr<ID3D12Resource> GetMultipassBuff2() { return multipassBuff2; };

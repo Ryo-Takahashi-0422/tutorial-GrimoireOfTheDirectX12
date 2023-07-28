@@ -49,7 +49,7 @@ VertexInputLayout::VertexInputLayout()
 			0
 		},
 
-		//法線ベクトル
+		//ボーンウェイト
 		{
 			"WEIGHT",
 			0,
@@ -60,7 +60,7 @@ VertexInputLayout::VertexInputLayout()
 			0
 		},
 
-		//法線ベクトル
+		//エッジフラグ
 		{
 			"EDGE_FLG",
 			0,

@@ -52,3 +52,6 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 #include <PeraGraphicsPipelineSetting.h>
 #include <PeraSetRootSignature.h>
 #include <BufferShaderCompile.h>
+
+#include <LightMapShaderCompile.h>
+#include <LightMapGraphicsPipelineSetting.h>

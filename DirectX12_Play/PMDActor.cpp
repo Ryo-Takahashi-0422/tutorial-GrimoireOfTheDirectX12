@@ -117,10 +117,10 @@ void PMDActor::UpdateVMDMotion()
 		//boneMatrices[node.boneIdx] = mat * XMMatrixTranslationFromVector(offset);
 
 		// debug
-		if (node.boneIdx == 83 & frameNo > 65)
-		{
-			int i = 0;
-		}
+		//if (node.boneIdx == 83 & frameNo > 65)
+		//{
+		//	int i = 0;
+		//}
 	}
 	RecursiveMatrixMultiply(&bNodeTable["ƒZƒ“ƒ^["], XMMatrixIdentity());
 	IKSolve();

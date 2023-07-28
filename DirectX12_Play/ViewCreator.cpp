@@ -22,17 +22,45 @@ void ViewCreator::CreateCBV4Matrix(ComPtr<ID3D12Device> _dev)
 	}
 	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	basicDescHeapHandle.ptr += inc;
+
+	// ライトマップ計算用にもう一つ
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc4MultipassMatrix;
+	cbvDesc4MultipassMatrix.BufferLocation = bufferHeapCreator->GetMatrixBuff4Multipass()->GetGPUVirtualAddress();
+	cbvDesc4MultipassMatrix.SizeInBytes = bufferHeapCreator->GetMatrixBuff4Multipass()->GetDesc().Width;
+	if (handle4SRVMultipass.ptr == 0)
+	{
+		handle4SRVMultipass = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
+	}
+	handle4SRVMultipass.ptr += inc * 6;
+
+	_dev->CreateConstantBufferView
+	(
+		&cbvDesc4MultipassMatrix,
+		handle4SRVMultipass
+	);
 }
 
 void ViewCreator::CreateDSVWrapper(ComPtr<ID3D12Device> _dev)
 {
 	SetDSVDesc();
+	auto handle = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
+	// 深度マップ用
 	_dev->CreateDepthStencilView
 	(
 		bufferHeapCreator->GetDepthBuff().Get(),
 		&dsvDesc,
-		bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart()
+		handle
+	);
+
+	// ライトマップ用
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	_dev->CreateDepthStencilView
+	(
+		bufferHeapCreator->GetLightMapBuff().Get(),
+		&dsvDesc,
+		handle
 	);
 }
 
@@ -162,40 +190,40 @@ void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 {
 	SetSRVDesc4Multipass();
-	auto handle = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
+	handle4SRVMultipass = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
 
-	// 1個目
+	// 1個目 ペラポリゴンのレンダリング結果
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff().Get(),
 		&multipassSRVDesc,
-		handle
+		handle4SRVMultipass
 	);
 
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// 2個目
+	// 2個目 モデルのレンダリング結果
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff2().Get(),
 		&multipassSRVDesc,
-		handle
+		handle4SRVMultipass
 	);
 
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// 3個目
+	// 3個目 ガウスぼかしウェイト
 	effectCBVDesc.BufferLocation = bufferHeapCreator->GetGaussianBuff()->GetGPUVirtualAddress();
 	effectCBVDesc.SizeInBytes = bufferHeapCreator->GetGaussianBuff()->GetDesc().Width;
 	_dev->CreateConstantBufferView
 	(
 		&effectCBVDesc,
-		handle
+		handle4SRVMultipass
 	);
 
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// 4個目
+	// 4個目 割れノーマルマップ
 	normalMapSRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	normalMapSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	normalMapSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -204,21 +232,35 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 	(
 		bufferHeapCreator->GetNormalMapReadBuff()[0].Get(),
 		&normalMapSRVDesc,
-		handle
+		handle4SRVMultipass
 	);
 
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// 5個目
+	// 5個目 深度マップ
 	depthSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
 	depthSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	depthSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	depthSRVDesc.Texture2D.MipLevels = 1;
 	_dev->CreateShaderResourceView
 	(
-		bufferHeapCreator->/*GetDepthMapBuff()*/GetDepthBuff().Get(),
+		bufferHeapCreator->GetDepthBuff().Get(),
 		&depthSRVDesc,
-		handle
+		handle4SRVMultipass
+	);
+
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// 6個目 ライトマップ
+	depthSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	depthSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	depthSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	depthSRVDesc.Texture2D.MipLevels = 1;
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetLightMapBuff().Get(),
+		&depthSRVDesc,
+		handle4SRVMultipass
 	);
 }
 

@@ -14,6 +14,7 @@ cbuffer SceneBuffer : register(b0) // 変換行列
     matrix world; // ワールド行列
     matrix view; // ビュー行列
     matrix proj; // プロジェクション行列
+    matrix lightCamera; // ライトから見たビュー
     matrix shadow; // 影
     float3 eye; // 視点
     matrix bones[256]; // ボーン行列

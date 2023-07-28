@@ -6,8 +6,35 @@ float4 psBuffer(Output input) : SV_TARGET
     // buffer[0] + buffer[1]による出力
     float dep = pow(depthmap.Sample(smp, input.uv), 20);
     float4 dep4 = float4(dep, dep, dep, 1);
-    float4 dmap = depthmap.Sample(smp, input.uv);
-    return dep4;
+    
+    float lmap = pow(lightmap.Sample(smp, input.uv), 20);
+    float4 lmap4 = float4(lmap, lmap, lmap, 1);
+    
+    //return lmap4;
+    //return dep4;
+    return col;
+
+    
+    
+    
+    //float3 light = normalize(float3(1, -1, 1));
+    //float bright = dot(input.norm, -light);
+    
+    //float3 posFromLightVP = input.tpos.xyz / input.tpos.w;
+    //float2 shadowUV = (posFromLightVP + float2(1, -1)) * float2(0.5, -0.5);
+    //float depthFromLight = lightmap.Sample(smp, shadowUV);
+    //float shadowWeight = 1.0f;
+    //if(depthFromLight < posFromLightVP.z)
+    //{
+    //    shadowWeight = 0.5f;
+    //}
+    //shadowWeight = lerp(0.5f, 1.0f, depthFromLight);
+    //float b = bright * shadowWeight;
+    
+    //return float4(b, b, b, 1);
+    
+    
+    
     
     
     // PAL(RGBからグレースケールYを得る企画)

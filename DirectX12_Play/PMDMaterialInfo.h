@@ -32,6 +32,7 @@ using namespace DirectX;
 		XMMATRIX world; // モデル本体の回転・移動行列
 		XMMATRIX view; // ビュー行列
 		XMMATRIX proj; // プロジェクション行列
+		XMMATRIX lightCamera; // ライトからみたビュー
 		XMMATRIX shadow; // 影
 		XMFLOAT3 eye; // 視点座標
 		XMMATRIX bones[256]; // ボーン行列
@@ -131,6 +132,7 @@ public:
 	float angle;
 	XMMATRIX worldMat;
 	SceneMatrix* mapMatrix = nullptr;
+	SceneMatrix* mapMatrix4Lightmap = nullptr;
 
 	//std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
 	char signature[3] = {}; // シグネチャ

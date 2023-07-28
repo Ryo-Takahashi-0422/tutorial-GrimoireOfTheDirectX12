@@ -157,17 +157,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 	// ﾏﾙﾁﾊﾟｽ関連ｸﾗｽ群
 	peraLayout = new PeraLayout;
-	peraGPLSetting = new PeraGraphicsPipelineSetting(peraLayout); //TODO PeraLayout,VertexInputLayoutｸﾗｽの基底クラスを作ってそれに対応させる
+	peraGPLSetting = new PeraGraphicsPipelineSetting(peraLayout/*vertexInputLayout*/); //TODO PeraLayout,VertexInputLayoutｸﾗｽの基底クラスを作ってそれに対応させる
 	peraPolygon = new PeraPolygon;
 	peraSetRootSignature = new PeraSetRootSignature;
 	peraShaderCompile = new PeraShaderCompile;
-	bufferGPLSetting = new PeraGraphicsPipelineSetting(peraLayout);
+	bufferGPLSetting = new PeraGraphicsPipelineSetting(peraLayout/*vertexInputLayout*/);
 	bufferSetRootSignature = new PeraSetRootSignature;
 	bufferShaderCompile = new BufferShaderCompile;
 
-	// 平面、ライト座標
-	_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
-	_parallelLightVec = XMFLOAT3(1, -1, 1);
+	// ライトマップ関連
+	lightMapGPLSetting = new LightMapGraphicsPipelineSetting(vertexInputLayout);
+	lightMapRootSignature = new PeraSetRootSignature;
+	lightMapShaderCompile = new LightMapShaderCompile;
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -296,6 +297,12 @@ bool AppD3DX12::ResourceInit() {
 		return false;
 	}
 
+	// ライトマップ用
+	if (FAILED(lightMapRootSignature->SetRootsignatureParam(_dev)))
+	{
+		return false;
+	}
+
 // 初期化処理2：シェーダーコンパイル設定
 	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
 	auto blobs = settingShaderCompile->SetShaderCompile(setRootSignature, _vsBlob, _psBlob);
@@ -315,6 +322,12 @@ bool AppD3DX12::ResourceInit() {
 	_vsBackbufferBlob = bufferBlobs.first;
 	_psBackbufferBlob = bufferBlobs.second;
 
+	// ライトマップ用
+	auto lightMapBlobs = lightMapShaderCompile->SetShaderCompile(lightMapRootSignature, _lightMapVSBlob, _lightMapPSBlob);
+	if (lightMapBlobs.first == nullptr) return false;
+	_lightMapVSBlob = lightMapBlobs.first;
+	_lightMapPSBlob = lightMapBlobs.second; // こちらはnullptr
+
 // 初期化処理3：頂点入力レイアウトの作成及び
 // 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
 	result = gPLSetting->CreateGPStateWrapper(_dev, setRootSignature, _vsBlob, _psBlob);
@@ -324,6 +337,9 @@ bool AppD3DX12::ResourceInit() {
 
 	// 表示用
 	result = bufferGPLSetting->CreateGPStateWrapper(_dev, bufferSetRootSignature, _vsBackbufferBlob, _psBackbufferBlob);
+
+	// ライトマップ用
+	result = lightMapGPLSetting->CreateGPStateWrapper(_dev, lightMapRootSignature, _lightMapVSBlob, _lightMapPSBlob);
 
 // 初期化処理5：コマンドリスト生成
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
@@ -340,7 +356,7 @@ bool AppD3DX12::ResourceInit() {
 	result = bufferHeapCreator->CreateBufferOfIndex(_dev);
 
 	//デプスバッファーを作成
-	result = bufferHeapCreator->CreateBufferOfDepth(_dev);
+	result = bufferHeapCreator->CreateBufferOfDepthAndLightMap(_dev);
 
 	//ファイル形式毎のテクスチャロード処理
 	textureLoader->LoadTexture();
@@ -404,12 +420,31 @@ bool AppD3DX12::ResourceInit() {
 	mappingExecuter->MappingIndexOfVertexBuff();
 
 	//行列用定数バッファーのマッピング
+	// 平面、ライト座標
+	_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
+	lightVec = XMFLOAT3(1, 1, 1);
+	auto light = XMLoadFloat3(&lightVec);
+	auto eyePos = XMLoadFloat3(&eye);
+	auto targetPos = XMLoadFloat3(&target);
+	auto upVec = XMLoadFloat3(&up);
+	light = targetPos + XMVector3Normalize(light) * XMVector3Length(XMVectorSubtract(targetPos, eyePos)).m128_f32[0];
+
 	result = bufferHeapCreator->GetMatrixBuff()->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix);
 	pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 	pmdMaterialInfo->mapMatrix->view = viewMat;
 	pmdMaterialInfo->mapMatrix->proj = projMat;
-	pmdMaterialInfo->mapMatrix->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&_parallelLightVec));
+	pmdMaterialInfo->mapMatrix->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
+	pmdMaterialInfo->mapMatrix->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
 	pmdMaterialInfo->mapMatrix->eye = eye;
+
+	// ↑と同じことをしている。ライトマップ用にもmapMatrixにマッピングしたらモデルが消える。TODO:いけてないのでなんとかしたい...
+	result = bufferHeapCreator->GetMatrixBuff4Multipass()->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix4Lightmap); // ライトマップ用にもマッピング
+	pmdMaterialInfo->mapMatrix4Lightmap->world = pmdMaterialInfo->worldMat;
+	pmdMaterialInfo->mapMatrix4Lightmap->view = viewMat;
+	pmdMaterialInfo->mapMatrix4Lightmap->proj = projMat;
+	pmdMaterialInfo->mapMatrix4Lightmap->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
+	pmdMaterialInfo->mapMatrix4Lightmap->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
+	pmdMaterialInfo->mapMatrix4Lightmap->eye = eye;
 
 	//マテリアル用バッファーへのマッピング
 	mappingExecuter->MappingMaterialBuff();
@@ -541,6 +576,7 @@ void AppD3DX12::Run() {
 		);
 		_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
 
+
 		// ﾏﾙﾁﾊﾟｽ2パス目
 		//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。
 		D3D12_RESOURCE_BARRIER BarrierDesc = {};
@@ -553,7 +589,6 @@ void AppD3DX12::Run() {
 		//リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
 
-
 		// モデル描画
 		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
 		_cmdList->SetGraphicsRootSignature(setRootSignature->GetRootSignature().Get());
@@ -565,6 +600,7 @@ void AppD3DX12::Run() {
 		//handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
 		// ★戻す
@@ -643,6 +679,55 @@ void AppD3DX12::Run() {
 		);
 
 
+
+
+		constexpr uint32_t shadow_difinition = 1024;
+		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.0f, 0.0f, shadow_difinition, shadow_difinition);
+		_cmdList->RSSetViewports(1, &vp); // 実は重要
+		CD3DX12_RECT rc(0, 0, shadow_difinition, shadow_difinition);
+		_cmdList->RSSetScissorRects(1, &rc); // 実は重要
+
+		// ライトマップ描画
+
+		_cmdList->SetPipelineState(lightMapGPLSetting->GetPipelineState().Get());
+		_cmdList->SetGraphicsRootSignature(lightMapRootSignature->GetRootSignature().Get());
+
+		dsvh.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		_cmdList->OMSetRenderTargets(0, nullptr, false, &dsvh);
+		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
+		//画面クリア
+		//_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
+		_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
+
+		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
+		//auto lightHandle = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		//auto linc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 5;
+		//lightHandle.ptr += linc;
+		//
+		//_cmdList->SetGraphicsRootDescriptorTable
+		//(
+		//	0, // バインドのスロット番号
+		//	lightHandle
+		//);
+
+		_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
+
+		// ライトマップ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
+		D3D12_RESOURCE_BARRIER barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetLightMapBuff().Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
+
+
+
+		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer()); // 実は重要
+		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer()); // 実は重要
+
 		// ﾊﾞｯｸﾊﾞｯﾌｧに描画する
 		// ﾊﾞｯｸﾊﾞｯﾌｧ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
 		D3D12_RESOURCE_BARRIER barrierDesc4BackBuffer = CD3DX12_RESOURCE_BARRIER::Transition
@@ -685,6 +770,12 @@ void AppD3DX12::Run() {
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		_cmdList->SetGraphicsRootDescriptorTable(4, gHandle2); // 深度マップ
 
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(5, gHandle2); // ライトマップ
+
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(6, gHandle2); // ライトマップ用シーン行列
+
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 
 		// ﾊﾞｯｸﾊﾞｯﾌｧ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄから元に戻す
@@ -699,6 +790,16 @@ void AppD3DX12::Run() {
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE			
 		);
+
+		// ライトマップ用バッファの状態を書き込み可能に戻す
+		barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetLightMapBuff().Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE
+			
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
 
 
 
@@ -744,6 +845,14 @@ void AppD3DX12::Run() {
 		_swapChain->Present(1, 0);
 	}
 
+	delete bufferGPLSetting;
+	delete bufferSetRootSignature;
+	delete bufferShaderCompile;
+
+	delete lightMapGPLSetting;
+	delete lightMapRootSignature;
+	delete lightMapShaderCompile;
+
 	delete viewCreator;
 	delete mappingExecuter;
 	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
@@ -767,7 +876,5 @@ void AppD3DX12::Run() {
 	delete peraSetRootSignature;
 	delete peraShaderCompile;
 
-	//delete bufferGPLSetting;
-	//delete bufferSetRootSignature;
-	//delete bufferShaderCompile;
+
 }

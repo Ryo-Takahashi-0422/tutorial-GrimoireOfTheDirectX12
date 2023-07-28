@@ -9,11 +9,13 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 
 	//サンプラーのスロット設定
-	descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // multipassBuff1
-	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // multipassBuff2
+	descTableRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // multipassBuff1用
+	descTableRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // multipassBuff2用
 	descTableRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // effect用
-	descTableRange[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2); // normalMapReadBuff
-	descTableRange[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3); // depthBuff4DepthMap
+	descTableRange[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2); // normalMapReadBuff用
+	descTableRange[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3); // depthBuff4DepthMap用
+	descTableRange[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4); // lightmap用
+	descTableRange[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // シーン行列用
 
 	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[0].DescriptorTable.NumDescriptorRanges = 1;
@@ -40,7 +42,17 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	rootParam[4].DescriptorTable.pDescriptorRanges = &descTableRange[4];
 	rootParam[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	rootSignatureDesc.NumParameters = 5;
+	rootParam[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParam[5].DescriptorTable.NumDescriptorRanges = 1;
+	rootParam[5].DescriptorTable.pDescriptorRanges = &descTableRange[5];
+	rootParam[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	rootParam[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParam[6].DescriptorTable.NumDescriptorRanges = 1;
+	rootParam[6].DescriptorTable.pDescriptorRanges = &descTableRange[6];
+	rootParam[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	rootSignatureDesc.NumParameters = 7;
 	rootSignatureDesc.pParameters = rootParam;
 	rootSignatureDesc.NumStaticSamplers = 1;
 	rootSignatureDesc.pStaticSamplers = &sampler;

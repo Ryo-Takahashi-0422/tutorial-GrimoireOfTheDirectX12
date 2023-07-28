@@ -34,6 +34,12 @@
     <Filter Include="ソース ファイル\Inheritance">
       <UniqueIdentifier>{eb557f49-81e3-488c-a34d-f816413a4227}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\LightMap">
+      <UniqueIdentifier>{14c2b951-9aaf-452a-b4bf-fc283817ce58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\LightMap">
+      <UniqueIdentifier>{43a4e6a5-6a90-4dc5-91c2-42d44c0e3257}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -117,6 +123,12 @@
     <ClCompile Include="BufferShaderCompile.cpp">
       <Filter>ソース ファイル\Multipass</Filter>
     </ClCompile>
+    <ClCompile Include="LightMapShaderCompile.cpp">
+      <Filter>ソース ファイル\LightMap</Filter>
+    </ClCompile>
+    <ClCompile Include="LightMapGraphicsPipelineSetting.cpp">
+      <Filter>ソース ファイル\LightMap</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PeraPixel.hlsl">
@@ -135,6 +147,9 @@
       <Filter>シェーダー</Filter>
     </FxCompile>
     <FxCompile Include="BufferVertex.hlsl">
+      <Filter>シェーダー</Filter>
+    </FxCompile>
+    <FxCompile Include="LightMapShader.hlsl">
       <Filter>シェーダー</Filter>
     </FxCompile>
   </ItemGroup>
@@ -230,6 +245,12 @@
     </ClInclude>
     <ClInclude Include="BufferShaderCompile.h">
       <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="LightMapShaderCompile.h">
+      <Filter>ヘッダー ファイル\LightMap</Filter>
+    </ClInclude>
+    <ClInclude Include="LightMapGraphicsPipelineSetting.h">
+      <Filter>ヘッダー ファイル\LightMap</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

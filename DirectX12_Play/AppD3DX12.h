@@ -84,9 +84,14 @@ private:
 	PeraSetRootSignature* bufferSetRootSignature = nullptr;
 	BufferShaderCompile* bufferShaderCompile = nullptr;
 
-	// ライト座標
+	// ライトマップ関連
+	LightMapGraphicsPipelineSetting* lightMapGPLSetting = nullptr;
+	PeraSetRootSignature* lightMapRootSignature = nullptr;
+	LightMapShaderCompile* lightMapShaderCompile = nullptr;
+	ComPtr<ID3D10Blob> _lightMapVSBlob = nullptr; // ライトマップ用頂点シェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _lightMapPSBlob = nullptr; // ライトマップ用ピクセルシェーダーオブジェクト格納用
 	XMFLOAT4 _planeNormalVec;
-	XMFLOAT3 _parallelLightVec;
+	XMFLOAT3 lightVec;
 
 public:
 	///Applicationのシングルトンインスタンスを得る

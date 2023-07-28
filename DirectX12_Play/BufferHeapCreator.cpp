@@ -33,7 +33,7 @@ void BufferHeapCreator::SetRTVHeapDesc()
 void BufferHeapCreator::SetDSVHeapDesc()
 {
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.NumDescriptors = 2; // 深度 + lightmap
 }
 
 void BufferHeapCreator::SetCBVSRVHeapDesc()
@@ -53,7 +53,7 @@ void BufferHeapCreator::SetMutipassRTVHeapDesc()
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 5; // マルチパス対象数で変動する + effectCBV + normalmapSRV
+	mutipassSRVHeapDesc.NumDescriptors = 7; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -80,7 +80,7 @@ void BufferHeapCreator::SetDepthResourceDesc()
 	depthResDesc.Width = prepareRenderingWindow->GetWindowWidth();
 	depthResDesc.Height = prepareRenderingWindow->GetWindowHeight();
 	depthResDesc.DepthOrArraySize = 1;
-	depthResDesc.Format = DXGI_FORMAT_D32_FLOAT; // 深度値書き込み用
+	depthResDesc.Format = DXGI_FORMAT_R32_TYPELESS; // 深度値書き込み用
 	depthResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
 	depthResDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 }
@@ -173,7 +173,7 @@ HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev)
 	);
 }
 
-HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev)
+HRESULT BufferHeapCreator::CreateBufferOfDepthAndLightMap(ComPtr<ID3D12Device> _dev)
 {
 	SetDepthHeapProp();
 	SetDepthResourceDesc();
@@ -181,26 +181,37 @@ HRESULT BufferHeapCreator::CreateBufferOfDepth(ComPtr<ID3D12Device> _dev)
 	depthClearValue2.DepthStencil.Depth = 1.0f;
 	depthClearValue2.Format = DXGI_FORMAT_D32_FLOAT;
 
-	// こちらは深度マップ用
-	depthMapHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-	depthMapHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	depthMapHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	depthMapResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthMapResDesc.Width = prepareRenderingWindow->GetWindowWidth();
-	depthMapResDesc.Height = prepareRenderingWindow->GetWindowHeight();
-	depthMapResDesc.DepthOrArraySize = 1;
-	depthMapResDesc.Format = DXGI_FORMAT_R32_TYPELESS; // 深度値書き込み用
-	depthMapResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
-	depthMapResDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	return _dev->CreateCommittedResource
+	_dev->CreateCommittedResource
 	(
 		&depthHeapProps,
 		D3D12_HEAP_FLAG_NONE,
-		&/*depthResDesc*/depthMapResDesc,
+		&/*depthResDesc*/depthResDesc,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&depthClearValue2,
 		IID_PPV_ARGS(depthBuff.ReleaseAndGetAddressOf())
+	);
+
+	// ライトマップバッファー作成
+	lightMapHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	lightMapHeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	lightMapHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	constexpr uint32_t shadow_difinition = 1024;
+	lightMapResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	lightMapResDesc.Width = shadow_difinition;
+	lightMapResDesc.Height = shadow_difinition;
+	lightMapResDesc.DepthOrArraySize = 1;
+	lightMapResDesc.Format = DXGI_FORMAT_R32_TYPELESS; // 深度値書き込み用
+	lightMapResDesc.SampleDesc.Count = 1; // 1pixce/1つのサンプル
+	lightMapResDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	return _dev->CreateCommittedResource
+	(
+		&lightMapHeapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&lightMapResDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthClearValue2,
+		IID_PPV_ARGS(lightMapBuff.ReleaseAndGetAddressOf())
 	);
 }
 
@@ -210,7 +221,7 @@ HRESULT BufferHeapCreator::CreateConstBufferOfWVPMatrix(ComPtr<ID3D12Device> _de
 	wvpHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	wvpResdesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(SceneMatrix) + 0xff) & ~0xff);
 
-	return _dev->CreateCommittedResource
+	_dev->CreateCommittedResource
 	(
 		&wvpHeapProp,
 		D3D12_HEAP_FLAG_NONE,
@@ -218,6 +229,16 @@ HRESULT BufferHeapCreator::CreateConstBufferOfWVPMatrix(ComPtr<ID3D12Device> _de
 		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
 		nullptr,
 		IID_PPV_ARGS(matrixBuff.ReleaseAndGetAddressOf())
+	);
+
+	return 	_dev->CreateCommittedResource
+	(
+		&wvpHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&wvpResdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
+		nullptr,
+		IID_PPV_ARGS(matrixBuff4Multipass.ReleaseAndGetAddressOf())
 	);
 }
 
