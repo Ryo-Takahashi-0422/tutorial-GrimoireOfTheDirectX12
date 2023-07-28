@@ -11,5 +11,7 @@ min16uint weight : WEIGHT): SV_POSITION
     matrix bm = bones[boneno[0]] * w + bones[boneno[1]] * (1 - w);
     pos = mul(bm, pos);
     
+    //pos = mul(mul(mul(proj, view), world), pos) /*mul(lightCamera, pos)*/;
+    //return pos;
     return mul(lightCamera, pos);
 }

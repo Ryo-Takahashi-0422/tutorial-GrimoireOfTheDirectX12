@@ -23,7 +23,7 @@ void ViewCreator::CreateCBV4Matrix(ComPtr<ID3D12Device> _dev)
 	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	basicDescHeapHandle.ptr += inc;
 
-	// ライトマップ計算用にもう一つ
+	// ライトマップ計算用にもう一つ(7つめ)
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc4MultipassMatrix;
 	cbvDesc4MultipassMatrix.BufferLocation = bufferHeapCreator->GetMatrixBuff4Multipass()->GetGPUVirtualAddress();
 	cbvDesc4MultipassMatrix.SizeInBytes = bufferHeapCreator->GetMatrixBuff4Multipass()->GetDesc().Width;
@@ -159,6 +159,18 @@ void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)
 
 		basicDescHeapHandle.ptr += inc;
 	}
+
+	// 最後 ライトマップ
+	depthSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	depthSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	depthSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	depthSRVDesc.Texture2D.MipLevels = 1;
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetLightMapBuff().Get(),
+		&depthSRVDesc,
+		basicDescHeapHandle
+	);
 }
 
 void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)

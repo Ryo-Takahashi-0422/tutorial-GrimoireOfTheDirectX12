@@ -10,16 +10,16 @@ float4 psBuffer(Output input) : SV_TARGET
     float lmap = pow(lightmap.Sample(smp, input.uv), 0.3);
     float4 lmap4 = float4(lmap, lmap, lmap, 1);
     
-    return lmap4;
+    //return lmap4;
     //return dep4;
     //return col;
-    //return model.Sample(smp, input.uv);
+    return model.Sample(smp, input.uv);
 
     
     
     
     //float3 light = normalize(float3(1, -1, 1));
-    //float bright = dot(input.norm, -light);
+    ////float bright = dot(input.norm, -light);
     
     //float3 posFromLightVP = input.tpos.xyz / input.tpos.w;
     //float2 shadowUV = (posFromLightVP + float2(1, -1)) * float2(0.5, -0.5);
@@ -29,10 +29,10 @@ float4 psBuffer(Output input) : SV_TARGET
     //{
     //    shadowWeight = 0.5f;
     //}
-    //shadowWeight = lerp(0.5f, 1.0f, depthFromLight);
-    //float b = bright * shadowWeight;
+    ////shadowWeight = lerp(0.5f, 1.0f, depthFromLight);
+    //float4 b = shadowWeight * model.Sample(smp, input.uv);
     
-    //return float4(b, b, b, 1);
+    //return b/*float4(b, b, b, 1)*/;
     
     
     

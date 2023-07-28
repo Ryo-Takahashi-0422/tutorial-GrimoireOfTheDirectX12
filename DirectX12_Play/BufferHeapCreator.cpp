@@ -39,7 +39,7 @@ void BufferHeapCreator::SetDSVHeapDesc()
 void BufferHeapCreator::SetCBVSRVHeapDesc()
 {
 	cbvsrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	cbvsrvHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+	cbvsrvHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5 + 1; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)*materialNum + ライトマップ
 	cbvsrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	cbvsrvHeapDesc.NodeMask = 0;
 }

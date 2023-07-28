@@ -534,7 +534,73 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-		//auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		constexpr uint32_t shadow_difinition = 1024;
+		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.0f, 0.0f, shadow_difinition, shadow_difinition);
+		_cmdList->RSSetViewports(1, &vp); // 実は重要
+		CD3DX12_RECT rc(0, 0, shadow_difinition, shadow_difinition);
+		_cmdList->RSSetScissorRects(1, &rc); // 実は重要
+
+		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+
+		// ライトマップ描画
+
+		_cmdList->SetPipelineState(lightMapGPLSetting->GetPipelineState().Get());
+		_cmdList->SetGraphicsRootSignature(lightMapRootSignature->GetRootSignature().Get());
+
+		dsvh.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		_cmdList->OMSetRenderTargets(0, nullptr, false, &dsvh);
+		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
+		//画面クリア
+		//_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
+		_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
+
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
+		_cmdList->SetGraphicsRootDescriptorTable
+		(
+			0, // バインドのスロット番号
+			bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		);
+
+		auto materialHandle2 = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		auto inc2 = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto materialHInc2 = inc2 * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+		materialHandle2.ptr += inc2; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
+		unsigned int idxOffset2 = 0;
+
+		for (auto m : pmdMaterialInfo->materials)
+		{
+			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle2);
+			//インデックス付きインスタンス化されたプリミティブを描画
+			_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset2, 0, 0); // instanceid 0:通常、1:影
+
+			materialHandle2.ptr += materialHInc2;
+			idxOffset2 += m.indiceNum;
+		}
+
+		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
+		//auto lightHandle = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		//auto linc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 5;
+		//lightHandle.ptr += linc;
+		//
+		//_cmdList->SetGraphicsRootDescriptorTable
+		//(
+		//	0, // バインドのスロット番号
+		//	lightHandle
+		//);
+
+		_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
+
+		// ライトマップ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
+		D3D12_RESOURCE_BARRIER barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetLightMapBuff().Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
+
 
 		//// マルチパス1パス目
 
@@ -599,7 +665,7 @@ void AppD3DX12::Run() {
 		handle = bufferHeapCreator->/*GetRTVHeap()*/GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
 		//handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
@@ -657,6 +723,10 @@ void AppD3DX12::Run() {
 			idxOffset += m.indiceNum;
 		}
 
+		auto lHandle = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		lHandle.ptr += materialHInc * pmdMaterialInfo->materialNum + inc;
+		_cmdList->SetGraphicsRootDescriptorTable(2, lHandle/*materialHandle*/); // ライトマップ格納
+
 		//_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
 		//_cmdList->DrawInstanced(vertNum ,1, 0, 0);
 
@@ -678,76 +748,6 @@ void AppD3DX12::Run() {
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 		);
-
-
-
-
-		constexpr uint32_t shadow_difinition = 1024;
-		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.0f, 0.0f, shadow_difinition, shadow_difinition);
-		_cmdList->RSSetViewports(1, &vp); // 実は重要
-		CD3DX12_RECT rc(0, 0, shadow_difinition, shadow_difinition);
-		_cmdList->RSSetScissorRects(1, &rc); // 実は重要
-
-		// ライトマップ描画
-
-		_cmdList->SetPipelineState(lightMapGPLSetting->GetPipelineState().Get());
-		_cmdList->SetGraphicsRootSignature(lightMapRootSignature->GetRootSignature().Get());
-
-		dsvh.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		_cmdList->OMSetRenderTargets(0, nullptr, false, &dsvh);
-		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
-		//画面クリア
-		//_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
-		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
-		_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
-
-		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
-		_cmdList->SetGraphicsRootDescriptorTable
-		(
-			0, // バインドのスロット番号
-			bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
-		);
-
-		auto materialHandle2 = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		auto inc2 = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		auto materialHInc2 = inc2 * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
-		materialHandle2.ptr += inc2; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
-		unsigned int idxOffset2 = 0;
-
-		for (auto m : pmdMaterialInfo->materials)
-		{
-			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle2);
-			//インデックス付きインスタンス化されたプリミティブを描画
-			_cmdList->DrawIndexedInstanced(m.indiceNum, 2, idxOffset2, 0, 0); // instanceid 0:通常、1:影
-
-			materialHandle2.ptr += materialHInc2;
-			idxOffset2 += m.indiceNum;
-		}
-
-		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
-		//auto lightHandle = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		//auto linc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 5;
-		//lightHandle.ptr += linc;
-		//
-		//_cmdList->SetGraphicsRootDescriptorTable
-		//(
-		//	0, // バインドのスロット番号
-		//	lightHandle
-		//);
-
-		_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
-
-		// ライトマップ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
-		D3D12_RESOURCE_BARRIER barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
-		(
-			bufferHeapCreator->GetLightMapBuff().Get(),
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-		);
-		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
-
-
 
 
 		_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer()); // 実は重要
@@ -855,7 +855,7 @@ void AppD3DX12::Run() {
 
 		//行列情報の更新
 		//pmdMaterialInfo->angle += 0.01f;
-		pmdMaterialInfo->angle = 200.0f;
+		//pmdMaterialInfo->angle = 200.0f;
 		pmdMaterialInfo->worldMat = XMMatrixRotationY(pmdMaterialInfo->angle);
 		pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
 
