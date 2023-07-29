@@ -54,10 +54,10 @@ float4 BasicPS(Output input) : SV_TARGET
     }
     //shadowWeight = lerp(0.5f, 1.0f, depthFromLight);
     float b = bright * shadowWeight;
-    
-    float lmap = pow(lightmap.Sample(smp, input.uv), 0.3);
+        
+    float lmap = pow(lightmap.Sample(smp, shadowUV), 0.3); // このuvはモデルのuvである。レンダリングされた画像のuvとは違うので上手く読めない？
     float4 lmap4 = float4(lmap, lmap, lmap, 1);
     return lmap4; //!!!この結果がBufferPixelと異なっている。こちらがオカシイ。テクスチャが読み込めていない様子。
-    return float4(b, b, b, 1)/* * result*/;
+    //return float4(b, b, b, 1)/* * result*/;
     
 }

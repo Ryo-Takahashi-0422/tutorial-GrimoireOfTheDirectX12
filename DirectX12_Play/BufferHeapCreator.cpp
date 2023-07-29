@@ -39,7 +39,7 @@ void BufferHeapCreator::SetDSVHeapDesc()
 void BufferHeapCreator::SetCBVSRVHeapDesc()
 {
 	cbvsrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	cbvsrvHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5 + 1; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)*materialNum + ライトマップ
+	cbvsrvHeapDesc.NumDescriptors = 1 + pmdMaterialInfo->materialNum * 5 + 2; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)*materialNum + 深度マップ + ライトマップ
 	cbvsrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	cbvsrvHeapDesc.NodeMask = 0;
 }
@@ -175,6 +175,7 @@ HRESULT BufferHeapCreator::CreateBufferOfIndex(ComPtr<ID3D12Device> _dev)
 
 HRESULT BufferHeapCreator::CreateBufferOfDepthAndLightMap(ComPtr<ID3D12Device> _dev)
 {
+	// デプスマップバッファー作成
 	SetDepthHeapProp();
 	SetDepthResourceDesc();
 	D3D12_CLEAR_VALUE depthClearValue2 = {};

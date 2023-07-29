@@ -31,8 +31,9 @@ cbuffer Material : register(b1)
 SamplerState smp : register(s0); // 0番スロットに設定されたサンプラー
 SamplerState smpToon : register(s1); // 1番スロットに設定されたサンプラー(トゥーン)
 
-Texture2D<float4> tex : register(t0); //0番スロットに設定されたテクスチャ
-Texture2D<float4> sph : register(t1); // 1番スロットに設定されたテクスチャ
-Texture2D<float4> spa : register(t2); // 2番スロットに設定されたテクスチャ
-Texture2D<float4> toon : register(t3); // 3番スロットに設定されたトゥーンテクスチャ
-Texture2D<float4> lightmap : register(t4); // 4番スロットにライトマップテクスチャ
+Texture2D<float4> tex : register(t2); //0番スロットに設定されたテクスチャ
+Texture2D<float4> sph : register(t3); // 1番スロットに設定されたテクスチャ
+Texture2D<float4> spa : register(t4); // 2番スロットに設定されたテクスチャ
+Texture2D<float4> toon : register(t5); // 3番スロットに設定されたトゥーンテクスチャ
+Texture2D<float> depthmap : register(t0); // 4番スロットにデプスマップテクスチャ
+Texture2D<float> lightmap : register(t1); // 4番スロットにライトマップテクスチャ

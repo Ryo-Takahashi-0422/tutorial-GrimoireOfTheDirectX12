@@ -713,6 +713,11 @@ void AppD3DX12::Run() {
 		materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
 		unsigned int idxOffset = 0;
 
+		_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle); // デプスマップ格納
+		materialHandle.ptr += inc;
+		_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納
+		materialHandle.ptr += inc;
+
 		for (auto m : pmdMaterialInfo->materials)
 		{
 			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
@@ -723,12 +728,11 @@ void AppD3DX12::Run() {
 			idxOffset += m.indiceNum;
 		}
 
-		auto lHandle = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		lHandle.ptr += materialHInc * pmdMaterialInfo->materialNum + inc;
-		_cmdList->SetGraphicsRootDescriptorTable(2, lHandle/*materialHandle*/); // ライトマップ格納
+		//_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle); // デプスマップ格納
+		//materialHandle.ptr += inc;
+		//_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納
 
 		//_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
-		//_cmdList->DrawInstanced(vertNum ,1, 0, 0);
 
 		//ﾊﾞｯｸﾊﾞｯﾌｧ表示前にリソースをCOMMON状態に移行
 		//コマンドリストクローズ後は、コマンドリストが特定の呼び出し(Reset())以外は受け付けず、以下3行はエラーになる
