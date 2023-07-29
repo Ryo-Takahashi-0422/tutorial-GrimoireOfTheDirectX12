@@ -44,20 +44,23 @@ float4 BasicPS(Output input) : SV_TARGET
     light = normalize(float3(1, -1, 1));
     float bright = dot(input.norm, -light);
     
+    float shadowWeight = 1.0f;
     float3 posFromLightVP = input.tpos.xyz / input.tpos.w;
     float2 shadowUV = (posFromLightVP.xy  + float2(1, -1)) * float2(0.5, -0.5);
-    float depthFromLight = lightmap.Sample(smp, shadowUV);
-    float shadowWeight = 1.0f;
-    if (depthFromLight < posFromLightVP.z - 0.001f)
-    {
-        shadowWeight = 0.5f;
-    }
+    //float depthFromLight = lightmap.Sample(smp, shadowUV);
+    
+    //if (depthFromLight < posFromLightVP.z - 0.001f)
+    //{
+    //    shadowWeight = 0.5f;
+    //}
     //shadowWeight = lerp(0.5f, 1.0f, depthFromLight);
-    float b = bright * shadowWeight;
+    float depthFromLight = lightmap.SampleCmp(smpBilinear, shadowUV, posFromLightVP.z - 0.005f);
+    shadowWeight = lerp(0.5f, 1.0f, depthFromLight);
+    float b = /*bright **/ shadowWeight;
         
     float lmap = pow(lightmap.Sample(smp, shadowUV), 0.3); // このuvはモデルのuvである。レンダリングされた画像のuvとは違うので上手く読めない？
     float4 lmap4 = float4(lmap, lmap, lmap, 1);
-    return lmap4; //!!!この結果がBufferPixelと異なっている。こちらがオカシイ。テクスチャが読み込めていない様子。
-    //return float4(b, b, b, 1)/* * result*/;
+    //return lmap4; //!!!この結果がBufferPixelと異なっている。こちらがオカシイ。テクスチャが読み込めていない様子。
+    return shadowWeight * result;
     
 }

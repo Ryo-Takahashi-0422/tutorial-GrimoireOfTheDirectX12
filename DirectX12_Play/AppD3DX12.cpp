@@ -422,7 +422,7 @@ bool AppD3DX12::ResourceInit() {
 	//行列用定数バッファーのマッピング
 	// 平面、ライト座標
 	_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
-	lightVec = XMFLOAT3(1, 1, 1);
+	lightVec = XMFLOAT3(-0.5f, 1, -0.5f);
 	auto light = XMLoadFloat3(&lightVec);
 	auto eyePos = XMLoadFloat3(&eye);
 	auto targetPos = XMLoadFloat3(&target);
@@ -713,6 +713,8 @@ void AppD3DX12::Run() {
 		materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
 		unsigned int idxOffset = 0;
 
+		// (たぶん)DrawIndexedInstancedによる描画の前にSRVからのテクスチャ取得を終えていないとデータがシェーダーに通らない
+		// なお、このパスでのデプスも描画と同時に渡しているが参照出来ないのは、リソース状態がdepth_writeのままだからと思われる
 		_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle); // デプスマップ格納
 		materialHandle.ptr += inc;
 		_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納

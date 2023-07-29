@@ -30,6 +30,7 @@ cbuffer Material : register(b1)
 
 SamplerState smp : register(s0); // 0番スロットに設定されたサンプラー
 SamplerState smpToon : register(s1); // 1番スロットに設定されたサンプラー(トゥーン)
+SamplerComparisonState smpBilinear : register(s2); // 2番スロットに設定された、色情報そのものではなくその比較情報を得るサンプラー
 
 Texture2D<float4> tex : register(t2); //0番スロットに設定されたテクスチャ
 Texture2D<float4> sph : register(t3); // 1番スロットに設定されたテクスチャ

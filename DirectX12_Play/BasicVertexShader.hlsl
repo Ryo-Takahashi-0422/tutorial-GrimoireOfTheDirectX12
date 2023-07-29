@@ -20,7 +20,7 @@ uint instNo : SV_InstanceID
     //}
     
     // pixelshaderへの出力を作っていく
-    output.svpos = /*mul(mul(mul(proj, view), world), pos)*/mul(lightCamera, pos);
+    output.svpos = mul(mul(mul(proj, view), world), pos)/*mul(lightCamera, pos)*/;
     norm.w = 0; // worldに平行移動成分が含まれている場合、法線が並行移動する。(この時モデルは暗くなる。なぜ？？)
     output.norm = mul(world, norm);
     output.vnormal = mul(view, output.norm);
