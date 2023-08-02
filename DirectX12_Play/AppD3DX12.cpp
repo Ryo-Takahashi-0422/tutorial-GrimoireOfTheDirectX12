@@ -96,12 +96,12 @@ HRESULT AppD3DX12::D3DX12DeviceInit()
 	result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(_fence.ReleaseAndGetAddressOf()));
 }
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 bool AppD3DX12::PrepareRendering() {
-#else
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
-{
-#endif
+//#else
+//int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+//{
+//#endif
 	// SetRootSignatureBaseクラスのインスタンス化
 	setRootSignature = new SetRootSignature;
 
@@ -129,7 +129,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	boneMatrices = new std::vector<DirectX::XMMATRIX>;
 	boneMatrices = pmdActor->GetMatrices();
 	bNodeTable = pmdMaterialInfo->GetBoneNode();
-
+	
 	// レンダリングウィンドウ設定
 	prepareRenderingWindow = new PrepareRenderingWindow;
 	prepareRenderingWindow->CreateAppWindow();
@@ -197,9 +197,12 @@ bool AppD3DX12::PipelineInit(){
 	filter.DenyList.NumSeverities = _countof(severities);
 	filter.DenyList.pSeverityList = severities;
 
-	result = infoQueue->PushStorageFilter(&filter);
-	// ついでにエラーメッセージでブレークさせる
-	result = infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+	if (infoQueue != nullptr)
+	{
+		result = infoQueue->PushStorageFilter(&filter);
+		// ついでにエラーメッセージでブレークさせる
+		result = infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+	}
 
 //初期化処理３：コマンドキューの記述用意・作成
 
@@ -277,9 +280,9 @@ bool AppD3DX12::PipelineInit(){
 }
 
 bool AppD3DX12::ResourceInit() {
-//●リソース初期化
-	
-// 初期化処理1：ルートシグネチャ設定
+	//●リソース初期化
+
+	// 初期化処理1：ルートシグネチャ設定
 	if (FAILED(setRootSignature->SetRootsignatureParam(_dev)))
 	{
 		return false;
@@ -302,13 +305,14 @@ bool AppD3DX12::ResourceInit() {
 	{
 		return false;
 	}
-
+	
+//#ifdef _DEBUG
 // 初期化処理2：シェーダーコンパイル設定
 	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
 	auto blobs = settingShaderCompile->SetShaderCompile(setRootSignature, _vsBlob, _psBlob);
 	if (blobs.first == nullptr or blobs.second == nullptr) return false;
 	_vsBlob = blobs.first;
-	_psBlob = blobs.second;
+	_psBlob = blobs.second;	
 
 	// ﾏﾙﾁﾊﾟｽ1枚目用
 	auto mBlobs = peraShaderCompile->SetPeraShaderCompile(peraSetRootSignature, _vsMBlob, _psMBlob);
@@ -327,6 +331,39 @@ bool AppD3DX12::ResourceInit() {
 	if (lightMapBlobs.first == nullptr) return false;
 	_lightMapVSBlob = lightMapBlobs.first;
 	_lightMapPSBlob = lightMapBlobs.second; // こちらはnullptr
+
+//#else
+//	
+//	FILE* fp = nullptr;
+//	//auto folder = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\";
+//	auto f0 = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BasicVertexShader.cso";
+//	auto f1 = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BasicPixelShader.cso";
+//	auto f2 = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BufferVertex.cso";
+//	auto f3 = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BufferPixel.cso";
+//	auto f4 = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\PeraVertex.cso";
+//	auto f5 = L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\PeraPixel.cso";
+//	const wchar_t* file_name[] = { f0,f1,f2,f3,f4,f5 };
+//
+//	int i = 0;
+//	long m_Size[6];
+//	//char* m_Data[6];
+//	ComPtr<ID3D11VertexShader>vertexShader;
+//	ComPtr<ID3D11PixelShader> pixelShader;
+//	
+//	for (auto& file : file_name)
+//	{
+//		auto vertexShaderBytecode = DX::ReadData(file);
+//		ComPtr<ID3D11VertexShader> vertexShader;
+//		DX::ThrowIfFailed(
+//			m_d3dDevice->CreateVertexShader(
+//				vertexShaderBytecode->Data,
+//				vertexShaderBytecode->Length,
+//				nullptr,
+//				&vertexShader
+//			)
+//	}
+//
+//#endif
 
 // 初期化処理3：頂点入力レイアウトの作成及び
 // 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
@@ -374,6 +411,7 @@ bool AppD3DX12::ResourceInit() {
 
 	//行列用定数バッファーの生成
 	pmdMaterialInfo->worldMat = XMMatrixIdentity();
+
 	//auto worldMat = XMMatrixRotationY(15.0f);
 	pmdMaterialInfo->angle = 0.0f;
 

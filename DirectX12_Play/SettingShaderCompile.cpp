@@ -6,7 +6,8 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> SettingShaderCompile::SetShade
 {
 	result = D3DCompileFromFile
 	(
-		L"BasicVertexShader.hlsl",
+		//L"BasicVertexShader.hlsl",
+		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BasicVertexShader.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"BasicVS",
@@ -16,10 +17,11 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> SettingShaderCompile::SetShade
 		_vsBlob.ReleaseAndGetAddressOf()
 		, setRootSignature->GetErrorBlob().GetAddressOf()
 	);
-
+	
 	result = D3DCompileFromFile
 	(
-		L"BasicPixelShader.hlsl",
+		//L"BasicPixelShader.hlsl",
+		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BasicPixelShader.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"BasicPS",
@@ -29,7 +31,7 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> SettingShaderCompile::SetShade
 		_psBlob.ReleaseAndGetAddressOf()
 		, setRootSignature->GetErrorBlob().GetAddressOf()
 	);
-
+	
 	//エラーチェック
 	if (FAILED(result))
 	{

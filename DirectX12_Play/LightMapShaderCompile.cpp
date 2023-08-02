@@ -7,7 +7,8 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> LightMapShaderCompile::SetShad
 {
 	result = D3DCompileFromFile
 	(
-		L"BasicVertexShader.hlsl",/*LightMapShader.hlsl*/
+		//L"BasicVertexShader.hlsl",
+		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BasicVertexShader.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"LightMapVS",

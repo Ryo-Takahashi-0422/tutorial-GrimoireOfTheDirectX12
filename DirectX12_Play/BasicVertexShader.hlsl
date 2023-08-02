@@ -27,7 +27,7 @@ uint instNo : SV_InstanceID
     output.uv = uv;
     output.ray = normalize(pos.xyz - eye);
     output.instNo = instNo;
-    output.tpos = mul(lightCamera, pos);
+    output.tpos = mul(lightCamera, pos); // world乗算をしても同様の結果になるのは、使っているworldが単位行列だから
     
 	return output;
 }

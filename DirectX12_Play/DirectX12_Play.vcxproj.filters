@@ -249,5 +249,8 @@
     <ClInclude Include="LightMapGraphicsPipelineSetting.h">
       <Filter>ヘッダー ファイル\LightMap</Filter>
     </ClInclude>
+    <ClInclude Include="ReadData.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

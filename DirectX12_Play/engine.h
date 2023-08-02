@@ -1,11 +1,12 @@
 #pragma once
 
+//#include <pix3.h>
 #include <DirectXTex.h>
 #include <Windows.h>
 #include<tchar.h>
-#ifdef _DEBUG
+//#ifdef _DEBUG
 #include <iostream>
-#endif // _DEBUG
+//#endif // _DEBUG
 #include <vector>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -19,6 +20,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <array>
+#include <ReadData.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
