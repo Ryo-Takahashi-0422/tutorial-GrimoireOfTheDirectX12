@@ -10,15 +10,21 @@ struct Output
     float4 tpos : TPOS;
 };
 
+struct PixelOutput
+{    
+    float4 col : SV_TARGET0;
+    float4 mnormal : SV_TARGET1;    
+};
+
 cbuffer SceneBuffer : register(b0) // 変換行列
 {
-    matrix world; // ワールド行列
-    matrix view; // ビュー行列
-    matrix proj; // プロジェクション行列
-    matrix lightCamera; // ライトから見たビュー
-    matrix shadow; // 影
-    float3 eye; // 視点
-    matrix bones[256]; // ボーン行列
+    matrix world; // world matrix
+    matrix view; // view matrix
+    matrix proj; // projection matrix
+    matrix lightCamera; // view matrix from light * orthographic projection matrix
+    matrix shadow; // shadow matrix
+    float3 eye; // eye(camera) position
+    matrix bones[256]; // bone matrix
 };
 
 cbuffer Material : register(b1)
@@ -28,13 +34,13 @@ cbuffer Material : register(b1)
     float3 ambient;
 }
 
-SamplerState smp : register(s0); // 0番スロットに設定されたサンプラー
-SamplerState smpToon : register(s1); // 1番スロットに設定されたサンプラー(トゥーン)
-SamplerComparisonState smpBilinear : register(s2); // 2番スロットに設定された、色情報そのものではなくその比較情報を得るサンプラー
+SamplerState smp : register(s0); // No.0 sampler
+SamplerState smpToon : register(s1); // No.1 sampler(toon)
+SamplerComparisonState smpBilinear : register(s2); // No.2 sampler
 
-Texture2D<float4> tex : register(t2); //0番スロットに設定されたテクスチャ
-Texture2D<float4> sph : register(t3); // 1番スロットに設定されたテクスチャ
-Texture2D<float4> spa : register(t4); // 2番スロットに設定されたテクスチャ
-Texture2D<float4> toon : register(t5); // 3番スロットに設定されたトゥーンテクスチャ
-Texture2D<float> depthmap : register(t0); // 4番スロットにデプスマップテクスチャ
-Texture2D<float> lightmap : register(t1); // 4番スロットにライトマップテクスチャ
+Texture2D<float> depthmap : register(t0); // No.0 depthmap
+Texture2D<float> lightmap : register(t1); // No.1 lightmap(depth from light-view)
+Texture2D<float4> tex : register(t2); // No.2 eye texture
+Texture2D<float4> sph : register(t3); // No.3 .sph texture
+Texture2D<float4> spa : register(t4); // No.4 .spa texture
+Texture2D<float4> toon : register(t5); //No.5 toon texture

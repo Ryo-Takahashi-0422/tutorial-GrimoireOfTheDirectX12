@@ -47,13 +47,13 @@ void BufferHeapCreator::SetCBVSRVHeapDesc()
 void BufferHeapCreator::SetMutipassRTVHeapDesc()
 {
 	mutipassRTVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassRTVHeapDesc.NumDescriptors = 2; // マルチパス対象数で変動する
+	mutipassRTVHeapDesc.NumDescriptors = 3; // マルチパス2個 + マルチターゲット1個分
 }
 
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 7; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列
+	mutipassSRVHeapDesc.NumDescriptors = 8; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -274,7 +274,7 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		IID_PPV_ARGS(multipassBuff.ReleaseAndGetAddressOf())
 	);
 
-	return _dev->CreateCommittedResource
+	_dev->CreateCommittedResource
 	(
 		&mutipassHeapProp,
 		D3D12_HEAP_FLAG_NONE,
@@ -282,6 +282,16 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		&depthClearValue,
 		IID_PPV_ARGS(multipassBuff2.ReleaseAndGetAddressOf())
+	);
+
+	return _dev->CreateCommittedResource
+	(
+		&mutipassHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&mutipassResDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		&depthClearValue,
+		IID_PPV_ARGS(multipassBuff3.ReleaseAndGetAddressOf())
 	);
 }
 

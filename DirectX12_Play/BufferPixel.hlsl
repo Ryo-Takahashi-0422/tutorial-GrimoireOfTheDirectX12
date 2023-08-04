@@ -13,7 +13,14 @@ float4 psBuffer(Output input) : SV_TARGET
     //return lmap4;
     //return dep4;
     //return col;
+    if (input.uv.x < 0.3 && input.uv.y < 0.3)
+    {
+        return multinormalmap.Sample(smp, (input.uv) * 3);
+    }
+    
     return model.Sample(smp, input.uv);
+    
+    
 
     
     

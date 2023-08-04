@@ -1,10 +1,11 @@
 #pragma once
 
-//#include <pix3.h>
+
 #include <DirectXTex.h>
 #include <Windows.h>
 #include<tchar.h>
 //#ifdef _DEBUG
+#include <pix3.h>
 #include <iostream>
 //#endif // _DEBUG
 #include <vector>

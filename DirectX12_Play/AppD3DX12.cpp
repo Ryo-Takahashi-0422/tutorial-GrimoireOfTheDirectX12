@@ -688,10 +688,21 @@ void AppD3DX12::Run() {
 		BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		BarrierDesc.Transition.pResource = /*_backBuffers[bbIdx]*/bufferHeapCreator->GetMultipassBuff2().Get();
 		BarrierDesc.Transition.Subresource = 0;
-		BarrierDesc.Transition.StateBefore = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		//リソースバリア：リソースへの複数のアクセスを同期する必要があることをドライバーに通知
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
+
+
+		// ★マルチターゲット
+		D3D12_RESOURCE_BARRIER barrierDesc4test = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetMultipassBuff3().Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_RENDER_TARGET
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4test);
+
 
 		// モデル描画
 		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
@@ -700,20 +711,29 @@ void AppD3DX12::Run() {
 		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
 		//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
-		handle = bufferHeapCreator->/*GetRTVHeap()*/GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
-		//handle.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		handle.ptr += /*(bbIdx + 1) * */_dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
+		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+
+
+		auto handle2 = handle;
+		handle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvs[2] =
+		{
+			handle,handle2
+		};
+
 
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
 		// ★戻す
-		_cmdList->OMSetRenderTargets(1, &handle, false, &dsvh);
+		_cmdList->OMSetRenderTargets(2, rtvs/*&handle*/, false, &dsvh);
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 		//画面クリア
 		float clearColor[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+		_cmdList->ClearRenderTargetView(handle2, clearColor, 0, nullptr);
 
 		//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -775,13 +795,20 @@ void AppD3DX12::Run() {
 		//_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
 
 		//ﾊﾞｯｸﾊﾞｯﾌｧ表示前にリソースをCOMMON状態に移行
-		//コマンドリストクローズ後は、コマンドリストが特定の呼び出し(Reset())以外は受け付けず、以下3行はエラーになる
-		//クローズ後にコマンドキューを実行しているが、ここでリソースの状態が適用される。ここまでにCOMMONから状態を
-		//変更させておく必要があるが、実質は●●●から～クローズまでに変更させる必要がある。
-		//★戻す
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
+		
+		// ★マルチターゲット
+		barrierDesc4test = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetMultipassBuff3().Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4test);
+
+
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 
@@ -820,7 +847,7 @@ void AppD3DX12::Run() {
 		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->/*GetCBVSRVHeap()*/GetMultipassSRVHeap().GetAddressOf());
 
 		auto gHandle = bufferHeapCreator->/*GetCBVSRVHeap()*/GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		_cmdList->SetGraphicsRootDescriptorTable(0, gHandle);
+		//_cmdList->SetGraphicsRootDescriptorTable(0, gHandle);
 		_cmdList->SetPipelineState(/*peraGPLSetting*/bufferGPLSetting->GetPipelineState().Get());
 
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -844,6 +871,9 @@ void AppD3DX12::Run() {
 
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		_cmdList->SetGraphicsRootDescriptorTable(6, gHandle2); // ライトマップ用シーン行列
+
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(7, gHandle2); // マルチターゲット描画
 
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 

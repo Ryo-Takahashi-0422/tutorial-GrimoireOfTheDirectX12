@@ -59,9 +59,9 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineSetting::SetGPL(
 
 	gpipeLine.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
-	gpipeLine.NumRenderTargets = 1;
-
-	gpipeLine.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM/*DXGI_FORMAT_R8G8B8A8_UNORM_SRGB*/;
+	gpipeLine.NumRenderTargets = 2;
+	gpipeLine.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	gpipeLine.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	gpipeLine.SampleDesc.Count = 1; //1サンプル/ピクセル
 	gpipeLine.SampleDesc.Quality = 0;
