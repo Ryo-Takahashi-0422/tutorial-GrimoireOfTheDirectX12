@@ -37,5 +37,4 @@ PeraLayout::PeraLayout()
 
 PeraLayout::~PeraLayout()
 {
-	delete this;
 }

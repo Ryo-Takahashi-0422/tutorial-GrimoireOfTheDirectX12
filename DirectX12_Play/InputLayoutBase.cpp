@@ -3,7 +3,6 @@
 
 InputLayoutBase::~InputLayoutBase()
 {
-	delete this;
 }
 
 std::vector<D3D12_INPUT_ELEMENT_DESC> InputLayoutBase::GetInputLayout()

@@ -9,5 +9,5 @@ private:
 
 public:
 	HRESULT SetRootsignatureParam(ComPtr<ID3D12Device> _dev);
-	~PeraSetRootSignature();
+	//~PeraSetRootSignature();
 };

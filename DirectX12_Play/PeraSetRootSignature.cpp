@@ -85,7 +85,6 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	return S_OK;
 }
 
-PeraSetRootSignature::~PeraSetRootSignature()
-{
-	delete this;
-}
+//PeraSetRootSignature::~PeraSetRootSignature()
+//{
+//}

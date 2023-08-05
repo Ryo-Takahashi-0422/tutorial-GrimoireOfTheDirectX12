@@ -3,5 +3,4 @@
 
 SetRootSignatureBase::~SetRootSignatureBase()
 {
-	delete this;
 }

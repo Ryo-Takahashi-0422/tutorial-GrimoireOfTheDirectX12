@@ -11,7 +11,6 @@ PeraGraphicsPipelineSetting::PeraGraphicsPipelineSetting(InputLayoutBase* _verte
 
 PeraGraphicsPipelineSetting::~PeraGraphicsPipelineSetting()
 {
-	delete this;
 }
 
 HRESULT PeraGraphicsPipelineSetting::CreateGPStateWrapper(ComPtr<ID3D12Device> _dev,

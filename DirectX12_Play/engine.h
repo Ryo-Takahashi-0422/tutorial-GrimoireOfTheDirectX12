@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <DirectXTex.h>
 #include <Windows.h>
 #include<tchar.h>

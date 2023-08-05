@@ -74,5 +74,4 @@ HRESULT SetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 
 SetRootSignature::~SetRootSignature()
 {
-	delete this;
 }

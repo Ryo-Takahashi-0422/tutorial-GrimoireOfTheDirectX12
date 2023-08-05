@@ -8,5 +8,4 @@ IGraphicsPipelineSetting::IGraphicsPipelineSetting(InputLayoutBase* _vertexInput
 
 IGraphicsPipelineSetting::~IGraphicsPipelineSetting()
 {
-	delete this;
 }

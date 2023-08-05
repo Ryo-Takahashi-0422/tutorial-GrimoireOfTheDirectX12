@@ -567,11 +567,12 @@ void AppD3DX12::Run() {
 			DispatchMessage(&msg);
 		}
 		//アプリ終了時にmessageがWM_QUITになる
-		if (msg.message == WM_QUIT)
+		if (msg.message == WM_QUIT || msg.message == WM_CLOSE)
 		{
+			printf("%s", "quit");
 			break;
 		}
-
+		
 		constexpr uint32_t shadow_difinition = 1024;
 		D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.0f, 0.0f, shadow_difinition, shadow_difinition);
 		_cmdList->RSSetViewports(1, &vp); // 実は重要
@@ -941,16 +942,17 @@ void AppD3DX12::Run() {
 		std::copy(boneMatrices->begin(), boneMatrices->end(), pmdMaterialInfo->mapMatrix->bones);
 
 		//フリップしてレンダリングされたイメージをユーザーに表示
-		_swapChain->Present(1, 0);
+		_swapChain->Present(1, 0);		
 	}
 
 	delete bufferGPLSetting;
-	delete bufferSetRootSignature;
 	delete bufferShaderCompile;
-
+	
 	delete lightMapGPLSetting;
-	delete lightMapRootSignature;
+	
 	delete lightMapShaderCompile;
+
+	
 
 	delete viewCreator;
 	delete mappingExecuter;
@@ -962,7 +964,6 @@ void AppD3DX12::Run() {
 
 	delete pmdActor;
 	delete settingShaderCompile;
-	delete setRootSignature;
 	delete gPLSetting;
 
 	delete vmdMotionInfo;
@@ -972,8 +973,10 @@ void AppD3DX12::Run() {
 	delete peraGPLSetting;
 	delete peraLayout;
 	delete peraPolygon;
-	delete peraSetRootSignature;
-	delete peraShaderCompile;
+	delete peraShaderCompile;	
 
-
+	//delete bufferSetRootSignature;
+	//delete lightMapRootSignature;
+	//delete setRootSignature;
+	//delete peraSetRootSignature;
 }

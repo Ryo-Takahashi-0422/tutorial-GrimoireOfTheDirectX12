@@ -6,6 +6,15 @@ class PrepareRenderingWindow
 	static LRESULT CALLBACK StaticWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
 private:
+	//! @brief ウィンドウプロシージャ
+	virtual LRESULT WndProc(
+		HWND hWnd,
+		UINT msg,
+		WPARAM wp,
+		LPARAM lp
+	);
+
+	
 	WNDCLASSEX w;
 	const unsigned int window_width = 720;
 	const unsigned int window_height = 720;
@@ -15,13 +24,6 @@ private:
 	D3D12_RECT scissorRect;
 
 public:
-	//! @brief ウィンドウプロシージャ
-	virtual LRESULT WndProc(
-		HWND hWnd,
-		UINT msg,
-		WPARAM wp,
-		LPARAM lp
-	);
 	void CreateAppWindow();
 	void SetViewportAndRect();
 	HWND GetHWND() { return hwnd; };

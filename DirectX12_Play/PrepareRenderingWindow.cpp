@@ -5,28 +5,42 @@ LRESULT PrepareRenderingWindow::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM l
 	switch (msg)
 	{
 	case WM_DESTROY:
+		MessageBox(hwnd, TEXT("quit application"),
+			TEXT("quit"), MB_ICONINFORMATION);
 		PostQuitMessage(0);
 		return 0;
 	}
+
 	return DefWindowProc(hWnd, msg, wp, lp);
 }
 
 // windowがメッセージループ中に取得したメッセージを処理するクラス
 LRESULT CALLBACK PrepareRenderingWindow::StaticWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
+{	
 	PrepareRenderingWindow* This = (PrepareRenderingWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	if (!This) {//取得できなかった(ウィンドウ生成中)場合
 		if (msg == WM_CREATE || msg == WM_INITDIALOG) {
 			This = (PrepareRenderingWindow*)((LPCREATESTRUCT)lparam)->lpCreateParams;
-			if (This) {
+			if (This) {				
 				SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)This);
 				return This->WndProc(hwnd, msg, wparam, lparam);
 			}
 		}
 	}
+
 	else {//取得できた場合(ウィンドウ生成後)
 		return This->WndProc(hwnd, msg, wparam, lparam);
 	}
+
+	switch (msg)
+	{
+	case WM_DESTROY: // process when the window is closed
+		MessageBox(hwnd, TEXT("Thanks for starting"),
+			TEXT("quit the application"), MB_ICONINFORMATION);
+		PostQuitMessage(0);
+		return 0;
+	}
+
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
@@ -48,7 +62,7 @@ void PrepareRenderingWindow::CreateAppWindow()
 
 	hwnd = CreateWindow(
 		w.lpszClassName,
-		_T("DX12テスト"),//タイトルバーの文字
+		_T("DX12test"),//タイトルバーの文字
 		WS_OVERLAPPEDWINDOW,//タイトルバーと境界線があるウィンドウです
 		CW_USEDEFAULT,//表示X座標はOSにお任せします
 		CW_USEDEFAULT,//表示Y座標はOSにお任せします

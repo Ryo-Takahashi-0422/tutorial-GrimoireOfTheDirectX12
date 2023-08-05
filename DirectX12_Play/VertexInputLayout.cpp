@@ -75,7 +75,6 @@ VertexInputLayout::VertexInputLayout()
 
 VertexInputLayout::~VertexInputLayout()
 {
-	delete this;
 }
 //
 //std::vector<D3D12_INPUT_ELEMENT_DESC> VertexInputLayout::GetInputLayout()
