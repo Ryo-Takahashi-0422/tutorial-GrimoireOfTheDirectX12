@@ -18,7 +18,14 @@ float4 psBuffer(Output input) : SV_TARGET
         return multinormalmap.Sample(smp, (input.uv) * 3);
     }
     
-    return model.Sample(smp, input.uv);
+    // deffered shading
+    float4 nm = multinormalmap.Sample(smp, input.uv);
+    nm = nm * 2.0f - 1.0f;
+    float3 light = normalize(float3(1.0f, -1.0f, 1.0f));
+    const float ambient = 0.25f;
+    float diffB = max(saturate(dot(nm.xyz, -light)), 0.6); // dot(nm.xyz, -light)) is cosƒÆ between normalized reflection(-light) direction and normal direction of vertex
+    
+    return model.Sample(smp, input.uv) * float4(diffB, diffB, diffB, 1);
     
     
 
