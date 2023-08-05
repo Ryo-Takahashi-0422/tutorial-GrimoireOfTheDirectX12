@@ -234,7 +234,7 @@ void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 
 	//★★★後で試す
 	//multipassRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB; // パスの二つ目はモデル描画なのでそれに合わせて変更する
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV/*D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV*/);
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// ニ個目
 	_dev->CreateRenderTargetView
@@ -244,12 +244,32 @@ void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 		handle
 	);
 
-	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV/*D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV*/);
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// 3個目
 	_dev->CreateRenderTargetView
 	(
 		bufferHeapCreator->GetMultipassBuff3().Get(),
+		&multipassRTVDesc,
+		handle
+	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	// No.4 bloom-1
+	_dev->CreateRenderTargetView
+	(
+		bufferHeapCreator->GetBloomBuff()[0].Get(),
+		&multipassRTVDesc,
+		handle
+	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	// No.5 bloom-2
+	_dev->CreateRenderTargetView
+	(
+		bufferHeapCreator->GetBloomBuff()[1].Get(),
 		&multipassRTVDesc,
 		handle
 	);
@@ -337,6 +357,24 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff3().Get(),
+		&multipassSRVDesc,
+		handle4SRVMultipass
+	);
+
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	// No.8 bloom-1
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetBloomBuff()[0].Get(),
+		&multipassSRVDesc,
+		handle4SRVMultipass
+	);
+
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	// No.9 bloom-2
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetBloomBuff()[1].Get(),
 		&multipassSRVDesc,
 		handle4SRVMultipass
 	);

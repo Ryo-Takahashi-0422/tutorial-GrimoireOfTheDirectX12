@@ -179,6 +179,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AppD3DX12.cpp" />
+    <ClCompile Include="BloomShaderCompile.cpp" />
     <ClCompile Include="BufferHeapCreator.cpp" />
     <ClCompile Include="BufferShaderCompile.cpp" />
     <ClCompile Include="GraphicsPipelineSetting.cpp" />
@@ -241,6 +242,15 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">BasicVS</EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="BloomPixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">BloomPS</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">BloomPS</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="BufferPixel.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">psBuffer</EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -281,6 +291,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppD3DX12.h" />
+    <ClInclude Include="BloomShaderCompile.h" />
     <ClInclude Include="BufferHeapCreator.h" />
     <ClInclude Include="BufferShaderCompile.h" />
     <ClInclude Include="GraphicsPipelineSetting.h" />

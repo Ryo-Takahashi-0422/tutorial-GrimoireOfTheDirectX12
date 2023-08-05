@@ -169,6 +169,11 @@ bool AppD3DX12::PrepareRendering() {
 	lightMapGPLSetting = new LightMapGraphicsPipelineSetting(vertexInputLayout);
 	lightMapRootSignature = new SetRootSignature;
 	lightMapShaderCompile = new LightMapShaderCompile;
+
+	// bloom	
+	bloomGPLSetting = new PeraGraphicsPipelineSetting(peraLayout);
+	bloomRootSignature = new PeraSetRootSignature;
+	bloomShaderCompile = new BloomShaderCompile;
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -305,6 +310,12 @@ bool AppD3DX12::ResourceInit() {
 	{
 		return false;
 	}
+
+	// bloom
+	if (FAILED(bloomRootSignature->SetRootsignatureParam(_dev)))
+	{
+		return false;
+	}
 	
 //#ifdef _DEBUG
 // 初期化処理2：シェーダーコンパイル設定
@@ -331,6 +342,12 @@ bool AppD3DX12::ResourceInit() {
 	if (lightMapBlobs.first == nullptr) return false;
 	_lightMapVSBlob = lightMapBlobs.first;
 	_lightMapPSBlob = lightMapBlobs.second; // こちらはnullptr
+
+	// bloom
+	auto bloomBlobs = bloomShaderCompile->SetPeraShaderCompile(bloomRootSignature, _bloomVSBlob, _bloomPSBlob);
+	if (bloomBlobs.first == nullptr or bufferBlobs.second == nullptr) return false;
+	_bloomVSBlob = bloomBlobs.first; // こちらはnullpt
+	_bloomPSBlob = bloomBlobs.second;
 
 //#else
 //	
@@ -704,6 +721,15 @@ void AppD3DX12::Run() {
 		);
 		_cmdList->ResourceBarrier(1, &barrierDesc4test);
 
+		// bloom
+		D3D12_RESOURCE_BARRIER barrierDesc4Bloom = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetBloomBuff()[0].Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_RENDER_TARGET
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4Bloom);
+
 
 		// モデル描画
 		_cmdList->SetPipelineState(gPLSetting->GetPipelineState().Get());
@@ -712,29 +738,41 @@ void AppD3DX12::Run() {
 		_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
 		//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
-		handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
-		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
+		//handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		
+		//auto handle2 = handle;
+		//handle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//D3D12_CPU_DESCRIPTOR_HANDLE rtvs[2] =
+		//{
+		//	handle,handle2
+		//};
+
 		dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
-
-
-		auto handle2 = handle;
-		handle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvs[2] =
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handles[3];
+		auto baseH = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+		auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		uint32_t offset = 1;		
+		for (auto& handle : handles)
 		{
-			handle,handle2
-		};
-
+			handle.InitOffsetted(baseH, incSize * offset);
+			offset += 1;
+		}
+		_cmdList->OMSetRenderTargets(3, handles, false, &dsvh);
 
 		// レンダーターゲットと深度ステンシル(両方シェーダーが認識出来ないビュー)はCPU記述子ハンドルを設定してパイプラインに直バインド
 		// なのでこの二種類のビューはマッピングしなかった
-		// ★戻す
-		_cmdList->OMSetRenderTargets(2, rtvs/*&handle*/, false, &dsvh);
+		//_cmdList->OMSetRenderTargets(2, rtvs/*&handle*/, false, &dsvh);
 		_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 		//画面クリア
 		float clearColor[] = { 0.3f, 0.3f, 0.3f, 1.0f };
-		_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
-		_cmdList->ClearRenderTargetView(handle2, clearColor, 0, nullptr);
+		_cmdList->ClearRenderTargetView(handles[0], clearColor, 0, nullptr);
+		_cmdList->ClearRenderTargetView(handles[1], clearColor, 0, nullptr);
+		clearColor[0] = 0;
+		clearColor[1] = 0;
+		clearColor[2] = 0;
+		_cmdList->ClearRenderTargetView(handles[2], clearColor, 0, nullptr);
 
 		//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -809,6 +847,15 @@ void AppD3DX12::Run() {
 		);
 		_cmdList->ResourceBarrier(1, &barrierDesc4test);
 
+		// bloom
+		barrierDesc4Bloom = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator->GetBloomBuff()[0].Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+		_cmdList->ResourceBarrier(1, &barrierDesc4Bloom);
+
 
 
 		auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
@@ -875,6 +922,9 @@ void AppD3DX12::Run() {
 
 		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		_cmdList->SetGraphicsRootDescriptorTable(7, gHandle2); // マルチターゲット描画
+
+		gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		_cmdList->SetGraphicsRootDescriptorTable(8, gHandle2); // bloom
 
 		_cmdList->DrawInstanced(4, 1, 0, 0);
 

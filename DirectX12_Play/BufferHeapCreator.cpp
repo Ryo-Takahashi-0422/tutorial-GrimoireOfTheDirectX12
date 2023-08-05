@@ -47,13 +47,13 @@ void BufferHeapCreator::SetCBVSRVHeapDesc()
 void BufferHeapCreator::SetMutipassRTVHeapDesc()
 {
 	mutipassRTVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassRTVHeapDesc.NumDescriptors = 3; // マルチパス2個 + マルチターゲット1個分
+	mutipassRTVHeapDesc.NumDescriptors = 5; // マルチパス2個 + マルチターゲット1個分 + bloom*2
 }
 
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 8; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット
+	mutipassSRVHeapDesc.NumDescriptors = 10; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -274,7 +274,7 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		IID_PPV_ARGS(multipassBuff.ReleaseAndGetAddressOf())
 	);
 
-	_dev->CreateCommittedResource
+	result = _dev->CreateCommittedResource
 	(
 		&mutipassHeapProp,
 		D3D12_HEAP_FLAG_NONE,
@@ -284,7 +284,7 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		IID_PPV_ARGS(multipassBuff2.ReleaseAndGetAddressOf())
 	);
 
-	return _dev->CreateCommittedResource
+	result = _dev->CreateCommittedResource
 	(
 		&mutipassHeapProp,
 		D3D12_HEAP_FLAG_NONE,
@@ -293,6 +293,23 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		&depthClearValue,
 		IID_PPV_ARGS(multipassBuff3.ReleaseAndGetAddressOf())
 	);
+
+	// for bloom[2]
+	for (auto& res : _bloomBuff)
+	{
+		result = _dev->CreateCommittedResource
+		(
+			&mutipassHeapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&mutipassResDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			&depthClearValue,
+			IID_PPV_ARGS(res.ReleaseAndGetAddressOf())
+		);
+	}
+
+	return result;
+
 }
 
 HRESULT BufferHeapCreator::CreateConstBufferOfGaussian(ComPtr<ID3D12Device> _dev, std::vector<float> weights)

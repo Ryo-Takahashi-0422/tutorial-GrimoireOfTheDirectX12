@@ -73,6 +73,8 @@
     
     output.col = shadowWeight * result;
     output.mnormal.rgb = float3((input.norm.xyz + 1.0f) / 2.0f);
+    float y = dot(float3(0.299f, 0.587f, 0.114f), output.col.xyz);
+    output.highLum = y > 0.7f ? y : 0.0f;
     return output;
     
 }

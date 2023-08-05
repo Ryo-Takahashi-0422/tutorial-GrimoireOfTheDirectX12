@@ -93,6 +93,13 @@ private:
 	XMFLOAT4 _planeNormalVec;
 	XMFLOAT3 lightVec;
 
+	// bloom	
+	PeraGraphicsPipelineSetting* bloomGPLSetting = nullptr;
+	PeraSetRootSignature* bloomRootSignature = nullptr;
+	BloomShaderCompile* bloomShaderCompile = nullptr;
+	ComPtr<ID3D10Blob> _bloomVSBlob = nullptr; // bloom用頂点シェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _bloomPSBlob = nullptr; // bloom用ピクセルシェーダーオブジェクト格納用
+
 public:
 	///Applicationのシングルトンインスタンスを得る
 	static AppD3DX12& Instance();

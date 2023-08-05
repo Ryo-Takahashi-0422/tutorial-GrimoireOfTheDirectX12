@@ -57,3 +57,5 @@ using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata
 
 #include <LightMapShaderCompile.h>
 #include <LightMapGraphicsPipelineSetting.h>
+
+#include <BloomShaderCompile.h>

@@ -5,7 +5,6 @@ class PeraGraphicsPipelineSetting : public IGraphicsPipelineSetting
 
 private:
 	D3D12_INPUT_ELEMENT_DESC inputLayouts[2];
-	ComPtr<ID3D12PipelineState> _pipelineState2 = nullptr;
 
 public:
 	PeraGraphicsPipelineSetting(InputLayoutBase* _vertexInputLayout);
@@ -18,5 +17,4 @@ public:
 		SetRootSignatureBase* setRootSignature, ComPtr<ID3D10Blob> _vsBlob, ComPtr<ID3D10Blob> _psBlob);
 
 	ComPtr<ID3D12PipelineState> GetPipelineState();
-	ComPtr<ID3D12PipelineState> GetPipelineState2();
 };

@@ -18,10 +18,7 @@ HRESULT PeraGraphicsPipelineSetting::CreateGPStateWrapper(ComPtr<ID3D12Device> _
 {
 	gpipeLine = SetGPL(setRootSignature, _vsBlob, _psBlob);
 	// ˆêŒÂ–Ú
-	result = _dev->CreateGraphicsPipelineState(&gpipeLine, IID_PPV_ARGS(_pipelineState.ReleaseAndGetAddressOf()));
-
-	// “ñŒÂ–Ú
-	return _dev->CreateGraphicsPipelineState(&gpipeLine, IID_PPV_ARGS(_pipelineState2.ReleaseAndGetAddressOf()));
+	return _dev->CreateGraphicsPipelineState(&gpipeLine, IID_PPV_ARGS(_pipelineState.ReleaseAndGetAddressOf()));
 }
 
 void PeraGraphicsPipelineSetting::SetInputlayout(int i, D3D12_INPUT_ELEMENT_DESC inputLayout)
@@ -76,9 +73,4 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC PeraGraphicsPipelineSetting::SetGPL(
 ComPtr<ID3D12PipelineState> PeraGraphicsPipelineSetting::GetPipelineState()
 {
 	return _pipelineState;
-}
-
-ComPtr<ID3D12PipelineState> PeraGraphicsPipelineSetting::GetPipelineState2()
-{
-	return _pipelineState2;
 }
