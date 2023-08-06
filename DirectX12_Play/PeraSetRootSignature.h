@@ -4,8 +4,8 @@ class PeraSetRootSignature : public SetRootSignatureBase
 {
 private:
 	D3D12_STATIC_SAMPLER_DESC sampler;
-	CD3DX12_DESCRIPTOR_RANGE descTableRange[9] = {};
-	D3D12_ROOT_PARAMETER rootParam[9] = {};
+	CD3DX12_DESCRIPTOR_RANGE descTableRange[10] = {};
+	D3D12_ROOT_PARAMETER rootParam[10] = {};
 
 public:
 	HRESULT SetRootsignatureParam(ComPtr<ID3D12Device> _dev);

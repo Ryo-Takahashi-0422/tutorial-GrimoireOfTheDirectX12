@@ -1,10 +1,11 @@
-Texture2D<float4> tex : register(t0); // multipass2 texture(background texture)
+Texture2D<float4> tex : register(t0); // multipass1 texture(background texture)
 Texture2D<float4> model : register(t1); // multipass2 texture(pmd model rendering texture)
 Texture2D<float4> normalmap : register(t2); // ノーマルマップ
 Texture2D<float> depthmap : register(t3); // デプスマップ
 Texture2D<float> lightmap : register(t4); // ライトマップ
 Texture2D<float4> multinormalmap : register(t5); // マルチターゲットにレンダリングした法線マップ
-Texture2D<float4> bloommap : register(t6); // マルチターゲットにレンダリングした法線マップ
+Texture2D<float4> bloommap : register(t6); // bloom
+Texture2D<float4> shrinkedbloommap : register(t7); // shrinked bloom map
 
 SamplerState smp : register(s0); // sampler
 

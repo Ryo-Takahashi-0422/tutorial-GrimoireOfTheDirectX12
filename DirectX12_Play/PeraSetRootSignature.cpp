@@ -18,6 +18,7 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	descTableRange[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // シーン行列用
 	descTableRange[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5); // マルチターゲット法線用
 	descTableRange[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6); // bloom
+	descTableRange[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 7); // shirinked bloom
 
 	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[0].DescriptorTable.NumDescriptorRanges = 1;
@@ -64,7 +65,12 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	rootParam[8].DescriptorTable.pDescriptorRanges = &descTableRange[8];
 	rootParam[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	rootSignatureDesc.NumParameters = 9;
+	rootParam[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParam[9].DescriptorTable.NumDescriptorRanges = 1;
+	rootParam[9].DescriptorTable.pDescriptorRanges = &descTableRange[9];
+	rootParam[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	rootSignatureDesc.NumParameters = 10;
 	rootSignatureDesc.pParameters = rootParam;
 	rootSignatureDesc.NumStaticSamplers = 1;
 	rootSignatureDesc.pStaticSamplers = &sampler;

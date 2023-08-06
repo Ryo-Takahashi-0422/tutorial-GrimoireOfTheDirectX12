@@ -79,9 +79,10 @@ private:
 	PeraPolygon* peraPolygon = nullptr;
 	PeraSetRootSignature* peraSetRootSignature = nullptr;
 	PeraShaderCompile* peraShaderCompile = nullptr;
-
 	PeraGraphicsPipelineSetting* bufferGPLSetting = nullptr;
 	PeraSetRootSignature* bufferSetRootSignature = nullptr;
+
+
 	BufferShaderCompile* bufferShaderCompile = nullptr;
 
 	// ライトマップ関連
@@ -92,6 +93,7 @@ private:
 	ComPtr<ID3D10Blob> _lightMapPSBlob = nullptr; // ライトマップ用ピクセルシェーダーオブジェクト格納用
 	XMFLOAT4 _planeNormalVec;
 	XMFLOAT3 lightVec;
+	
 
 	// bloom	
 	PeraGraphicsPipelineSetting* bloomGPLSetting = nullptr;
@@ -99,6 +101,14 @@ private:
 	BloomShaderCompile* bloomShaderCompile = nullptr;
 	ComPtr<ID3D10Blob> _bloomVSBlob = nullptr; // bloom用頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _bloomPSBlob = nullptr; // bloom用ピクセルシェーダーオブジェクト格納用
+	
+
+	// draw method
+	void DrawLightMap(); // draw light map
+	void DrawModel(); // draw pmd model
+	void DrawShrinkTextureForBlur(); // draw blur texture
+	void DrawPeraPolygon(); // draw background polygon	
+	void DrawBackBuffer(); // draw back buffers
 
 public:
 	///Applicationのシングルトンインスタンスを得る

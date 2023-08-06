@@ -6,6 +6,7 @@ float4 BloomPS(Output input) : SV_TARGET
     float w, h, miplevels;
     tex.GetDimensions(0, w, h, miplevels);
     return Get5x5GaussianBlur(tex, smp, input.uv, 1.0 / w, 1.0 / h);
+    //return float4(1,1,1,1);
 
 }
 
