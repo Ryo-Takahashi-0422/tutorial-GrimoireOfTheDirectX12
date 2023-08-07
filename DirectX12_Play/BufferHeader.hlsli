@@ -59,3 +59,9 @@ float4 SimpleGaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, flo
 
 // normalize texture use
 float4 NormalmapEffect(float2 _uv);
+
+// deffered shading
+float4 DefferedShading(float2 _uv);
+
+// shrinkedbloommap use case(bloom effect)
+float4 BloomEffect(float2 _uv);

@@ -3,38 +3,9 @@
 // entry point for BufferShaderCompile
 float4 psBuffer(Output input) : SV_TARGET
 {
-    float w, h, levels;
-    float dx;
-    float dy;
-    
-    model.GetDimensions(0, w, h, levels);
-    
-    float4 col = model.Sample(smp, input.uv) + tex.Sample(smp, input.uv);
-    // buffer[0] + buffer[1]Ç…ÇÊÇÈèoóÕ
-    float dep = pow(depthmap.Sample(smp, input.uv), 20);
-    float4 dep4 = float4(dep, dep, dep, 1);
-    
-    float lmap = pow(lightmap.Sample(smp, input.uv), 0.3);
-    float4 lmap4 = float4(lmap, lmap, lmap, 1);
-    
-    return shrinkedbloommap.Sample(smp, input.uv);
-    //return dep4;
-    //return col;
-    if (input.uv.x < 0.3 && input.uv.y < 0.3)
-    {
-        return multinormalmap.Sample(smp, (input.uv) * 3);
-    }
-    
-    // deffered shading
-    float4 nm = multinormalmap.Sample(smp, input.uv);
-    nm = nm * 2.0f - 1.0f;
-    float3 light = normalize(float3(1.0f, -1.0f, 1.0f));
-    const float ambient = 0.25f;
-    float diffB = max(saturate(dot(nm.xyz, -light)), ambient); // dot(nm.xyz, -light)) is cosÉ∆ between normalized reflection(-light) direction and normal direction of vertex
-    
-    //return model.Sample(smp, input.uv)/* * float4(diffB, diffB, diffB, 1)*/;
-    
-    return model.Sample(smp, input.uv) + Get5x5GaussianBlur(bloommap, smp, input.uv, 1.0f / w, 1.0f / h);   
+    //return model.Sample(smp, input.uv);
+    //return DefferedShading(input.uv);
+    return BloomEffect(input.uv);
 }
 
 float4 MakePAL(float4 col)
@@ -103,7 +74,7 @@ float4 Sharpness(Texture2D _texture, SamplerState _smp, float2 _uv, int offset, 
 float4 Get5x5GaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, float dx, float dy)
 {
     float4 ret = float4(0, 0, 0, 0);
-    ret = model.Sample(smp, _uv);
+    ret = _texture.Sample(smp, _uv);
     ret += bkweights[0] * ret;
     
     // â°ï˚å¸
@@ -221,4 +192,41 @@ float4 NormalmapEffect(float2 _uv)
     ret = model.Sample(smp, _uv + normalTex * 0.1f) + tex.Sample(smp, _uv/* + normalTex * 0.5f*/);
     
     return ret;
+}
+
+float4 DefferedShading(float2 _uv)
+{
+    float4 nm = multinormalmap.Sample(smp, _uv);
+    nm = nm * 2.0f - 1.0f;
+    float3 light = normalize(float3(1.0f, -1.0f, 1.0f));
+    const float ambient = 0.7f;
+    
+    // dot(nm.xyz, -light)) is cosÉ∆ between normalized reflection(-light) direction and normal direction of vertex
+    float diffB = max(saturate(dot(nm.xyz, -light)), ambient);    
+    
+    return model.Sample(smp, _uv) * float4(diffB, diffB, diffB, 1);
+}
+
+float4 BloomEffect(float2 _uv)
+{
+    float w, h, levels;
+    model.GetDimensions(0, w, h, levels);
+    float dx = 1.0f / w;
+    float dy = 1.0f / h;
+
+    float4 bloomAccum = float4(0, 0, 0, 0);
+    float2 uvSize = float2(0.5, 0.5);
+    float2 uvOfst = float2(0, 0);
+    
+    for (int i = 0; i < 3; ++i)
+    {
+        bloomAccum += Get5x5GaussianBlur(shrinkedbloommap, smp, _uv * uvSize + uvOfst, dx, dy);
+        uvOfst.y += uvSize.y;
+        uvSize *= 0.5f;
+    }
+    
+    // all 1 = white bloom. xy /= 10 is blue cool bloom.
+    bloomAccum.xy /= 10;
+    
+    return model.Sample(smp, _uv) + saturate(bloomAccum);
 }
