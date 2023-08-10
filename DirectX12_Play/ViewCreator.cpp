@@ -247,6 +247,16 @@ void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 		&multipassRTVDesc,
 		handle
 	);
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	// No.6 shrinkedModel
+	_dev->CreateRenderTargetView
+	(
+		bufferHeapCreator->GetBloomBuff()[2].Get(),
+		&multipassRTVDesc,
+		handle
+	);
 }
 
 void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
@@ -327,7 +337,7 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 
 
 	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)*2;
-	// 7ŒÂ–Ú ƒ‚ƒfƒ‹‚ÌƒŒƒ“ƒ_ƒŠƒ“ƒOŒ‹‰Ê
+	// 7ŒÂ–Ú normal
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetMultipassBuff3().Get(),
@@ -349,6 +359,15 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 	_dev->CreateShaderResourceView
 	(
 		bufferHeapCreator->GetBloomBuff()[1].Get(),
+		&multipassSRVDesc,
+		handle4SRVMultipass
+	);
+
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	// No.10 shrinkedModel
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetBloomBuff()[2].Get(),
 		&multipassSRVDesc,
 		handle4SRVMultipass
 	);

@@ -6,6 +6,7 @@ Texture2D<float> lightmap : register(t4); // ライトマップ
 Texture2D<float4> multinormalmap : register(t5); // マルチターゲットにレンダリングした法線マップ
 Texture2D<float4> bloommap : register(t6); // bloom
 Texture2D<float4> shrinkedbloommap : register(t7); // shrinked bloom map
+Texture2D<float4> shrinkedModel : register(t8); // shrinked bloom map
 
 SamplerState smp : register(s0); // sampler
 
@@ -33,6 +34,12 @@ struct Output
     float4 tpos : TPOS;
 };
 
+struct BlurOutput
+{
+    float4 highLum : SV_TARGET0; // high luminance texture
+    float4 blurModel : SV_TARGET1; // blured model texture
+};
+
 // return grayscale of PAL(phase alternating line、位相反転線) from input
 float4 MakePAL(float4 col);
 
@@ -51,6 +58,8 @@ float4 Sharpness(Texture2D _texture, SamplerState _smp, float2 _uv, int offset, 
 // return gaussian blur matrix
 float4 Get5x5GaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, float dx, float dy);
 
+float4 Gauss(Texture2D<float4> tex, SamplerState smp, float2 uv, float dx, float dy, float4 rect);
+
 // blur by pixel averaging
 float4 AverageBlur(Texture2D _texture, SamplerState _smp, float2 _uv, int offset, float dx, float dy);
 
@@ -64,4 +73,4 @@ float4 NormalmapEffect(float2 _uv);
 float4 DefferedShading(float2 _uv);
 
 // shrinkedbloommap use case(bloom effect)
-float4 BloomEffect(float2 _uv);
+float4 BloomEffect(Texture2D _texture, float2 _uv);

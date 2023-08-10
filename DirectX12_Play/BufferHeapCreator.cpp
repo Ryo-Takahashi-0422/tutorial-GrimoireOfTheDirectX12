@@ -47,13 +47,13 @@ void BufferHeapCreator::SetCBVSRVHeapDesc()
 void BufferHeapCreator::SetMutipassRTVHeapDesc()
 {
 	mutipassRTVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassRTVHeapDesc.NumDescriptors = 5; // マルチパス2個 + マルチターゲット1個分 + bloom*2
+	mutipassRTVHeapDesc.NumDescriptors = 6; // マルチパス2個 + マルチターゲット1個分 + bloom*2 + shrinkedModel
 }
 
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 10; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2
+	mutipassSRVHeapDesc.NumDescriptors = 11; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2 + shrinkedModel
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -294,7 +294,7 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 		IID_PPV_ARGS(multipassBuff3.ReleaseAndGetAddressOf())
 	);
 
-	// for bloom[2]
+	// for bloom[3]
 	for (auto& res : _bloomBuff)
 	{
 		result = _dev->CreateCommittedResource

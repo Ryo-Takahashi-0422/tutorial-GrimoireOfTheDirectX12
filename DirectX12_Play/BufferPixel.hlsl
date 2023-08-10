@@ -5,7 +5,65 @@ float4 psBuffer(Output input) : SV_TARGET
 {
     //return model.Sample(smp, input.uv);
     //return DefferedShading(input.uv);
-    return BloomEffect(input.uv);
+    //return pow(depthmap.Sample(smp, input.uv), 20);
+    
+    
+    float y = depthmap.Sample(smp, float2(0.5f, 0.5f));
+    float dp = depthmap.Sample(smp, input.uv);
+    
+    //return float4(y, y, y, 1);
+    float depthDiff = abs(y - dp);
+    depthDiff = pow(depthDiff, 0.5f);
+    //return float4(depthDiff, depthDiff, depthDiff, 1);
+    float w, h, levels;
+    model.GetDimensions(0, w, h, levels);
+    float dx = 1.0f / w;
+    float dy = 1.0f / h;
+    
+    
+    float2 uvSize = float2(0.5f, 0.5f);
+    float2 uvOfst = float2(0, 0);
+    float t = depthDiff * 2; //t=0(near)Å`8(far)
+    float no;
+    t = modf(t, no);
+    float4 retColor[2];
+    
+
+    //return BloomEffect(shrinkedModel, input.uv);
+    retColor[0] = model.Sample(smp, input.uv);
+    
+    if (no == 0.0f)
+    {
+        retColor[1] = Get5x5GaussianBlur(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy);
+        ///*Get5x5GaussianBlur*/Gauss(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy, float4(uvOfst, uvOfst + uvSize));
+    }
+    else
+    {
+        for (int i = 1; i <= 8; ++i)
+        {
+            if (i - no < 0)
+            {
+                continue;
+            }
+            
+            retColor[i - no] = Get5x5GaussianBlur(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy);
+            ///*Get5x5GaussianBlur*/Gauss(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy, float4(uvOfst, uvOfst + uvSize));
+
+            uvOfst.y += uvSize.y;
+            uvSize *= 0.5f;
+            if (i - no > 1)
+            {
+                break;
+            }
+        }
+
+    }
+    
+    
+    //return lerp(retColor[0], retColor[1], t);
+    //return shrinkedbloommap.Sample(smp, input.uv);
+    //return shrinkedModel.Sample(smp, input.uv);
+    return BloomEffect(shrinkedbloommap, input.uv);
 }
 
 float4 MakePAL(float4 col)
@@ -108,6 +166,57 @@ float4 Get5x5GaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, flo
     return ret;
 }
 
+float4 Gauss(Texture2D<float4> tex, SamplerState smp, float2 uv, float dx, float dy, float4 rect)
+{
+    float4 ret = tex.Sample(smp, uv);
+
+    float l1 = -dx, l2 = -2 * dx;
+    float r1 = dx, r2 = 2 * dx;
+    float u1 = -dy, u2 = -2 * dy;
+    float d1 = dy, d2 = 2 * dy;
+    l1 = max(uv.x + l1, rect.x) - uv.x;
+    l2 = max(uv.x + l2, rect.x) - uv.x;
+    r1 = min(uv.x + r1, rect.z - dx) - uv.x;
+    r2 = min(uv.x + r2, rect.z - dx) - uv.x;
+
+    u1 = max(uv.y + u1, rect.y) - uv.y;
+    u2 = max(uv.y + u2, rect.y) - uv.y;
+    d1 = min(uv.y + d1, rect.w - dy) - uv.y;
+    d2 = min(uv.y + d2, rect.w - dy) - uv.y;
+
+    return float4((
+		  tex.Sample(smp, uv + float2(l2, u2)).rgb
+		+ tex.Sample(smp, uv + float2(l1, u2)).rgb * 4
+		+ tex.Sample(smp, uv + float2(0, u2)).rgb * 6
+		+ tex.Sample(smp, uv + float2(r1, u2)).rgb * 4
+		+ tex.Sample(smp, uv + float2(r2, u2)).rgb
+
+		+ tex.Sample(smp, uv + float2(l2, u1)).rgb * 4
+		+ tex.Sample(smp, uv + float2(l1, u1)).rgb * 16
+		+ tex.Sample(smp, uv + float2(0, u1)).rgb * 24
+		+ tex.Sample(smp, uv + float2(r1, u1)).rgb * 16
+		+ tex.Sample(smp, uv + float2(r2, u1)).rgb * 4
+
+		+ tex.Sample(smp, uv + float2(l2, 0)).rgb * 6
+		+ tex.Sample(smp, uv + float2(l1, 0)).rgb * 24
+		+ ret.rgb * 36
+		+ tex.Sample(smp, uv + float2(r1, 0)).rgb * 24
+		+ tex.Sample(smp, uv + float2(r2, 0)).rgb * 6
+
+		+ tex.Sample(smp, uv + float2(l2, d1)).rgb * 4
+		+ tex.Sample(smp, uv + float2(l1, d1)).rgb * 16
+		+ tex.Sample(smp, uv + float2(0, d1)).rgb * 24
+		+ tex.Sample(smp, uv + float2(r1, d1)).rgb * 16
+		+ tex.Sample(smp, uv + float2(r2, d1)).rgb * 4
+
+		+ tex.Sample(smp, uv + float2(l2, d2)).rgb
+		+ tex.Sample(smp, uv + float2(l1, d2)).rgb * 4
+		+ tex.Sample(smp, uv + float2(0, d2)).rgb * 6
+		+ tex.Sample(smp, uv + float2(r1, d2)).rgb * 4
+		+ tex.Sample(smp, uv + float2(r2, d2)).rgb
+	) / 256.0f, ret.a);
+}
+
 float4 AverageBlur(Texture2D _texture, SamplerState _smp, float2 _uv, int offset, float dx, float dy)
 {
     float4 ret = float4(0, 0, 0, 0);
@@ -207,7 +316,7 @@ float4 DefferedShading(float2 _uv)
     return model.Sample(smp, _uv) * float4(diffB, diffB, diffB, 1);
 }
 
-float4 BloomEffect(float2 _uv)
+float4 BloomEffect(Texture2D _texture, float2 _uv)
 {
     float w, h, levels;
     model.GetDimensions(0, w, h, levels);
@@ -220,7 +329,7 @@ float4 BloomEffect(float2 _uv)
     
     for (int i = 0; i < 3; ++i)
     {
-        bloomAccum += Get5x5GaussianBlur(shrinkedbloommap, smp, _uv * uvSize + uvOfst, dx, dy);
+        bloomAccum += Get5x5GaussianBlur(_texture, smp, _uv * uvSize + uvOfst, dx, dy);
         uvOfst.y += uvSize.y;
         uvSize *= 0.5f;
     }

@@ -1,11 +1,17 @@
 #include "BufferHeader.hlsli"
 
 // entry point for bloom
-float4 BloomPS(Output input) : SV_TARGET
+BlurOutput BloomPS(Output input) : SV_TARGET
 {
+    BlurOutput blurOutput;    
     float w, h, miplevels;
     tex.GetDimensions(0, w, h, miplevels);
-    return Get5x5GaussianBlur(tex, smp, input.uv, 1.0 / w, 1.0 / h);
+    
+    blurOutput.highLum = Get5x5GaussianBlur(tex, smp, input.uv, 1.0 / w, 1.0 / h); // tex use as bloom
+    blurOutput.blurModel = Get5x5GaussianBlur(model, smp, input.uv, 1.0 / w, 1.0 / h);
+    
+    return blurOutput/*Get5x5GaussianBlur(tex, smp, input.uv, 1.0 / w, 1.0 / h)*/;
+    
     //return float4(1,1,1,1);
 
 }
@@ -13,7 +19,7 @@ float4 BloomPS(Output input) : SV_TARGET
 float4 Get5x5GaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, float dx, float dy)
 {
     float4 ret = float4(0, 0, 0, 0);
-    ret = model.Sample(smp, _uv);
+    ret = _texture.Sample(smp, _uv);
     ret += bkweights[0] * ret;
     
     // ‰¡•ûŒü

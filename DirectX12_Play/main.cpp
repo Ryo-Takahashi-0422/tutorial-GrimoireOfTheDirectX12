@@ -10,6 +10,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #endif
 
 	auto& app = AppD3DX12::Instance();
+
 	if (!app.PrepareRendering()) {
 		return -1;
 	}

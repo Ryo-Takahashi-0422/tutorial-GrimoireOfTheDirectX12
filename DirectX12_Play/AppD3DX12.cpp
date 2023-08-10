@@ -741,12 +741,11 @@ void AppD3DX12::DrawPeraPolygon()
 
 void AppD3DX12::DrawModel()
 {
-	// ﾏﾙﾁﾊﾟｽ2パス目
-		//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。
+	//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。これはcolor
 	D3D12_RESOURCE_BARRIER BarrierDesc = {};
 	BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	BarrierDesc.Transition.pResource = /*_backBuffers[bbIdx]*/bufferHeapCreator->GetMultipassBuff2().Get();
+	BarrierDesc.Transition.pResource = bufferHeapCreator->GetMultipassBuff2().Get();
 	BarrierDesc.Transition.Subresource = 0;
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -754,7 +753,7 @@ void AppD3DX12::DrawModel()
 	_cmdList->ResourceBarrier(1, &BarrierDesc);
 
 
-	// ★マルチターゲット
+	// normal
 	D3D12_RESOURCE_BARRIER barrierDesc4test = CD3DX12_RESOURCE_BARRIER::Transition
 	(
 		bufferHeapCreator->GetMultipassBuff3().Get(),
@@ -794,7 +793,7 @@ void AppD3DX12::DrawModel()
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handles[3];
 	auto baseH = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	uint32_t offset = 1;
+	uint32_t offset = 1; // start from No.2 RTV
 	for (auto& handle : handles)
 	{
 		handle.InitOffsetted(baseH, incSize * offset);
@@ -869,18 +868,12 @@ void AppD3DX12::DrawModel()
 		idxOffset += m.indiceNum;
 	}
 
-	//_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle); // デプスマップ格納
-	//materialHandle.ptr += inc;
-	//_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納
-
-	//_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
-
-	//ﾊﾞｯｸﾊﾞｯﾌｧ表示前にリソースをCOMMON状態に移行
+	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	BarrierDesc.Transition.StateAfter = /*D3D12_RESOURCE_STATE_PRESENT*/D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	_cmdList->ResourceBarrier(1, &BarrierDesc);
 
-	// ★マルチターゲット
+	// normal
 	barrierDesc4test = CD3DX12_RESOURCE_BARRIER::Transition
 	(
 		bufferHeapCreator->GetMultipassBuff3().Get(),
@@ -909,16 +902,9 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
 
-	// set luminance buffer to shader resource
-	//D3D12_RESOURCE_BARRIER barrierDesc4Bloom = CD3DX12_RESOURCE_BARRIER::Transition
-	//(
-	//	bufferHeapCreator->GetBloomBuff()[0].Get(),
-	//	D3D12_RESOURCE_STATE_RENDER_TARGET,
-	//	D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-	//);
-	//_cmdList->ResourceBarrier(1, &barrierDesc4Bloom);
+	// No need to set luminance buffer to shader resource, cause other method implement it.
 
-	// set shrink buffer to render target
+	// high luminance blur renderer status to
 	D3D12_RESOURCE_BARRIER barrierDesc4Shrink = CD3DX12_RESOURCE_BARRIER::Transition
 	(
 		bufferHeapCreator->GetBloomBuff()[1].Get(),
@@ -927,15 +913,38 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4Shrink);
 
-	auto rtvHandle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
-	rtvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 4;
+	// model blur renderer status to
+	D3D12_RESOURCE_BARRIER barrierDesc4ShrinkModel = CD3DX12_RESOURCE_BARRIER::Transition
+	(
+		bufferHeapCreator->GetBloomBuff()[2].Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+	_cmdList->ResourceBarrier(1, &barrierDesc4ShrinkModel);
 
-	_cmdList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handles[2];
+	auto baseH = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	//baseH.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 4;
+	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	uint32_t offset = 4;
+	for (auto& handle : handles)
+	{
+		handle.InitOffsetted(baseH, incSize * offset);
+		offset += 1;
+	}	
+
+	_cmdList->OMSetRenderTargets(2, handles, false, nullptr);
+	float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	_cmdList->ClearRenderTargetView(handles[0], clearColor, 0, nullptr);
+	_cmdList->ClearRenderTargetView(handles[1], clearColor, 0, nullptr);
+
 	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
 
 	// bloom texture
 	auto srvHandle = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 2; // gaussian value
+	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // model texture
+	_cmdList->SetGraphicsRootDescriptorTable(1, srvHandle);
+	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // gaussian value
 	_cmdList->SetGraphicsRootDescriptorTable(2, srvHandle); // table[2] is for gaussian value
 	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 6; // bloom texture
 	_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
@@ -974,6 +983,11 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	barrierDesc4Shrink.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrierDesc4Shrink.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	_cmdList->ResourceBarrier(1, &barrierDesc4Shrink);
+
+	// change resource from render target to shader resource
+	barrierDesc4ShrinkModel.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrierDesc4ShrinkModel.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	_cmdList->ResourceBarrier(1, &barrierDesc4ShrinkModel);
 }
 
 void AppD3DX12::DrawBackBuffer()
@@ -1048,6 +1062,9 @@ void AppD3DX12::DrawBackBuffer()
 
 	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	_cmdList->SetGraphicsRootDescriptorTable(9, gHandle2); // shrinked bloom
+
+	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	_cmdList->SetGraphicsRootDescriptorTable(10, gHandle2); // shrinked model
 
 	_cmdList->DrawInstanced(4, 1, 0, 0);
 
