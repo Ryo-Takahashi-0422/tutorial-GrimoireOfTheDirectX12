@@ -4,7 +4,8 @@ class AppD3DX12
 {
 private:
 
-	std::array<std::string, 1> strModelPath = {};
+	std::array<std::string, 2> strModelPath;
+	int strModelNum = 0;
 	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\squat2.vmd";
 	ComPtr<ID3D12Device> _dev = nullptr;
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;

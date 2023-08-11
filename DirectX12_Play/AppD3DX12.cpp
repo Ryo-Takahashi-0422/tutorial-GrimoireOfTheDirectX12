@@ -103,8 +103,15 @@ bool AppD3DX12::PrepareRendering() {
 //{
 //#endif
 
-	strModelPath[0] = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
+	//strModelPath[0] = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
 	//strModelPath[1] = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\鏡音レン.pmd";
+	strModelPath =
+	{
+		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd",
+		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\鏡音レン.pmd"
+	};
+
+	strModelNum = strModelPath.size();
 
 	// SetRootSignatureBaseクラスのインスタンス化
 	setRootSignature = new SetRootSignature;
@@ -116,25 +123,25 @@ bool AppD3DX12::PrepareRendering() {
 	vertexInputLayout = new VertexInputLayout;
 	
 	// PMDファイルの読み込み
-	pmdMaterialInfo.resize(strModelPath.size());
-	
-	for (int i = 0; i < strModelPath.size(); ++i)
+	pmdMaterialInfo.resize(strModelNum);
+
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		pmdMaterialInfo[i] = new PMDMaterialInfo;
 		if (FAILED(pmdMaterialInfo[i]->ReadPMDHeaderFile(strModelPath[i]))) return false;
 	}
 
 	// VMDモーションファイルの読み込み
-	vmdMotionInfo.resize(strModelPath.size());
-	for (int i = 0; i < strModelPath.size(); ++i)
+	vmdMotionInfo.resize(strModelNum);
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		vmdMotionInfo[i] = new VMDMotionInfo;
 		if (FAILED(vmdMotionInfo[i]->ReadVMDHeaderFile(strMotionPath))) return false;
 	}
 
 	// PMDActorクラスのインスタンス化
-	pmdActor.resize(strModelPath.size());// = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
-	for (int i = 0; i < strModelPath.size(); ++i)
+	pmdActor.resize(strModelNum);// = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
+	for (int i = 0; i < strModelNum; ++i)
 	{
 
 		pmdActor[i] = new PMDActor(pmdMaterialInfo[i], vmdMotionInfo[i]);
@@ -144,7 +151,7 @@ bool AppD3DX12::PrepareRendering() {
 	gPLSetting = new GraphicsPipelineSetting(vertexInputLayout);
 
 	// アニメーション用の回転・並行移動行列の参照準備
-	for (int i = 0; i < strModelPath.size(); ++i)
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		boneMatrices[i] = pmdActor[i]->GetMatrices();
 		bNodeTable[i] = pmdMaterialInfo[i]->GetBoneNode();
@@ -157,13 +164,13 @@ bool AppD3DX12::PrepareRendering() {
 	// TextureLoaderクラスのインスタンス化
 	textureLoader = new TextureLoader;
 
-	bufferHeapCreator.resize(strModelPath.size());
-	textureTransporter.resize(strModelPath.size());
-	mappingExecuter.resize(strModelPath.size());
-	viewCreator.resize(strModelPath.size());
+	bufferHeapCreator.resize(strModelNum);
+	textureTransporter.resize(strModelNum);
+	mappingExecuter.resize(strModelNum);
+	viewCreator.resize(strModelNum);
 
 	// アニメーション用の回転・並行移動行列の参照準備
-	for (int i = 0; i < strModelPath.size(); ++i)
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		// BufferHeapCreatorクラスのインスタンス化
 		bufferHeapCreator[i] = new BufferHeapCreator(pmdMaterialInfo[i], prepareRenderingWindow, textureLoader);
@@ -272,7 +279,7 @@ bool AppD3DX12::PipelineInit(){
 		(IDXGISwapChain1**)_swapChain.ReleaseAndGetAddressOf());
 
 //初期化処理５：レンダーターゲットビュー(RTV)の記述子ヒープを作成
-	for (int i = 0; i < strModelPath.size(); ++i)
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		//RTV 記述子ヒープ領域の確保
 		bufferHeapCreator[i]->SetRTVHeapDesc();
@@ -401,7 +408,7 @@ bool AppD3DX12::ResourceInit() {
 	//cmdList->Close();
 
 // 初期化処理7：各バッファーを作成して頂点情報を読み込み
-	for (int i = 0; i < strModelPath.size(); ++i)
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		//頂点バッファーの作成(リソースと暗黙的なヒープの作成) 
 		result = bufferHeapCreator[i]->CreateBufferOfVertex(_dev);
@@ -584,7 +591,7 @@ bool AppD3DX12::ResourceInit() {
 
 void AppD3DX12::Run() {
 	MSG msg = {};
-	for (int i = 0; i < strModelPath.size(); ++i)
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		pmdActor[i]->PlayAnimation(); // アニメーション開始時刻の取得
 		pmdActor[i]->MotionUpdate(_duration);
@@ -604,7 +611,7 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-		for (int i = 0; i < strModelPath.size(); ++i)
+		for (int i = 0; i < strModelNum; ++i)
 		{
 			auto dsvh = bufferHeapCreator[i]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
@@ -645,7 +652,7 @@ void AppD3DX12::Run() {
 		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
 
-		for (int i = 0; i < strModelPath.size(); ++i)
+		for (int i = 0; i < strModelNum; ++i)
 		{
 			//行列情報の更新
 			//pmdMaterialInfo->angle += 0.01f;
@@ -670,7 +677,7 @@ void AppD3DX12::Run() {
 	delete lightMapGPLSetting;	
 	delete lightMapShaderCompile;
 	
-	for (int i = 0; i < strModelPath.size(); ++i)
+	for (int i = 0; i < strModelNum; ++i)
 	{
 		delete viewCreator[i];
 		delete mappingExecuter[i];
@@ -1053,14 +1060,16 @@ void AppD3DX12::DrawBackBuffer()
 
 	auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
 
-	// デプスマップ用バッファの状態を読み込み可能に変える
-	D3D12_RESOURCE_BARRIER barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
-	(
-		bufferHeapCreator[0]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-	);
-
+	for (int i = 0; i < strModelNum; ++i)
+	{
+		// デプスマップ用バッファの状態を読み込み可能に変える
+		D3D12_RESOURCE_BARRIER barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator[i]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		);
+	}
 	_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer()); // 実は重要
 	_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer()); // 実は重要
 
@@ -1074,6 +1083,7 @@ void AppD3DX12::DrawBackBuffer()
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4BackBuffer);
 
+	// only bufferHeapCreator[0]->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart() is initialized as backbuffer
 	auto rtvHeapPointer = bufferHeapCreator[0]->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	rtvHeapPointer.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, /*&dsvh*/nullptr);
@@ -1081,6 +1091,8 @@ void AppD3DX12::DrawBackBuffer()
 
 	float clsClr[4] = { 0.2,0.5,0.5,1.0 };
 	_cmdList->ClearRenderTargetView(rtvHeapPointer, clsClr, 0, nullptr);
+	
+
 
 	// 作成したﾃｸｽﾁｬの利用処理
 	_cmdList->SetGraphicsRootSignature(/*peraSetRootSignature*/bufferSetRootSignature->GetRootSignature().Get());
@@ -1131,21 +1143,25 @@ void AppD3DX12::DrawBackBuffer()
 	barrierDesc4BackBuffer.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	_cmdList->ResourceBarrier(1, &barrierDesc4BackBuffer);
 
-	// デプスマップ用バッファの状態を書き込み可能に戻す
-	barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
-	(
-		bufferHeapCreator[0]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE
-	);
+	for (int i = 0; i < strModelNum; ++i)
+	{
+		// デプスマップ用バッファの状態を書き込み可能に戻す
+		auto barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator[i]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE
+		);
 
-	// ライトマップ用バッファの状態を書き込み可能に戻す
-	auto barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
-	(
-		bufferHeapCreator[0]->GetLightMapBuff().Get(),
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE
+		// ライトマップ用バッファの状態を書き込み可能に戻す
+		auto barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
+		(
+			bufferHeapCreator[i]->GetLightMapBuff().Get(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE
 
-	);
-	_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
+		);
+
+		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
+	}
 }
