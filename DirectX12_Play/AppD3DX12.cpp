@@ -441,6 +441,11 @@ bool AppD3DX12::ResourceInit() {
 
 		//行列用定数バッファーの生成
 		pmdMaterialInfo[i]->worldMat = XMMatrixIdentity();
+		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[0] = 20;
+		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[1] = 3;
+		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[2] = 3;
+		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[3] = 3;
+
 
 		//auto worldMat = XMMatrixRotationY(15.0f);
 		pmdMaterialInfo[i]->angle = 0.0f;
@@ -620,10 +625,14 @@ void AppD3DX12::Run() {
 
 			DrawPeraPolygon(i); // draw background polygon
 
-			DrawModel(i); // draw pmd model
+			//DrawModel(i); // draw pmd model
 
-			DrawShrinkTextureForBlur(i); // draw shrink buffer
+			//DrawShrinkTextureForBlur(i); // draw shrink buffer
 		}
+
+		DrawModel(0); // draw pmd model
+
+		DrawShrinkTextureForBlur(0); // draw shrink buffer
 
 		DrawBackBuffer(); // draw back buffer
 
@@ -658,6 +667,8 @@ void AppD3DX12::Run() {
 			//pmdMaterialInfo->angle += 0.01f;
 			//pmdMaterialInfo->angle = 200.0f;
 			pmdMaterialInfo[i]->worldMat = XMMatrixRotationY(pmdMaterialInfo[i]->angle);
+			pmdMaterialInfo[0]->worldMat *= XMMatrixTranslation(5.0f, 0, -2.0f);
+			pmdMaterialInfo[1]->worldMat *= XMMatrixTranslation(-5.0f, 0, 10.0f);
 			pmdMaterialInfo[i]->mapMatrix->world = pmdMaterialInfo[i]->worldMat;
 
 			// モーション用行列の更新と書き込み
@@ -883,56 +894,60 @@ void AppD3DX12::DrawModel(unsigned int modelNum)
 	//プリミティブ型に関する情報と、入力アセンブラーステージの入力データを記述するデータ順序をバインド
 	_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	//頂点バッファーのCPU記述子ハンドルを設定
-	_cmdList->IASetVertexBuffers(0, 1, viewCreator[modelNum]->GetVbView());
-
-	//インデックスバッファーのビューを設定
-	_cmdList->IASetIndexBuffer(viewCreator[modelNum]->GetIbView());
-
-	//ディスクリプタヒープ設定および
-	//ディスクリプタヒープとルートパラメータの関連付け
-	//ここでルートシグネチャのテーブルとディスクリプタが関連付く
-	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[modelNum]->GetCBVSRVHeap().GetAddressOf());
-	_cmdList->SetGraphicsRootDescriptorTable
-	(
-		0, // バインドのスロット番号
-		bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
-	);
-
-	//////テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
-	////// 二つ目のセットによりNS300/Hではモデルが表示されなくなった。
-	//////_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
-	//////_cmdList->SetGraphicsRootDescriptorTable
-	//////(
-	//////	1, // バインドのスロット番号
-	//////	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
-	//////);
-
-	// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
-	// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
-	auto materialHandle = bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
-	materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
-	unsigned int idxOffset = 0;
-
-	// (たぶん)DrawIndexedInstancedによる描画の前にSRVからのテクスチャ取得を終えていないとデータがシェーダーに通らない
-	// なお、このパスでのデプスも描画と同時に渡しているが参照出来ないのは、リソース状態がdepth_writeのままだからと思われる
-	_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle); // デプスマップ格納
-	materialHandle.ptr += inc;
-	_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納
-	materialHandle.ptr += inc;
-
-	for (auto m : pmdMaterialInfo[modelNum]->materials)
+	// 描画されている複数のモデルを描画していく
+	for (int i = 0; i < strModelNum; ++i)
 	{
-		_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
-		//インデックス付きインスタンス化されたプリミティブを描画
-		_cmdList->DrawIndexedInstanced(m.indiceNum, 2, idxOffset, 0, 0); // instanceid 0:通常、1:影
+		//頂点バッファーのCPU記述子ハンドルを設定
+		_cmdList->IASetVertexBuffers(0, 1, viewCreator[i]->GetVbView());
 
-		materialHandle.ptr += materialHInc;
-		idxOffset += m.indiceNum;
+		//インデックスバッファーのビューを設定
+		_cmdList->IASetIndexBuffer(viewCreator[i]->GetIbView());
+
+		//ディスクリプタヒープ設定および
+		//ディスクリプタヒープとルートパラメータの関連付け
+		//ここでルートシグネチャのテーブルとディスクリプタが関連付く
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[i]->GetCBVSRVHeap().GetAddressOf());
+		_cmdList->SetGraphicsRootDescriptorTable
+		(
+			0, // バインドのスロット番号
+			bufferHeapCreator[i]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		);
+
+		//////テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
+		////// 二つ目のセットによりNS300/Hではモデルが表示されなくなった。
+		//////_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
+		//////_cmdList->SetGraphicsRootDescriptorTable
+		//////(
+		//////	1, // バインドのスロット番号
+		//////	bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		//////);
+
+		// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
+		// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
+		auto materialHandle = bufferHeapCreator[i]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
+		materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
+		unsigned int idxOffset = 0;
+
+		// (たぶん)DrawIndexedInstancedによる描画の前にSRVからのテクスチャ取得を終えていないとデータがシェーダーに通らない
+		// なお、このパスでのデプスも描画と同時に渡しているが参照出来ないのは、リソース状態がdepth_writeのままだからと思われる
+		_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle); // デプスマップ格納
+		materialHandle.ptr += inc;
+		_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納
+		materialHandle.ptr += inc;
+
+		for (auto m : pmdMaterialInfo[i]->materials)
+		{
+			_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
+			//インデックス付きインスタンス化されたプリミティブを描画
+			_cmdList->DrawIndexedInstanced(m.indiceNum, 2, idxOffset, 0, 0); // instanceid 0:通常、1:影
+
+			materialHandle.ptr += materialHInc;
+			idxOffset += m.indiceNum;
+		}
+
 	}
-
 	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;

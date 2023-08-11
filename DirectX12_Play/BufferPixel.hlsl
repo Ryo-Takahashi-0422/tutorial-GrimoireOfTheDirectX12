@@ -3,7 +3,7 @@
 // entry point for BufferShaderCompile
 float4 psBuffer(Output input) : SV_TARGET
 {
-    //return model.Sample(smp, input.uv);
+    return model.Sample(smp, input.uv);
     //return DefferedShading(input.uv);
     //return pow(depthmap.Sample(smp, input.uv), 20);
     
