@@ -102,6 +102,10 @@ bool AppD3DX12::PrepareRendering() {
 //int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 //{
 //#endif
+
+	strModelPath[0] = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
+	//strModelPath[1] = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\鏡音レン.pmd";
+
 	// SetRootSignatureBaseクラスのインスタンス化
 	setRootSignature = new SetRootSignature;
 
@@ -112,23 +116,39 @@ bool AppD3DX12::PrepareRendering() {
 	vertexInputLayout = new VertexInputLayout;
 	
 	// PMDファイルの読み込み
-	pmdMaterialInfo = new PMDMaterialInfo;
-	if (FAILED(pmdMaterialInfo->ReadPMDHeaderFile(strModelPath))) return false;
+	pmdMaterialInfo.resize(strModelPath.size());
+	
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		pmdMaterialInfo[i] = new PMDMaterialInfo;
+		if (FAILED(pmdMaterialInfo[i]->ReadPMDHeaderFile(strModelPath[i]))) return false;
+	}
 
 	// VMDモーションファイルの読み込み
-	vmdMotionInfo = new VMDMotionInfo;
-	if (FAILED(vmdMotionInfo->ReadVMDHeaderFile(strMotionPath))) return false;
+	vmdMotionInfo.resize(strModelPath.size());
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		vmdMotionInfo[i] = new VMDMotionInfo;
+		if (FAILED(vmdMotionInfo[i]->ReadVMDHeaderFile(strMotionPath))) return false;
+	}
 
 	// PMDActorクラスのインスタンス化
-	pmdActor = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
+	pmdActor.resize(strModelPath.size());// = new PMDActor(pmdMaterialInfo, vmdMotionInfo);
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+
+		pmdActor[i] = new PMDActor(pmdMaterialInfo[i], vmdMotionInfo[i]);
+	}
 
 	// GraphicsPipelineSettingクラスのインスタンス化
 	gPLSetting = new GraphicsPipelineSetting(vertexInputLayout);
 
 	// アニメーション用の回転・並行移動行列の参照準備
-	boneMatrices = new std::vector<DirectX::XMMATRIX>;
-	boneMatrices = pmdActor->GetMatrices();
-	bNodeTable = pmdMaterialInfo->GetBoneNode();
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		boneMatrices[i] = pmdActor[i]->GetMatrices();
+		bNodeTable[i] = pmdMaterialInfo[i]->GetBoneNode();
+	}
 	
 	// レンダリングウィンドウ設定
 	prepareRenderingWindow = new PrepareRenderingWindow;
@@ -137,18 +157,26 @@ bool AppD3DX12::PrepareRendering() {
 	// TextureLoaderクラスのインスタンス化
 	textureLoader = new TextureLoader;
 
-	// BufferHeapCreatorクラスのインスタンス化
-	bufferHeapCreator = new BufferHeapCreator(pmdMaterialInfo, prepareRenderingWindow, textureLoader);
+	bufferHeapCreator.resize(strModelPath.size());
+	textureTransporter.resize(strModelPath.size());
+	mappingExecuter.resize(strModelPath.size());
+	viewCreator.resize(strModelPath.size());
 
-	// TextureTransporterクラスのインスタンス化
-	textureTransporter = new TextureTransporter(pmdMaterialInfo, bufferHeapCreator);
+	// アニメーション用の回転・並行移動行列の参照準備
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		// BufferHeapCreatorクラスのインスタンス化
+		bufferHeapCreator[i] = new BufferHeapCreator(pmdMaterialInfo[i], prepareRenderingWindow, textureLoader);
 
-	// MappingExecuterクラスのインスタンス化
-	mappingExecuter = new MappingExecuter(pmdMaterialInfo, bufferHeapCreator);
+		// TextureTransporterクラスのインスタンス化
+		textureTransporter[i] = new TextureTransporter(pmdMaterialInfo[i], bufferHeapCreator[i]);
 
-	// ViewCreatorクラスのインスタンス化
-	viewCreator = new ViewCreator(pmdMaterialInfo, bufferHeapCreator);
+		// MappingExecuterクラスのインスタンス化
+		mappingExecuter[i] = new MappingExecuter(pmdMaterialInfo[i], bufferHeapCreator[i]);
 
+		// ViewCreatorクラスのインスタンス化
+		viewCreator[i] = new ViewCreator(pmdMaterialInfo[i], bufferHeapCreator[i]);
+	}
 	// レンダリングウィンドウ表示
 	ShowWindow(prepareRenderingWindow->GetHWND(), SW_SHOW);
 
@@ -244,19 +272,21 @@ bool AppD3DX12::PipelineInit(){
 		(IDXGISwapChain1**)_swapChain.ReleaseAndGetAddressOf());
 
 //初期化処理５：レンダーターゲットビュー(RTV)の記述子ヒープを作成
-	
-	//RTV 記述子ヒープ領域の確保
-	bufferHeapCreator->SetRTVHeapDesc();
-	//RTV用記述子ヒープの生成　ID3D12DescriptorHeap：記述子の連続したコレクション
-	result = bufferHeapCreator->CreateRTVHeap(_dev);
-
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		//RTV 記述子ヒープ領域の確保
+		bufferHeapCreator[i]->SetRTVHeapDesc();
+		//RTV用記述子ヒープの生成　ID3D12DescriptorHeap：記述子の連続したコレクション
+		result = bufferHeapCreator[i]->CreateRTVHeap(_dev);
+	}
 	//以下のように記述することでスワップチェーンの持つ情報を新たなDescオブジェクトにコピーできる
 	//DXGI_SWAP_CHAIN_DESC swcDesc = {};//スワップチェーンの説明
 	//result = _swapChain->GetDesc(&swcDesc);//SWCの説明を取得する
 
 //初期化処理６：フレームリソース(各フレームのレンダーターゲットビュー)を作成
 	_backBuffers.resize(swapChainDesc.BufferCount); // ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧｰのﾘｻｲｽﾞ
-	handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();//ヒープの先頭を表す CPU 記述子ハンドルを取得
+
+	handle = bufferHeapCreator[0]->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();//ヒープの先頭を表す CPU 記述子ハンドルを取得
 
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM/*_SRGB*/;
@@ -371,162 +401,173 @@ bool AppD3DX12::ResourceInit() {
 	//cmdList->Close();
 
 // 初期化処理7：各バッファーを作成して頂点情報を読み込み
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		//頂点バッファーの作成(リソースと暗黙的なヒープの作成) 
+		result = bufferHeapCreator[i]->CreateBufferOfVertex(_dev);
 
-	//頂点バッファーの作成(リソースと暗黙的なヒープの作成) 
-	result = bufferHeapCreator->CreateBufferOfVertex(_dev);
+		//インデックスバッファーを作成(リソースと暗黙的なヒープの作成)
+		result = bufferHeapCreator[i]->CreateBufferOfIndex(_dev);
 
-	//インデックスバッファーを作成(リソースと暗黙的なヒープの作成)
-	result = bufferHeapCreator->CreateBufferOfIndex(_dev);
+		//デプスバッファーを作成
+		result = bufferHeapCreator[i]->CreateBufferOfDepthAndLightMap(_dev);
 
-	//デプスバッファーを作成
-	result = bufferHeapCreator->CreateBufferOfDepthAndLightMap(_dev);
+		//ファイル形式毎のテクスチャロード処理
+		textureLoader->LoadTexture();
 
-	//ファイル形式毎のテクスチャロード処理
-	textureLoader->LoadTexture();
-	
-	// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
-	metaData.resize(pmdMaterialInfo->materialNum);
-	img.resize(pmdMaterialInfo->materialNum);
-	ScratchImage scratchImg = {};
-	bufferHeapCreator->CreateUploadAndReadBuff4PmdTexture(_dev, strModelPath, metaData, img); // バッファ作成
-	
-	// トゥーンテクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
-	toonMetaData.resize(pmdMaterialInfo->materialNum);
-	toonImg.resize(pmdMaterialInfo->materialNum);
-	bufferHeapCreator->CreateToonUploadAndReadBuff(_dev, strModelPath, toonMetaData, toonImg); // バッファ作成
+		// テクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
+		metaData.resize(pmdMaterialInfo[i]->materialNum);
+		img.resize(pmdMaterialInfo[i]->materialNum);
+		ScratchImage scratchImg = {};
+		//for (auto& path : strModelPath)
+		//{
+		bufferHeapCreator[i]->CreateUploadAndReadBuff4PmdTexture(_dev, strModelPath[i], metaData, img); // バッファ作成
+		//}
 
-	//行列用定数バッファーの生成
-	pmdMaterialInfo->worldMat = XMMatrixIdentity();
+		// トゥーンテクスチャ用のCPU_Upload用、GPU_Read用バッファの作成
+		toonMetaData.resize(pmdMaterialInfo[i]->materialNum);
+		toonImg.resize(pmdMaterialInfo[i]->materialNum);
+		//for (auto& path : strModelPath)
+		//{
+		bufferHeapCreator[i]->CreateToonUploadAndReadBuff(_dev, strModelPath[i], toonMetaData, toonImg); // バッファ作成
+		//}
 
-	//auto worldMat = XMMatrixRotationY(15.0f);
-	pmdMaterialInfo->angle = 0.0f;
+		//行列用定数バッファーの生成
+		pmdMaterialInfo[i]->worldMat = XMMatrixIdentity();
 
-	//ビュー行列の生成・乗算
-	XMFLOAT3 eye(0, 15, -15);
-	XMFLOAT3 target(0, 10, 0);
-	XMFLOAT3 up(0, 1, 0);
-	auto viewMat = XMMatrixLookAtLH
-	(
-		XMLoadFloat3(&eye),
-		XMLoadFloat3(&target),
-		XMLoadFloat3(&up)
-	);
+		//auto worldMat = XMMatrixRotationY(15.0f);
+		pmdMaterialInfo[i]->angle = 0.0f;
 
-	//プロジェクション(射影)行列の生成・乗算
-	auto projMat = XMMatrixPerspectiveFovLH
-	(
-		XM_PIDIV2, // 画角90°
-		static_cast<float>(prepareRenderingWindow->GetWindowHeight()) / static_cast<float>(prepareRenderingWindow->GetWindowWidth()),
-		1.0, // ニア―クリップ
-		100.0 // ファークリップ
-	);
+		//ビュー行列の生成・乗算
+		XMFLOAT3 eye(0, 15, -15);
+		XMFLOAT3 target(0, 10, 0);
+		XMFLOAT3 up(0, 1, 0);
+		auto viewMat = XMMatrixLookAtLH
+		(
+			XMLoadFloat3(&eye),
+			XMLoadFloat3(&target),
+			XMLoadFloat3(&up)
+		);
 
-	// 行列用定数バッファーの生成
-	result = bufferHeapCreator->CreateConstBufferOfWVPMatrix(_dev);
-	
-	//マテリアル用定数バッファーの生成
-	result = bufferHeapCreator->CreateConstBufferOfMaterial(_dev);
+		//プロジェクション(射影)行列の生成・乗算
+		auto projMat = XMMatrixPerspectiveFovLH
+		(
+			XM_PIDIV2, // 画角90°
+			static_cast<float>(prepareRenderingWindow->GetWindowHeight()) / static_cast<float>(prepareRenderingWindow->GetWindowWidth()),
+			1.0, // ニア―クリップ
+			100.0 // ファークリップ
+		);
 
-	// マルチパスレンダリング用に書き込み先リソースの作成
-    // 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
-	// 使っているバックバッファーの情報を利用する
-	auto& bbuff = _backBuffers[0];
-	auto mutipassResDesc = bbuff->GetDesc();
-	// RTV,SRV用バッファーと各ヒープ作成
-	result = bufferHeapCreator->CreateRenderBufferForMultipass(_dev, mutipassResDesc);
-	bufferHeapCreator->CreateMultipassRTVHeap(_dev);
-	bufferHeapCreator->CreateMultipassSRVHeap(_dev);
+		// 行列用定数バッファーの生成
+		result = bufferHeapCreator[i]->CreateConstBufferOfWVPMatrix(_dev);
 
-	//頂点バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的に頂点データをコピーする。
-	mappingExecuter->MappingVertBuff();
+		//マテリアル用定数バッファーの生成
+		result = bufferHeapCreator[i]->CreateConstBufferOfMaterial(_dev);
 
-	//インデクスバッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
-	mappingExecuter->MappingIndexOfVertexBuff();
+		// マルチパスレンダリング用に書き込み先リソースの作成
+		// 作成済みのヒープ情報を使ってもう一枚レンダリング先を用意
+		// 使っているバックバッファーの情報を利用する
+		auto& bbuff = _backBuffers[0];
+		auto mutipassResDesc = bbuff->GetDesc();
+		// RTV,SRV用バッファーと各ヒープ作成
+		result = bufferHeapCreator[i]->CreateRenderBufferForMultipass(_dev, mutipassResDesc);
+		bufferHeapCreator[i]->CreateMultipassRTVHeap(_dev);
+		bufferHeapCreator[i]->CreateMultipassSRVHeap(_dev);
 
-	//行列用定数バッファーのマッピング
-	// 平面、ライト座標
-	_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
-	lightVec = XMFLOAT3(-0.5f, 1, -0.5f);
-	auto light = XMLoadFloat3(&lightVec);
-	auto eyePos = XMLoadFloat3(&eye);
-	auto targetPos = XMLoadFloat3(&target);
-	auto upVec = XMLoadFloat3(&up);
-	light = targetPos + XMVector3Normalize(light) * XMVector3Length(XMVectorSubtract(targetPos, eyePos)).m128_f32[0];
+		//頂点バッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的に頂点データをコピーする。
+		mappingExecuter[i]->MappingVertBuff();
 
-	result = bufferHeapCreator->GetMatrixBuff()->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix);
-	pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
-	pmdMaterialInfo->mapMatrix->view = viewMat;
-	pmdMaterialInfo->mapMatrix->proj = projMat;
-	pmdMaterialInfo->mapMatrix->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
-	pmdMaterialInfo->mapMatrix->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
-	pmdMaterialInfo->mapMatrix->eye = eye;
+		//インデクスバッファーの仮想アドレスをポインタにマップ(関連付け)して、仮想的にインデックスデータをコピーする。
+		mappingExecuter[i]->MappingIndexOfVertexBuff();
 
-	// ↑と同じことをしている。ライトマップ用にもmapMatrixにマッピングしたらモデルが消える。TODO:いけてないのでなんとかしたい...
-	result = bufferHeapCreator->GetMatrixBuff4Multipass()->Map(0, nullptr, (void**)&pmdMaterialInfo->mapMatrix4Lightmap); // ライトマップ用にもマッピング
-	pmdMaterialInfo->mapMatrix4Lightmap->world = pmdMaterialInfo->worldMat;
-	pmdMaterialInfo->mapMatrix4Lightmap->view = viewMat;
-	pmdMaterialInfo->mapMatrix4Lightmap->proj = projMat;
-	pmdMaterialInfo->mapMatrix4Lightmap->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
-	pmdMaterialInfo->mapMatrix4Lightmap->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
-	pmdMaterialInfo->mapMatrix4Lightmap->eye = eye;
+		//行列用定数バッファーのマッピング
+		// 平面、ライト座標
+		_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
+		lightVec = XMFLOAT3(-0.5f, 1, -0.5f);
+		auto light = XMLoadFloat3(&lightVec);
+		auto eyePos = XMLoadFloat3(&eye);
+		auto targetPos = XMLoadFloat3(&target);
+		auto upVec = XMLoadFloat3(&up);
+		light = targetPos + XMVector3Normalize(light) * XMVector3Length(XMVectorSubtract(targetPos, eyePos)).m128_f32[0];
 
-	//マテリアル用バッファーへのマッピング
-	mappingExecuter->MappingMaterialBuff();
+		result = bufferHeapCreator[i]->GetMatrixBuff()->Map(0, nullptr, (void**)&pmdMaterialInfo[i]->mapMatrix);
+		pmdMaterialInfo[i]->mapMatrix->world = pmdMaterialInfo[i]->worldMat;
+		pmdMaterialInfo[i]->mapMatrix->view = viewMat;
+		pmdMaterialInfo[i]->mapMatrix->proj = projMat;
+		pmdMaterialInfo[i]->mapMatrix->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
+		pmdMaterialInfo[i]->mapMatrix->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
+		pmdMaterialInfo[i]->mapMatrix->eye = eye;
 
-	// TODO:strMoodelPathをリスト化してまとめて処理出来るようにする。BufferHeapCreatorにMappngExecuterを握らせる。
-	// ノーマルマップ読み込み、バッファ作成、マッピング
-	bufferHeapCreator->CreateUploadAndReadBuff4Normalmap(_dev, strModelPath, "jpg", 1);
-	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetNormalMapUploadBuff(), bufferHeapCreator->GetNormalMapImg(), 1);
-	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, 
-		bufferHeapCreator->GetNormalMapMetadata(), bufferHeapCreator->GetNormalMapImg(),
-		_fence, _fenceVal, bufferHeapCreator->GetNormalMapUploadBuff(), bufferHeapCreator->GetNormalMapReadBuff(), 1);
-	
-	// テクスチャのアップロード用バッファへのマッピング
-	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetPMDTexUploadBuff(), img, pmdMaterialInfo->materialNum);
-	// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img,
-		_fence, _fenceVal, bufferHeapCreator->GetPMDTexUploadBuff(), bufferHeapCreator->GetPMDTexReadBuff(), pmdMaterialInfo->materialNum);
+		// ↑と同じことをしている。ライトマップ用にもmapMatrixにマッピングしたらモデルが消える。TODO:いけてないのでなんとかしたい...
+		result = bufferHeapCreator[i]->GetMatrixBuff4Multipass()->Map(0, nullptr, (void**)&pmdMaterialInfo[i]->mapMatrix4Lightmap); // ライトマップ用にもマッピング
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->world = pmdMaterialInfo[i]->worldMat;
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->view = viewMat;
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->proj = projMat;
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->eye = eye;
 
-	// トゥーンテクスチャも同様にマッピング
-	mappingExecuter->TransferTexUploadToBuff(bufferHeapCreator->GetToonUploadBuff(), toonImg, pmdMaterialInfo->materialNum);
-	// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
-	textureTransporter->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg,
-		_fence, _fenceVal, bufferHeapCreator->GetToonUploadBuff(), bufferHeapCreator->GetToonReadBuff(), pmdMaterialInfo->materialNum);
+		//マテリアル用バッファーへのマッピング
+		mappingExecuter[i]->MappingMaterialBuff();
 
-	//CBV,SRVディスクリプタヒープ作成(行列、テクスチャに利用)
-	result = bufferHeapCreator->CreateCBVSRVHeap(_dev);
+		// TODO:strMoodelPathをリスト化してまとめて処理出来るようにする。BufferHeapCreatorにMappngExecuterを握らせる。
+		// ノーマルマップ読み込み、バッファ作成、マッピング
+		//for (auto& path : strModelPath)
+		//{
+		bufferHeapCreator[i]->CreateUploadAndReadBuff4Normalmap(_dev, strModelPath[i], "jpg", 1);
+		//}
 
-	//DSVビュー用にディスクリプタヒープ作成
-	result = bufferHeapCreator->CreateDSVHeap(_dev);
+		mappingExecuter[i]->TransferTexUploadToBuff(bufferHeapCreator[i]->GetNormalMapUploadBuff(), bufferHeapCreator[i]->GetNormalMapImg(), 1);
+		textureTransporter[i]->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue,
+			bufferHeapCreator[i]->GetNormalMapMetadata(), bufferHeapCreator[i]->GetNormalMapImg(),
+			_fence, _fenceVal, bufferHeapCreator[i]->GetNormalMapUploadBuff(), bufferHeapCreator[i]->GetNormalMapReadBuff(), 1);
 
-// 初期化処理8：各ビューを作成
+		// テクスチャのアップロード用バッファへのマッピング
+		mappingExecuter[i]->TransferTexUploadToBuff(bufferHeapCreator[i]->GetPMDTexUploadBuff(), img, pmdMaterialInfo[i]->materialNum);
+		// テクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
+		textureTransporter[i]->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, metaData, img,
+			_fence, _fenceVal, bufferHeapCreator[i]->GetPMDTexUploadBuff(), bufferHeapCreator[i]->GetPMDTexReadBuff(), pmdMaterialInfo[i]->materialNum);
 
-	// Vertexビュー作成
-	viewCreator->CreateVertexBufferView();
+		// トゥーンテクスチャも同様にマッピング
+		mappingExecuter[i]->TransferTexUploadToBuff(bufferHeapCreator[i]->GetToonUploadBuff(), toonImg, pmdMaterialInfo[i]->materialNum);
+		// トゥーンテクスチャをGPUのUpload用バッファからGPUのRead用バッファへデータコピー
+		textureTransporter[i]->TransportPMDMaterialTexture(_cmdList, _cmdAllocator, _cmdQueue, toonMetaData, toonImg,
+			_fence, _fenceVal, bufferHeapCreator[i]->GetToonUploadBuff(), bufferHeapCreator[i]->GetToonReadBuff(), pmdMaterialInfo[i]->materialNum);
 
-	// Indexビュー作成
-	viewCreator->CreateIndexBufferView();
+		//CBV,SRVディスクリプタヒープ作成(行列、テクスチャに利用)
+		result = bufferHeapCreator[i]->CreateCBVSRVHeap(_dev);
 
-	// DSV作成
-	viewCreator->CreateDSVWrapper(_dev);
+		//DSVビュー用にディスクリプタヒープ作成
+		result = bufferHeapCreator[i]->CreateDSVHeap(_dev);
 
-	// 行列用cbv作成
-	viewCreator->CreateCBV4Matrix(_dev);
-	// pmdモデルのマテリアル、テクスチャ、sph用ビューを作成。これがないとモデル真っ黒になる。
-	viewCreator->CreateCBVSRV4MateriallTextureSph(_dev);
+		// 初期化処理8：各ビューを作成
 
-	// ガウシアンぼかし用ウェイト、バッファー作成、マッピング、ディスクリプタヒープ作成、ビュー作成まで
-	auto weights = Utility::GetGaussianWeight(8, 5.0f);
-	bufferHeapCreator->CreateConstBufferOfGaussian(_dev, weights);
-	mappingExecuter->MappingGaussianWeight(weights);
-	//bufferHeapCreator->CreateEffectHeap(_dev);
-	//viewCreator->CreateCBV4GaussianView(_dev);
+			// Vertexビュー作成
+		viewCreator[i]->CreateVertexBufferView();
 
-	// マルチパス用ビュー作成
-	peraPolygon->CreatePeraView(_dev);
-	viewCreator->CreateRTV4Multipasses(_dev);
-	viewCreator->CreateSRV4Multipasses(_dev);
+		// Indexビュー作成
+		viewCreator[i]->CreateIndexBufferView();
 
+		// DSV作成
+		viewCreator[i]->CreateDSVWrapper(_dev);
+
+		// 行列用cbv作成
+		viewCreator[i]->CreateCBV4Matrix(_dev);
+		// pmdモデルのマテリアル、テクスチャ、sph用ビューを作成。これがないとモデル真っ黒になる。
+		viewCreator[i]->CreateCBVSRV4MateriallTextureSph(_dev);
+
+		// ガウシアンぼかし用ウェイト、バッファー作成、マッピング、ディスクリプタヒープ作成、ビュー作成まで
+		auto weights = Utility::GetGaussianWeight(8, 5.0f);
+		bufferHeapCreator[i]->CreateConstBufferOfGaussian(_dev, weights);
+		mappingExecuter[i]->MappingGaussianWeight(weights);
+		//bufferHeapCreator->CreateEffectHeap(_dev);
+		//viewCreator->CreateCBV4GaussianView(_dev);
+
+		// マルチパス用ビュー作成
+		peraPolygon->CreatePeraView(_dev);
+		viewCreator[i]->CreateRTV4Multipasses(_dev);
+		viewCreator[i]->CreateSRV4Multipasses(_dev);
+	}
 // 初期化処理9：フェンスの生成
 	//	ID3D12Fence* _fence = nullptr;
 	//	UINT64 _fenceVal = 0;
@@ -543,8 +584,12 @@ bool AppD3DX12::ResourceInit() {
 
 void AppD3DX12::Run() {
 	MSG msg = {};
-	pmdActor->PlayAnimation(); // アニメーション開始時刻の取得
-	pmdActor->MotionUpdate(_duration);
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		pmdActor[i]->PlayAnimation(); // アニメーション開始時刻の取得
+		pmdActor[i]->MotionUpdate(_duration);
+	}
+
 	while (true)
 	{
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -559,15 +604,19 @@ void AppD3DX12::Run() {
 			break;
 		}
 
-		auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+		for (int i = 0; i < strModelPath.size(); ++i)
+		{
+			auto dsvh = bufferHeapCreator[i]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
-		DrawLightMap(); // draw lightmap
-		
-		DrawPeraPolygon(); // draw background polygon
 
-		DrawModel(); // draw pmd model
+			DrawLightMap(i); // draw lightmap
 
-		DrawShrinkTextureForBlur(); // draw shrink buffer
+			DrawPeraPolygon(i); // draw background polygon
+
+			DrawModel(i); // draw pmd model
+
+			DrawShrinkTextureForBlur(i); // draw shrink buffer
+		}
 
 		DrawBackBuffer(); // draw back buffer
 
@@ -596,19 +645,21 @@ void AppD3DX12::Run() {
 		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
 
-		//行列情報の更新
-		//pmdMaterialInfo->angle += 0.01f;
-		//pmdMaterialInfo->angle = 200.0f;
-		pmdMaterialInfo->worldMat = XMMatrixRotationY(pmdMaterialInfo->angle);
-		pmdMaterialInfo->mapMatrix->world = pmdMaterialInfo->worldMat;
+		for (int i = 0; i < strModelPath.size(); ++i)
+		{
+			//行列情報の更新
+			//pmdMaterialInfo->angle += 0.01f;
+			//pmdMaterialInfo->angle = 200.0f;
+			pmdMaterialInfo[i]->worldMat = XMMatrixRotationY(pmdMaterialInfo[i]->angle);
+			pmdMaterialInfo[i]->mapMatrix->world = pmdMaterialInfo[i]->worldMat;
 
-		// モーション用行列の更新と書き込み
-		pmdActor->MotionUpdate(pmdActor->GetDuration());
-		pmdActor->UpdateVMDMotion();
-		//pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
-		//pmdActor->IKSolve();
-		std::copy(boneMatrices->begin(), boneMatrices->end(), pmdMaterialInfo->mapMatrix->bones);
-
+			// モーション用行列の更新と書き込み
+			pmdActor[i]->MotionUpdate(pmdActor[i]->GetDuration());
+			pmdActor[i]->UpdateVMDMotion();
+			//pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
+			//pmdActor->IKSolve();
+			std::copy(boneMatrices[i]->begin(), boneMatrices[i]->end(), pmdMaterialInfo[i]->mapMatrix->bones);
+		}
 		//フリップしてレンダリングされたイメージをユーザーに表示
 		_swapChain->Present(1, 0);		
 	}
@@ -619,21 +670,28 @@ void AppD3DX12::Run() {
 	delete lightMapGPLSetting;	
 	delete lightMapShaderCompile;
 	
-	delete viewCreator;
-	delete mappingExecuter;
+	for (int i = 0; i < strModelPath.size(); ++i)
+	{
+		delete viewCreator[i];
+		delete mappingExecuter[i];
+		delete bufferHeapCreator[i];
+		delete textureTransporter[i];
+		delete pmdActor[i];
+		delete vmdMotionInfo[i];
+		delete pmdMaterialInfo[i];
+	}
 	UnregisterClass(prepareRenderingWindow->GetWNDCCLASSEX().lpszClassName, prepareRenderingWindow->GetWNDCCLASSEX().hInstance);
 
-	delete bufferHeapCreator;
-	delete textureTransporter;
+
 	delete textureLoader;
 
-	delete pmdActor;
+
 	delete settingShaderCompile;
 	delete gPLSetting;
 
-	delete vmdMotionInfo;
+	
 	delete prepareRenderingWindow;
-	delete pmdMaterialInfo;
+	
 
 	delete peraGPLSetting;
 	delete peraLayout;
@@ -646,7 +704,7 @@ void AppD3DX12::Run() {
 	//delete peraSetRootSignature;
 }
 
-void AppD3DX12::DrawLightMap()
+void AppD3DX12::DrawLightMap(unsigned int modelNum)
 {
 	constexpr uint32_t shadow_difinition = 1024;
 	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.0f, 0.0f, shadow_difinition, shadow_difinition);
@@ -654,7 +712,7 @@ void AppD3DX12::DrawLightMap()
 	CD3DX12_RECT rc(0, 0, shadow_difinition, shadow_difinition);
 	_cmdList->RSSetScissorRects(1, &rc);
 
-	auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto dsvh = bufferHeapCreator[modelNum]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 	_cmdList->SetPipelineState(lightMapGPLSetting->GetPipelineState().Get());
 	_cmdList->SetGraphicsRootSignature(lightMapRootSignature->GetRootSignature().Get());
@@ -665,23 +723,23 @@ void AppD3DX12::DrawLightMap()
 	//画面クリア
 	//_cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 	_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
-	_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
+	_cmdList->IASetVertexBuffers(0, 1, viewCreator[modelNum]->GetVbView());
+	_cmdList->IASetIndexBuffer(viewCreator[modelNum]->GetIbView());
 
-	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
+	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[modelNum]->GetCBVSRVHeap().GetAddressOf());
 	_cmdList->SetGraphicsRootDescriptorTable
 	(
 		0, // バインドのスロット番号
-		bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
 	);
 
-	auto materialHandle2 = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+	auto materialHandle2 = bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 	auto inc2 = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	auto materialHInc2 = inc2 * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
 	materialHandle2.ptr += inc2; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
 	unsigned int idxOffset2 = 0;
 
-	for (auto m : pmdMaterialInfo->materials)
+	for (auto m : pmdMaterialInfo[modelNum]->materials)
 	{
 		_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle2);
 		//インデックス付きインスタンス化されたプリミティブを描画
@@ -691,25 +749,25 @@ void AppD3DX12::DrawLightMap()
 		idxOffset2 += m.indiceNum;
 	}
 
-	_cmdList->DrawIndexedInstanced(pmdMaterialInfo->vertNum, 1, 0, 0, 0);
+	_cmdList->DrawIndexedInstanced(pmdMaterialInfo[modelNum]->vertNum, 1, 0, 0, 0);
 
 	// ライトマップ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄに変更する
 	D3D12_RESOURCE_BARRIER barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetLightMapBuff().Get(),
+		bufferHeapCreator[modelNum]->GetLightMapBuff().Get(),
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
 }
 
-void AppD3DX12::DrawPeraPolygon()
+void AppD3DX12::DrawPeraPolygon(unsigned int modelNum)
 {
 	//// マルチパス1パス目
 
 	D3D12_RESOURCE_BARRIER barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetMultipassBuff().Get(),
+		bufferHeapCreator[modelNum]->GetMultipassBuff().Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
@@ -718,7 +776,7 @@ void AppD3DX12::DrawPeraPolygon()
 	_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
 	_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
-	auto rtvHeapPointer = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto rtvHeapPointer = bufferHeapCreator[modelNum]->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, /*&dsvh*/nullptr);
 	_cmdList->ClearRenderTargetView(rtvHeapPointer, clearColor, 0, nullptr);
 	_cmdList->SetGraphicsRootSignature(peraSetRootSignature->GetRootSignature().Get());
@@ -732,20 +790,20 @@ void AppD3DX12::DrawPeraPolygon()
 	// ﾏﾙﾁﾊﾟｽﾘｿｰｽﾊﾞﾘｱ元に戻す
 	barrierDesc4Multi = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetMultipassBuff().Get(),
+		bufferHeapCreator[modelNum]->GetMultipassBuff().Get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
 }
 
-void AppD3DX12::DrawModel()
+void AppD3DX12::DrawModel(unsigned int modelNum)
 {
 	//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。これはcolor
 	D3D12_RESOURCE_BARRIER BarrierDesc = {};
 	BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	BarrierDesc.Transition.pResource = bufferHeapCreator->GetMultipassBuff2().Get();
+	BarrierDesc.Transition.pResource = bufferHeapCreator[modelNum]->GetMultipassBuff2().Get();
 	BarrierDesc.Transition.Subresource = 0;
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -756,7 +814,7 @@ void AppD3DX12::DrawModel()
 	// normal
 	D3D12_RESOURCE_BARRIER barrierDesc4test = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetMultipassBuff3().Get(),
+		bufferHeapCreator[modelNum]->GetMultipassBuff3().Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
@@ -765,7 +823,7 @@ void AppD3DX12::DrawModel()
 	// bloom
 	D3D12_RESOURCE_BARRIER barrierDesc4Bloom = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetBloomBuff()[0].Get(),
+		bufferHeapCreator[modelNum]->GetBloomBuff()[0].Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
@@ -789,9 +847,9 @@ void AppD3DX12::DrawModel()
 	//	handle,handle2
 	//};
 
-	auto dsvh = bufferHeapCreator->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto dsvh = bufferHeapCreator[modelNum]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handles[3];
-	auto baseH = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto baseH = bufferHeapCreator[modelNum]->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	uint32_t offset = 1; // start from No.2 RTV
 	for (auto& handle : handles)
@@ -819,19 +877,19 @@ void AppD3DX12::DrawModel()
 	_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//頂点バッファーのCPU記述子ハンドルを設定
-	_cmdList->IASetVertexBuffers(0, 1, viewCreator->GetVbView());
+	_cmdList->IASetVertexBuffers(0, 1, viewCreator[modelNum]->GetVbView());
 
 	//インデックスバッファーのビューを設定
-	_cmdList->IASetIndexBuffer(viewCreator->GetIbView());
+	_cmdList->IASetIndexBuffer(viewCreator[modelNum]->GetIbView());
 
 	//ディスクリプタヒープ設定および
 	//ディスクリプタヒープとルートパラメータの関連付け
 	//ここでルートシグネチャのテーブルとディスクリプタが関連付く
-	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetCBVSRVHeap().GetAddressOf());
+	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[modelNum]->GetCBVSRVHeap().GetAddressOf());
 	_cmdList->SetGraphicsRootDescriptorTable
 	(
 		0, // バインドのスロット番号
-		bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
+		bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart()
 	);
 
 	//////テキストのように同時に二つの同タイプDHをセットすると、グラボによっては挙動が変化する。
@@ -845,7 +903,7 @@ void AppD3DX12::DrawModel()
 
 	// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
 	// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
-	auto materialHandle = bufferHeapCreator->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+	auto materialHandle = bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
 	materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
@@ -858,7 +916,7 @@ void AppD3DX12::DrawModel()
 	_cmdList->SetGraphicsRootDescriptorTable(3, materialHandle); // ライトマップ格納
 	materialHandle.ptr += inc;
 
-	for (auto m : pmdMaterialInfo->materials)
+	for (auto m : pmdMaterialInfo[modelNum]->materials)
 	{
 		_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
 		//インデックス付きインスタンス化されたプリミティブを描画
@@ -876,7 +934,7 @@ void AppD3DX12::DrawModel()
 	// normal
 	barrierDesc4test = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetMultipassBuff3().Get(),
+		bufferHeapCreator[modelNum]->GetMultipassBuff3().Get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
@@ -885,7 +943,7 @@ void AppD3DX12::DrawModel()
 	// bloom
 	barrierDesc4Bloom = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetBloomBuff()[0].Get(),
+		bufferHeapCreator[modelNum]->GetBloomBuff()[0].Get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
@@ -893,7 +951,7 @@ void AppD3DX12::DrawModel()
 }
 
 
-void AppD3DX12::DrawShrinkTextureForBlur()
+void AppD3DX12::DrawShrinkTextureForBlur(unsigned int modelNum)
 {
 	_cmdList->SetPipelineState(bloomGPLSetting->GetPipelineState().Get());
 	_cmdList->SetGraphicsRootSignature(bloomRootSignature->GetRootSignature().Get());
@@ -907,7 +965,7 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	// high luminance blur renderer status to
 	D3D12_RESOURCE_BARRIER barrierDesc4Shrink = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetBloomBuff()[1].Get(),
+		bufferHeapCreator[modelNum]->GetBloomBuff()[1].Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
@@ -916,14 +974,14 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	// model blur renderer status to
 	D3D12_RESOURCE_BARRIER barrierDesc4ShrinkModel = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetBloomBuff()[2].Get(),
+		bufferHeapCreator[modelNum]->GetBloomBuff()[2].Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4ShrinkModel);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handles[2];
-	auto baseH = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto baseH = bufferHeapCreator[modelNum]->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	//baseH.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 4;
 	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	uint32_t offset = 4;
@@ -938,10 +996,10 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	_cmdList->ClearRenderTargetView(handles[0], clearColor, 0, nullptr);
 	_cmdList->ClearRenderTargetView(handles[1], clearColor, 0, nullptr);
 
-	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->GetMultipassSRVHeap().GetAddressOf());
+	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[modelNum]->GetMultipassSRVHeap().GetAddressOf());
 
 	// bloom texture
-	auto srvHandle = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+	auto srvHandle = bufferHeapCreator[modelNum]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // model texture
 	_cmdList->SetGraphicsRootDescriptorTable(1, srvHandle);
 	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // gaussian value
@@ -949,7 +1007,7 @@ void AppD3DX12::DrawShrinkTextureForBlur()
 	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 6; // bloom texture
 	_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
 
-	auto desc = bufferHeapCreator->GetBloomBuff()[0]->GetDesc();
+	auto desc = bufferHeapCreator[modelNum]->GetBloomBuff()[0]->GetDesc();
 	D3D12_VIEWPORT vp = {};
 	D3D12_RECT sr = {};
 
@@ -998,7 +1056,7 @@ void AppD3DX12::DrawBackBuffer()
 	// デプスマップ用バッファの状態を読み込み可能に変える
 	D3D12_RESOURCE_BARRIER barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+		bufferHeapCreator[0]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
@@ -1016,7 +1074,7 @@ void AppD3DX12::DrawBackBuffer()
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4BackBuffer);
 
-	auto rtvHeapPointer = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto rtvHeapPointer = bufferHeapCreator[0]->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	rtvHeapPointer.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	_cmdList->OMSetRenderTargets(1, &rtvHeapPointer, false, /*&dsvh*/nullptr);
 	//_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
@@ -1026,16 +1084,16 @@ void AppD3DX12::DrawBackBuffer()
 
 	// 作成したﾃｸｽﾁｬの利用処理
 	_cmdList->SetGraphicsRootSignature(/*peraSetRootSignature*/bufferSetRootSignature->GetRootSignature().Get());
-	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator->/*GetCBVSRVHeap()*/GetMultipassSRVHeap().GetAddressOf());
+	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[0]->/*GetCBVSRVHeap()*/GetMultipassSRVHeap().GetAddressOf());
 
-	auto gHandle = bufferHeapCreator->/*GetCBVSRVHeap()*/GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+	auto gHandle = bufferHeapCreator[0]->/*GetCBVSRVHeap()*/GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 	_cmdList->SetGraphicsRootDescriptorTable(0, gHandle);
 	_cmdList->SetPipelineState(/*peraGPLSetting*/bufferGPLSetting->GetPipelineState().Get());
 
 	_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
 
-	auto gHandle2 = bufferHeapCreator->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+	auto gHandle2 = bufferHeapCreator[0]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2);
 
@@ -1076,7 +1134,7 @@ void AppD3DX12::DrawBackBuffer()
 	// デプスマップ用バッファの状態を書き込み可能に戻す
 	barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+		bufferHeapCreator[0]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE
 	);
@@ -1084,7 +1142,7 @@ void AppD3DX12::DrawBackBuffer()
 	// ライトマップ用バッファの状態を書き込み可能に戻す
 	auto barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		bufferHeapCreator->GetLightMapBuff().Get(),
+		bufferHeapCreator[0]->GetLightMapBuff().Get(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE
 

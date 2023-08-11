@@ -3,7 +3,8 @@
 class AppD3DX12
 {
 private:
-	std::string strModelPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd";
+
+	std::array<std::string, 1> strModelPath = {};
 	std::string strMotionPath = "C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\Motion\\squat2.vmd";
 	ComPtr<ID3D12Device> _dev = nullptr;
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
@@ -25,10 +26,10 @@ private:
 
 	ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 	GraphicsPipelineSetting* gPLSetting = nullptr;
-	BufferHeapCreator* bufferHeapCreator = nullptr;
-	TextureTransporter* textureTransporter = nullptr;
-	MappingExecuter* mappingExecuter = nullptr;
-	ViewCreator* viewCreator = nullptr;
+	std::vector<BufferHeapCreator*> bufferHeapCreator;
+	std::vector<TextureTransporter*> textureTransporter;
+	std::vector<MappingExecuter*> mappingExecuter;
+	std::vector<ViewCreator*> viewCreator;
 
 	std::vector<DirectX::TexMetadata*> metaData;
 	std::vector<DirectX::Image*> img;
@@ -57,14 +58,14 @@ private:
 	SetRootSignature* setRootSignature = nullptr;
 	SettingShaderCompile* settingShaderCompile = nullptr;
 	VertexInputLayout* vertexInputLayout = nullptr;
-	PMDMaterialInfo* pmdMaterialInfo = nullptr;
-	VMDMotionInfo* vmdMotionInfo = nullptr;
-	PMDActor* pmdActor = nullptr;
+	std::vector<PMDMaterialInfo*> pmdMaterialInfo;
+	std::vector<VMDMotionInfo*> vmdMotionInfo;
+	std::vector<PMDActor*> pmdActor;
 	PrepareRenderingWindow* prepareRenderingWindow = nullptr;	
 	TextureLoader* textureLoader = nullptr;
 
-	std::vector<DirectX::XMMATRIX>* boneMatrices = nullptr;
-	std::map<std::string, BoneNode> bNodeTable;
+	std::map<int, std::vector<DirectX::XMMATRIX>*> boneMatrices;
+	std::map<int, std::map<std::string, BoneNode>> bNodeTable;
 	unsigned int _duration; // アニメーションの最大フレーム番号
 
 	void RecursiveMatrixMultiply(BoneNode* node, const DirectX::XMMATRIX& mat);
@@ -104,10 +105,10 @@ private:
 	
 
 	// draw method
-	void DrawLightMap(); // draw light map
-	void DrawModel(); // draw pmd model
-	void DrawShrinkTextureForBlur(); // draw blur texture
-	void DrawPeraPolygon(); // draw background polygon	
+	void DrawLightMap(unsigned int modelNum); // draw light map
+	void DrawModel(unsigned int modelNum); // draw pmd model
+	void DrawShrinkTextureForBlur(unsigned int modelNum); // draw blur texture
+	void DrawPeraPolygon(unsigned int modelNum); // draw background polygon	
 	void DrawBackBuffer(); // draw back buffers
 
 public:
