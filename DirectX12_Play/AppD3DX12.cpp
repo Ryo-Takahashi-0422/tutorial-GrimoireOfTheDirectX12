@@ -108,7 +108,8 @@ bool AppD3DX12::PrepareRendering() {
 	strModelPath =
 	{
 		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd",
-		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\鏡音レン.pmd"
+		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\鏡音レン.pmd",
+		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\弱音ハク.pmd"
 	};
 
 	strModelNum = strModelPath.size();
@@ -441,11 +442,6 @@ bool AppD3DX12::ResourceInit() {
 
 		//行列用定数バッファーの生成
 		pmdMaterialInfo[i]->worldMat = XMMatrixIdentity();
-		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[0] = 20;
-		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[1] = 3;
-		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[2] = 3;
-		pmdMaterialInfo[i]->worldMat.r[0].m128_f32[3] = 3;
-
 
 		//auto worldMat = XMMatrixRotationY(15.0f);
 		pmdMaterialInfo[i]->angle = 0.0f;
@@ -588,9 +584,6 @@ bool AppD3DX12::ResourceInit() {
 // 初期化処理10：イベントハンドルの作成
 // 初期化処理11：GPUの処理完了待ち
 
-
-
-
 	return true;
 }
 
@@ -666,9 +659,10 @@ void AppD3DX12::Run() {
 			//行列情報の更新
 			//pmdMaterialInfo->angle += 0.01f;
 			//pmdMaterialInfo->angle = 200.0f;
-			pmdMaterialInfo[i]->worldMat = XMMatrixRotationY(pmdMaterialInfo[i]->angle);
-			pmdMaterialInfo[0]->worldMat *= XMMatrixTranslation(5.0f, 0, -2.0f);
-			pmdMaterialInfo[1]->worldMat *= XMMatrixTranslation(-5.0f, 0, 10.0f);
+			//pmdMaterialInfo[i]->worldMat = XMMatrixRotationY(pmdMaterialInfo[i]->angle);
+			pmdMaterialInfo[0]->worldMat = XMMatrixTranslation(0.0f, 0, -5.0f);
+			pmdMaterialInfo[1]->worldMat = XMMatrixTranslation(-24.0f, 0, 20.0f);
+			pmdMaterialInfo[2]->worldMat = XMMatrixTranslation(15.0f, 0, 10.0f);
 			pmdMaterialInfo[i]->mapMatrix->world = pmdMaterialInfo[i]->worldMat;
 
 			// モーション用行列の更新と書き込み
@@ -854,17 +848,6 @@ void AppD3DX12::DrawModel(unsigned int modelNum)
 	_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
 	_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
 
-	//ハンドルの初期値アドレスにバッファインデックスを乗算し、各ハンドルの先頭アドレスを計算
-	//handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart(); // auto rtvhでhandleに上書きでも可
-	//handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-	//auto handle2 = handle;
-	//handle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	//D3D12_CPU_DESCRIPTOR_HANDLE rtvs[2] =
-	//{
-	//	handle,handle2
-	//};
-
 	auto dsvh = bufferHeapCreator[modelNum]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handles[3];
 	auto baseH = bufferHeapCreator[modelNum]->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
@@ -883,7 +866,7 @@ void AppD3DX12::DrawModel(unsigned int modelNum)
 	_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 	//画面クリア
-	float clearColor[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+	float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	_cmdList->ClearRenderTargetView(handles[0], clearColor, 0, nullptr);
 	_cmdList->ClearRenderTargetView(handles[1], clearColor, 0, nullptr);
 	clearColor[0] = 0;

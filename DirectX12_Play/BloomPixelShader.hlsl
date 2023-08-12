@@ -8,7 +8,7 @@ BlurOutput BloomPS(Output input) : SV_TARGET
     tex.GetDimensions(0, w, h, miplevels);
     
     blurOutput.highLum = Get5x5GaussianBlur(tex, smp, input.uv, 1.0 / w, 1.0 / h); // tex use as bloom
-    blurOutput.blurModel = Get5x5GaussianBlur(model, smp, input.uv, 1.0 / w, 1.0 / h);
+    blurOutput.blurModel = model.Sample(smp, input.uv);
     
     return blurOutput/*Get5x5GaussianBlur(tex, smp, input.uv, 1.0 / w, 1.0 / h)*/;
     

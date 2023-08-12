@@ -3,66 +3,14 @@
 // entry point for BufferShaderCompile
 float4 psBuffer(Output input) : SV_TARGET
 {
-    return model.Sample(smp, input.uv);
+    //return model.Sample(smp, input.uv);
     //return DefferedShading(input.uv);
     //return pow(depthmap.Sample(smp, input.uv), 20);
     
-    
-    float y = depthmap.Sample(smp, float2(0.5f, 0.5f));
-    float dp = depthmap.Sample(smp, input.uv);
-    
-    //return float4(y, y, y, 1);
-    float depthDiff = abs(y - dp);
-    depthDiff = pow(depthDiff, 0.5f);
     //return float4(depthDiff, depthDiff, depthDiff, 1);
-    float w, h, levels;
-    model.GetDimensions(0, w, h, levels);
-    float dx = 1.0f / w;
-    float dy = 1.0f / h;
-    
-    
-    float2 uvSize = float2(0.5f, 0.5f);
-    float2 uvOfst = float2(0, 0);
-    float t = depthDiff * 2; //t=0(near)Å`8(far)
-    float no;
-    t = modf(t, no);
-    float4 retColor[2];
-    
 
-    //return BloomEffect(shrinkedModel, input.uv);
-    retColor[0] = model.Sample(smp, input.uv);
     
-    if (no == 0.0f)
-    {
-        retColor[1] = Get5x5GaussianBlur(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy);
-        ///*Get5x5GaussianBlur*/Gauss(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy, float4(uvOfst, uvOfst + uvSize));
-    }
-    else
-    {
-        for (int i = 1; i <= 8; ++i)
-        {
-            if (i - no < 0)
-            {
-                continue;
-            }
-            
-            retColor[i - no] = Get5x5GaussianBlur(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy);
-            ///*Get5x5GaussianBlur*/Gauss(shrinkedModel, smp, input.uv * uvSize + uvOfst, dx, dy, float4(uvOfst, uvOfst + uvSize));
-
-            uvOfst.y += uvSize.y;
-            uvSize *= 0.5f;
-            if (i - no > 1)
-            {
-                break;
-            }
-        }
-
-    }
-    
-    
-    //return lerp(retColor[0], retColor[1], t);
-    //return shrinkedbloommap.Sample(smp, input.uv);
-    //return shrinkedModel.Sample(smp, input.uv);
+    return FOVEffect(shrinkedModel, smp, input.uv, 0.7f);
     return BloomEffect(shrinkedbloommap, input.uv);
 }
 
@@ -244,35 +192,35 @@ float4 SimpleGaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, flo
     float4 ret = float4(0, 0, 0, 0);
 
     // highest
-    ret += model.Sample(smp, _uv + float2(-2 * dx, 2 * dy)) * 1;
-    ret += model.Sample(smp, _uv + float2(-1 * dx, 2 * dy)) * 4;
-    ret += model.Sample(smp, _uv + float2(0 * dx, 2 * dy)) * 6;
-    ret += model.Sample(smp, _uv + float2(1 * dx, 2 * dy)) * 4;
-    ret += model.Sample(smp, _uv + float2(2 * dx, 2 * dy)) * 1;
+    ret += _texture.Sample(smp, _uv + float2(-2 * dx, 2 * dy)) * 1;
+    ret += _texture.Sample(smp, _uv + float2(-1 * dx, 2 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(0 * dx, 2 * dy)) * 6;
+    ret += _texture.Sample(smp, _uv + float2(1 * dx, 2 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(2 * dx, 2 * dy)) * 1;
     // high
-    ret += model.Sample(smp, _uv + float2(-2 * dx, 1 * dy)) * 4;
-    ret += model.Sample(smp, _uv + float2(-1 * dx, 1 * dy)) * 16;
-    ret += model.Sample(smp, _uv + float2(0 * dx, 1 * dy)) * 24;
-    ret += model.Sample(smp, _uv + float2(1 * dx, 1 * dy)) * 16;
-    ret += model.Sample(smp, _uv + float2(2 * dx, 1 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(-2 * dx, 1 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(-1 * dx, 1 * dy)) * 16;
+    ret += _texture.Sample(smp, _uv + float2(0 * dx, 1 * dy)) * 24;
+    ret += _texture.Sample(smp, _uv + float2(1 * dx, 1 * dy)) * 16;
+    ret += _texture.Sample(smp, _uv + float2(2 * dx, 1 * dy)) * 4;
     // middle
-    ret += model.Sample(smp, _uv + float2(-2 * dx, 0 * dy)) * 6;
-    ret += model.Sample(smp, _uv + float2(-1 * dx, 0 * dy)) * 24;
-    ret += model.Sample(smp, _uv + float2(0 * dx, 0 * dy)) * 36;
-    ret += model.Sample(smp, _uv + float2(1 * dx, 0 * dy)) * 24;
-    ret += model.Sample(smp, _uv + float2(2 * dx, 0 * dy)) * 6;
+    ret += _texture.Sample(smp, _uv + float2(-2 * dx, 0 * dy)) * 6;
+    ret += _texture.Sample(smp, _uv + float2(-1 * dx, 0 * dy)) * 24;
+    ret += _texture.Sample(smp, _uv + float2(0 * dx, 0 * dy)) * 36;
+    ret += _texture.Sample(smp, _uv + float2(1 * dx, 0 * dy)) * 24;
+    ret += _texture.Sample(smp, _uv + float2(2 * dx, 0 * dy)) * 6;
     // low
-    ret += model.Sample(smp, _uv + float2(-2 * dx, -1 * dy)) * 4;
-    ret += model.Sample(smp, _uv + float2(-1 * dx, -1 * dy)) * 16;
-    ret += model.Sample(smp, _uv + float2(0 * dx, -1 * dy)) * 24;
-    ret += model.Sample(smp, _uv + float2(1 * dx, -1 * dy)) * 16;
-    ret += model.Sample(smp, _uv + float2(2 * dx, -1 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(-2 * dx, -1 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(-1 * dx, -1 * dy)) * 16;
+    ret += _texture.Sample(smp, _uv + float2(0 * dx, -1 * dy)) * 24;
+    ret += _texture.Sample(smp, _uv + float2(1 * dx, -1 * dy)) * 16;
+    ret += _texture.Sample(smp, _uv + float2(2 * dx, -1 * dy)) * 4;
     // lowest
-    ret += model.Sample(smp, _uv + float2(-2 * dx, -2 * dy)) * 1;
-    ret += model.Sample(smp, _uv + float2(-1 * dx, -2 * dy)) * 4;
-    ret += model.Sample(smp, _uv + float2(0 * dx, -2 * dy)) * 6;
-    ret += model.Sample(smp, _uv + float2(1 * dx, -2 * dy)) * 4;
-    ret += model.Sample(smp, _uv + float2(2 * dx, -2 * dy)) * 1;
+    ret += _texture.Sample(smp, _uv + float2(-2 * dx, -2 * dy)) * 1;
+    ret += _texture.Sample(smp, _uv + float2(-1 * dx, -2 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(0 * dx, -2 * dy)) * 6;
+    ret += _texture.Sample(smp, _uv + float2(1 * dx, -2 * dy)) * 4;
+    ret += _texture.Sample(smp, _uv + float2(2 * dx, -2 * dy)) * 1;
  
     return ret / 256;
 }
@@ -338,4 +286,36 @@ float4 BloomEffect(Texture2D _texture, float2 _uv)
     bloomAccum.xy /= 10;
     
     return model.Sample(smp, _uv) + saturate(bloomAccum);
+}
+
+float4 FOVEffect(Texture2D _texture, SamplerState _smp, float2 _uv, float focusDistance)
+{
+    float4 ret = (0, 0, 0, 1);
+    float w, h, levels;
+    model.GetDimensions(0, w, h, levels);
+    float dx = 1.0f / w;
+    float dy = 1.0f / h;
+    
+    float y = focusDistance;
+    float dp = depthmap.Sample(smp, _uv);
+    dp = pow(dp, 20.0); // Calculation between small values (y-dp) isn't effective. 'dp' should be emphasized enough before (y-dp).
+    //return float4(dp, dp, dp, 1);
+    
+    float depthDiff = abs(y - dp);
+    //depthDiff = pow(depthDiff, 20.0f);
+    
+    float2 uvSize = float2(0.5f, 0.5f);
+    float2 uvOfst = float2(0, 0);
+
+    float4 retColor[2];    
+    retColor[0] = model.Sample(smp, _uv);
+
+    //ret = SimpleGaussianBlur(model, smp, input.uv, dx, dy);
+    
+    ret = SimpleGaussianBlur(shrinkedModel, smp, _uv * uvSize + uvOfst, dx, dy);
+
+    retColor[1] = ret;
+    
+    depthDiff = saturate(depthDiff * 2);
+    return lerp(retColor[0], retColor[1], depthDiff);
 }

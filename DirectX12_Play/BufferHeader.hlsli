@@ -74,3 +74,6 @@ float4 DefferedShading(float2 _uv);
 
 // shrinkedbloommap use case(bloom effect)
 float4 BloomEffect(Texture2D _texture, float2 _uv);
+
+// Field Of Depth
+float4 FOVEffect(Texture2D _texture, SamplerState _smp, float2 _uv, float focusDistance);
