@@ -84,7 +84,6 @@ private:
 	PeraGraphicsPipelineSetting* bufferGPLSetting = nullptr;
 	PeraSetRootSignature* bufferSetRootSignature = nullptr;
 
-
 	BufferShaderCompile* bufferShaderCompile = nullptr;
 
 	// ライトマップ関連
@@ -96,7 +95,6 @@ private:
 	XMFLOAT4 _planeNormalVec;
 	XMFLOAT3 lightVec;
 	
-
 	// bloom	
 	PeraGraphicsPipelineSetting* bloomGPLSetting = nullptr;
 	PeraSetRootSignature* bloomRootSignature = nullptr;
@@ -104,13 +102,20 @@ private:
 	ComPtr<ID3D10Blob> _bloomVSBlob = nullptr; // bloom用頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _bloomPSBlob = nullptr; // bloom用ピクセルシェーダーオブジェクト格納用
 	
+	// AO
+	AOShaderCompile* aoShaderCompile = nullptr;
+	AOGraphicsPipelineSetting* aoGPLSetting = nullptr;
+	PeraSetRootSignature* aoRootSignature = nullptr;
+	ComPtr<ID3D10Blob> _aoVSBlob = nullptr; // AO用頂点シェーダーオブジェクト格納用
+	ComPtr<ID3D10Blob> _aoPSBlob = nullptr; // AO用ピクセルシェーダーオブジェクト格納用
 
 	// draw method
-	void DrawLightMap(unsigned int modelNum); // draw light map
-	void DrawModel(unsigned int modelNum); // draw pmd model
-	void DrawShrinkTextureForBlur(unsigned int modelNum); // draw blur texture
+	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map
+	void DrawModel(unsigned int modelNum, UINT buffSize); // draw pmd model
+	void DrawShrinkTextureForBlur(unsigned int modelNum, UINT buffSize); // draw blur texture
 	void DrawPeraPolygon(unsigned int modelNum); // draw background polygon	
-	void DrawBackBuffer(); // draw back buffers
+	void DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize); // draw ambient occlusion
+	void DrawBackBuffer(UINT buffSize); // draw back buffers
 
 public:
 	///Applicationのシングルトンインスタンスを得る

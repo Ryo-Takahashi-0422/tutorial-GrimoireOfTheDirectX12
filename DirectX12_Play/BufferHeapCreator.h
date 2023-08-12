@@ -51,6 +51,7 @@ private:
 	ComPtr<ID3D12Resource> grayTextureBuff = nullptr; // グレーテクスチャ用バッファー
 	ComPtr<ID3D12Resource> gaussianBuff = nullptr; // ガウスぼかし用バッファー
 	std::array<ComPtr<ID3D12Resource>, 3> _bloomBuff; // ブルーム用バッファー+shrinkedModel
+	ComPtr<ID3D12Resource> aoBuff = nullptr; // buffer for AO
 
 	std::vector<ComPtr<ID3D12Resource>> normalMapUploadBuff; // ノーマルマップ用アップロードバッファー
 	std::vector<ComPtr<ID3D12Resource>> normalMapReadBuff; // ノーマルマップ用リードバッファー
@@ -177,6 +178,7 @@ public:
 	ComPtr<ID3D12Resource> GetBlackTextureBuff() { return blackTextureBuff; };
 	ComPtr<ID3D12Resource> GetGrayTextureBuff() { return grayTextureBuff; };
 	ComPtr<ID3D12Resource> GetGaussianBuff() { return gaussianBuff; };
+	ComPtr<ID3D12Resource> GetAOBuff() { return aoBuff; };
 
 	std::vector<ComPtr<ID3D12Resource>> GetNormalMapUploadBuff() { return normalMapUploadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetNormalMapReadBuff() { return normalMapReadBuff; };

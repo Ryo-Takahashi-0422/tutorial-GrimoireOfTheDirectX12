@@ -40,6 +40,12 @@
     <Filter Include="ヘッダー ファイル\LightMap">
       <UniqueIdentifier>{43a4e6a5-6a90-4dc5-91c2-42d44c0e3257}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ヘッダー ファイル\AO">
+      <UniqueIdentifier>{376609c3-98ef-47ef-896c-e7a2a3bc4da4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\AO">
+      <UniqueIdentifier>{12056526-0af7-4ccd-94a5-040631316665}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -132,6 +138,12 @@
     <ClCompile Include="BloomShaderCompile.cpp">
       <Filter>ソース ファイル\Multipass</Filter>
     </ClCompile>
+    <ClCompile Include="AOShaderCompile.cpp">
+      <Filter>ソース ファイル\AO</Filter>
+    </ClCompile>
+    <ClCompile Include="AOGraphicsPipelineSetting.cpp">
+      <Filter>ソース ファイル\AO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PeraPixel.hlsl">
@@ -155,6 +167,9 @@
     <FxCompile Include="BloomPixelShader.hlsl">
       <Filter>シェーダー</Filter>
     </FxCompile>
+    <FxCompile Include="AOPixelShader.hlsl">
+      <Filter>シェーダー</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="PeraHeader.hlsli">
@@ -167,6 +182,9 @@
       <Filter>シェーダー</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="AOShaderHeader.hlsli">
+      <Filter>シェーダー</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppD3DX12.h">
@@ -261,6 +279,12 @@
     </ClInclude>
     <ClInclude Include="BloomShaderCompile.h">
       <Filter>ヘッダー ファイル\Multipass</Filter>
+    </ClInclude>
+    <ClInclude Include="AOShaderCompile.h">
+      <Filter>ヘッダー ファイル\AO</Filter>
+    </ClInclude>
+    <ClInclude Include="AOGraphicsPipelineSetting.h">
+      <Filter>ヘッダー ファイル\AO</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

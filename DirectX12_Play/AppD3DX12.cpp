@@ -210,6 +210,11 @@ bool AppD3DX12::PrepareRendering() {
 	bloomGPLSetting = new PeraGraphicsPipelineSetting(peraLayout);
 	bloomRootSignature = new PeraSetRootSignature;
 	bloomShaderCompile = new BloomShaderCompile;
+
+	//AO
+	aoGPLSetting = new AOGraphicsPipelineSetting(peraLayout);
+	aoRootSignature = new PeraSetRootSignature;
+	aoShaderCompile = new AOShaderCompile;
 }
 
 bool AppD3DX12::PipelineInit(){
@@ -354,6 +359,12 @@ bool AppD3DX12::ResourceInit() {
 	{
 		return false;
 	}
+
+	// AO
+	if (FAILED(aoRootSignature->SetRootsignatureParam(_dev)))
+	{
+		return false;
+	}
 	
 // 初期化処理2：シェーダーコンパイル設定
 	// _vsBlobと_psBlobにｼｪｰﾀﾞｰｺﾝﾊﾟｲﾙ設定を割り当てる。それぞれﾌｧｲﾙﾊﾟｽを保持するが読み込み失敗したらnullptrが返ってくる。
@@ -386,6 +397,12 @@ bool AppD3DX12::ResourceInit() {
 	_bloomVSBlob = bloomBlobs.first; // こちらはnullpt
 	_bloomPSBlob = bloomBlobs.second;
 
+	// AO
+	auto aoBlobs = aoShaderCompile->SetShaderCompile(aoRootSignature, _aoVSBlob, _aoPSBlob);
+	if (aoBlobs.first == nullptr or aoBlobs.second == nullptr) return false;
+	_aoVSBlob = aoBlobs.first; // こちらはnullpt
+	_aoPSBlob = aoBlobs.second;
+
 // 初期化処理3：頂点入力レイアウトの作成及び
 // 初期化処理4：パイプライン状態オブジェクト(PSO)のDesc記述してオブジェクト作成
 	result = gPLSetting->CreateGPStateWrapper(_dev, setRootSignature, _vsBlob, _psBlob);
@@ -401,6 +418,9 @@ bool AppD3DX12::ResourceInit() {
 
 	// for shrinked bloom creating
 	result = bloomGPLSetting->CreateGPStateWrapper(_dev, bloomRootSignature, _bloomVSBlob, _bloomPSBlob);
+
+	// AO
+	result = aoGPLSetting->CreateGPStateWrapper(_dev, aoRootSignature, _aoVSBlob, _aoPSBlob);
 
 // 初期化処理5：コマンドリスト生成
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
@@ -589,6 +609,7 @@ bool AppD3DX12::ResourceInit() {
 
 void AppD3DX12::Run() {
 	MSG msg = {};
+	auto cbv_srv_Size = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	for (int i = 0; i < strModelNum; ++i)
 	{
 		pmdActor[i]->PlayAnimation(); // アニメーション開始時刻の取得
@@ -614,7 +635,7 @@ void AppD3DX12::Run() {
 			auto dsvh = bufferHeapCreator[i]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
 
 
-			DrawLightMap(i); // draw lightmap
+			DrawLightMap(i, cbv_srv_Size); // draw lightmap
 
 			DrawPeraPolygon(i); // draw background polygon
 
@@ -623,11 +644,13 @@ void AppD3DX12::Run() {
 			//DrawShrinkTextureForBlur(i); // draw shrink buffer
 		}
 
-		DrawModel(0); // draw pmd model
+		DrawModel(0, cbv_srv_Size); // draw pmd model
 
-		DrawShrinkTextureForBlur(0); // draw shrink buffer
+		DrawShrinkTextureForBlur(0, cbv_srv_Size); // draw shrink buffer
 
-		DrawBackBuffer(); // draw back buffer
+		DrawAmbientOcclusion(0, cbv_srv_Size);
+
+		DrawBackBuffer(cbv_srv_Size); // draw back buffer
 
 		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();
@@ -703,7 +726,8 @@ void AppD3DX12::Run() {
 
 	
 	delete prepareRenderingWindow;
-	
+	delete aoShaderCompile;
+	delete aoGPLSetting;
 
 	delete peraGPLSetting;
 	delete peraLayout;
@@ -716,7 +740,7 @@ void AppD3DX12::Run() {
 	//delete peraSetRootSignature;
 }
 
-void AppD3DX12::DrawLightMap(unsigned int modelNum)
+void AppD3DX12::DrawLightMap(unsigned int modelNum, UINT buffSize)
 {
 	constexpr uint32_t shadow_difinition = 1024;
 	D3D12_VIEWPORT vp = CD3DX12_VIEWPORT(0.0f, 0.0f, shadow_difinition, shadow_difinition);
@@ -746,7 +770,7 @@ void AppD3DX12::DrawLightMap(unsigned int modelNum)
 	);
 
 	auto materialHandle2 = bufferHeapCreator[modelNum]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-	auto inc2 = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	auto inc2 = buffSize;
 	auto materialHInc2 = inc2 * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
 	materialHandle2.ptr += inc2; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
 	unsigned int idxOffset2 = 0;
@@ -809,7 +833,7 @@ void AppD3DX12::DrawPeraPolygon(unsigned int modelNum)
 	_cmdList->ResourceBarrier(1, &barrierDesc4Multi);
 }
 
-void AppD3DX12::DrawModel(unsigned int modelNum)
+void AppD3DX12::DrawModel(unsigned int modelNum, UINT buffSize)
 {
 	//リソースバリアの準備。ｽﾜｯﾌﾟﾁｪｰﾝﾊﾞｯｸﾊﾞｯﾌｧは..._COMMONを初期状態とする決まり。これはcolor
 	D3D12_RESOURCE_BARRIER BarrierDesc = {};
@@ -866,7 +890,7 @@ void AppD3DX12::DrawModel(unsigned int modelNum)
 	_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 	//画面クリア
-	float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float clearColor[] = { 0.1f, 0.1f, 0.2f, 1.0f };
 	_cmdList->ClearRenderTargetView(handles[0], clearColor, 0, nullptr);
 	_cmdList->ClearRenderTargetView(handles[1], clearColor, 0, nullptr);
 	clearColor[0] = 0;
@@ -908,7 +932,7 @@ void AppD3DX12::DrawModel(unsigned int modelNum)
 		// マテリアルのディスクリプタヒープをルートシグネチャのテーブルにバインドしていく
 		// CBV:1つ(matrix)、SRV:4つ(colortex, graytex, spa, sph)が対象。SetRootSignature.cpp参照。
 		auto materialHandle = bufferHeapCreator[i]->GetCBVSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto inc = buffSize;
 		auto materialHInc = inc * 5; // 行列cbv + (material cbv+テクスチャsrv+sph srv+spa srv+toon srv)
 		materialHandle.ptr += inc; // この処理の直前に行列用CBVをｺﾏﾝﾄﾞﾘｽﾄにセットしたため
 		unsigned int idxOffset = 0;
@@ -956,7 +980,7 @@ void AppD3DX12::DrawModel(unsigned int modelNum)
 }
 
 
-void AppD3DX12::DrawShrinkTextureForBlur(unsigned int modelNum)
+void AppD3DX12::DrawShrinkTextureForBlur(unsigned int modelNum, UINT buffSize)
 {
 	_cmdList->SetPipelineState(bloomGPLSetting->GetPipelineState().Get());
 	_cmdList->SetGraphicsRootSignature(bloomRootSignature->GetRootSignature().Get());
@@ -987,7 +1011,6 @@ void AppD3DX12::DrawShrinkTextureForBlur(unsigned int modelNum)
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handles[2];
 	auto baseH = bufferHeapCreator[modelNum]->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
-	//baseH.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 4;
 	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	uint32_t offset = 4;
 	for (auto& handle : handles)
@@ -1005,11 +1028,11 @@ void AppD3DX12::DrawShrinkTextureForBlur(unsigned int modelNum)
 
 	// bloom texture
 	auto srvHandle = bufferHeapCreator[modelNum]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // model texture
+	srvHandle.ptr += buffSize; // model texture
 	_cmdList->SetGraphicsRootDescriptorTable(1, srvHandle);
-	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // gaussian value
+	srvHandle.ptr += buffSize; // gaussian value
 	_cmdList->SetGraphicsRootDescriptorTable(2, srvHandle); // table[2] is for gaussian value
-	srvHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 6; // bloom texture
+	srvHandle.ptr += buffSize * 6; // bloom texture
 	_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
 
 	auto desc = bufferHeapCreator[modelNum]->GetBloomBuff()[0]->GetDesc();
@@ -1053,7 +1076,51 @@ void AppD3DX12::DrawShrinkTextureForBlur(unsigned int modelNum)
 	_cmdList->ResourceBarrier(1, &barrierDesc4ShrinkModel);
 }
 
-void AppD3DX12::DrawBackBuffer()
+void AppD3DX12::DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize)
+{
+	// AO renderer status to
+	D3D12_RESOURCE_BARRIER barrierDesc4AO = CD3DX12_RESOURCE_BARRIER::Transition
+	(
+		bufferHeapCreator[modelNum]->GetAOBuff().Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+	_cmdList->ResourceBarrier(1, &barrierDesc4AO);
+
+
+	auto baseH = bufferHeapCreator[modelNum]->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 6;
+	baseH.ptr += incSize;
+
+	_cmdList->OMSetRenderTargets(1, &baseH, false, nullptr);
+	float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	_cmdList->ClearRenderTargetView(baseH, clearColor, 0, nullptr);
+
+	_cmdList->SetGraphicsRootSignature(aoRootSignature->GetRootSignature().Get());
+
+	_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer());
+	_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer());
+
+	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[modelNum]->GetMultipassSRVHeap().GetAddressOf());
+
+	auto srvHandle = bufferHeapCreator[modelNum]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+	srvHandle.ptr += buffSize * 4; // depthmap
+	_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
+	srvHandle.ptr += buffSize * 3; // normalmap
+	_cmdList->SetGraphicsRootDescriptorTable(1, srvHandle);
+
+	_cmdList->SetPipelineState(aoGPLSetting->GetPipelineState().Get());
+	_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
+	_cmdList->DrawInstanced(4, 1, 0, 0);
+
+	//  AO renderer status to
+	barrierDesc4AO.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrierDesc4AO.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	_cmdList->ResourceBarrier(1, &barrierDesc4AO);
+}
+
+void AppD3DX12::DrawBackBuffer(UINT buffSize)
 {
 
 	auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
@@ -1104,35 +1171,38 @@ void AppD3DX12::DrawBackBuffer()
 	_cmdList->IASetVertexBuffers(0, 1, peraPolygon->GetVBView());
 
 	auto gHandle2 = bufferHeapCreator[0]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(1, gHandle2);
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(2, gHandle2); // ぼかし定数
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(3, gHandle2); // 法線マップ
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(4, gHandle2); // 深度マップ
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(5, gHandle2); // ライトマップ
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(6, gHandle2); // ライトマップ用シーン行列
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	_cmdList->SetGraphicsRootDescriptorTable(7, gHandle2); // マルチターゲット描画
+	gHandle2.ptr += buffSize;
+	_cmdList->SetGraphicsRootDescriptorTable(7, gHandle2); // normalmap
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(8, gHandle2); // bloom
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(9, gHandle2); // shrinked bloom
 
-	gHandle2.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(10, gHandle2); // shrinked model
+
+	gHandle2.ptr += buffSize;
+	_cmdList->SetGraphicsRootDescriptorTable(11, gHandle2); // AO
 
 	_cmdList->DrawInstanced(4, 1, 0, 0);
 

@@ -7,6 +7,7 @@ Texture2D<float4> multinormalmap : register(t5); // マルチターゲットにレンダリン
 Texture2D<float4> bloommap : register(t6); // bloom
 Texture2D<float4> shrinkedbloommap : register(t7); // shrinked bloom map
 Texture2D<float4> shrinkedModel : register(t8); // shrinked bloom map
+Texture2D<float> aomap : register(t9); // shrinked bloom map
 
 SamplerState smp : register(s0); // sampler
 

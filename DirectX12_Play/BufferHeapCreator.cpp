@@ -47,13 +47,13 @@ void BufferHeapCreator::SetCBVSRVHeapDesc()
 void BufferHeapCreator::SetMutipassRTVHeapDesc()
 {
 	mutipassRTVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassRTVHeapDesc.NumDescriptors = 6; // マルチパス2個 + マルチターゲット1個分 + bloom*2 + shrinkedModel
+	mutipassRTVHeapDesc.NumDescriptors = 7; // マルチパス2個 + マルチターゲット1個分 + bloom*2 + shrinkedModel + AO
 }
 
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 11; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2 + shrinkedModel
+	mutipassSRVHeapDesc.NumDescriptors = 12; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2 + shrinkedModel + AO
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -307,6 +307,23 @@ HRESULT BufferHeapCreator::CreateRenderBufferForMultipass(ComPtr<ID3D12Device> _
 			IID_PPV_ARGS(res.ReleaseAndGetAddressOf())
 		);
 	}
+
+	// for AO
+	D3D12_CLEAR_VALUE depthClearValue4AO = depthClearValue;
+	depthClearValue4AO.Format = DXGI_FORMAT_R32_FLOAT;
+	mutipassResDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	result = _dev->CreateCommittedResource
+	(
+		&mutipassHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&mutipassResDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		&depthClearValue4AO,
+		IID_PPV_ARGS(aoBuff.ReleaseAndGetAddressOf())
+	);
+
+	mutipassResDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
 
 	return result;
 
