@@ -4,7 +4,7 @@ class AOGraphicsPipelineSetting : public IGraphicsPipelineSetting
 {
 
 private:
-	D3D12_INPUT_ELEMENT_DESC inputLayouts[2];
+	D3D12_INPUT_ELEMENT_DESC inputLayouts[6];
 
 public:
 	AOGraphicsPipelineSetting(InputLayoutBase* _vertexInputLayout);

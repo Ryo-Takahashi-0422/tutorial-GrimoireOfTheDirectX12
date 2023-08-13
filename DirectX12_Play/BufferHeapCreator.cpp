@@ -33,7 +33,7 @@ void BufferHeapCreator::SetRTVHeapDesc()
 void BufferHeapCreator::SetDSVHeapDesc()
 {
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	dsvHeapDesc.NumDescriptors = 2; // 深度 + lightmap
+	dsvHeapDesc.NumDescriptors = 3; // 深度 + lightmap + AO用
 }
 
 void BufferHeapCreator::SetCBVSRVHeapDesc()
@@ -190,6 +190,16 @@ HRESULT BufferHeapCreator::CreateBufferOfDepthAndLightMap(ComPtr<ID3D12Device> _
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&depthClearValue2,
 		IID_PPV_ARGS(depthBuff.ReleaseAndGetAddressOf())
+	);
+
+	_dev->CreateCommittedResource
+	(
+		&depthHeapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&/*depthResDesc*/depthResDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthClearValue2,
+		IID_PPV_ARGS(depthBuff2.ReleaseAndGetAddressOf())
 	);
 
 	// ライトマップバッファー作成

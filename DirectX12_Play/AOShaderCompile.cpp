@@ -6,10 +6,11 @@ std::pair<ComPtr<ID3D10Blob>, ComPtr<ID3D10Blob>> AOShaderCompile::SetShaderComp
 {
 	result = D3DCompileFromFile
 	(
-		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BufferVertex.hlsl",
+		//L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\BufferVertex.hlsl",
+		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\DirectX12_Play\\AOVertexShader.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		"vsBuffer",
+		"AoVS",
 		"vs_5_0",
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,

@@ -170,6 +170,9 @@
     <FxCompile Include="AOPixelShader.hlsl">
       <Filter>シェーダー</Filter>
     </FxCompile>
+    <FxCompile Include="AOVertexShader.hlsl">
+      <Filter>シェーダー</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="PeraHeader.hlsli">

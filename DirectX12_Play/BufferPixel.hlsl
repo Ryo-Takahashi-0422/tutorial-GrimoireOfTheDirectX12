@@ -3,14 +3,16 @@
 // entry point for BufferShaderCompile
 float4 psBuffer(Output input) : SV_TARGET
 {
-    return aomap.Sample(smp, input.uv);
+    //return depthmap.Sample(smp, input.uv);
+    float ao = aomap.Sample(smp, input.uv);
+    return float4(ao, ao, ao, 1);
     //return DefferedShading(input.uv);
     //return pow(depthmap.Sample(smp, input.uv), 20);
     
     //return float4(depthDiff, depthDiff, depthDiff, 1);
 
     
-    return FOVEffect(shrinkedModel, smp, input.uv, 0.7f);
+    return FOVEffect(shrinkedModel, smp, input.uv, 0.0f);
     return BloomEffect(shrinkedbloommap, input.uv);
 }
 
@@ -229,7 +231,7 @@ float4 NormalmapEffect(float2 _uv)
 {
     float4 ret = float4(0, 0, 0, 0);
     float2 normalTex = normalmap.Sample(smp, _uv);
-    normalTex = normalTex * 2.0f - 1.0f; // 法線マップは法線方向Nx,Ny,Nzをそれぞれ(1+Nx,y,z)/2として画像データとしているので、法線方向データに戻す
+    normalTex = normalTex * 2.0f - 1.0f; // 法線マップは法線方向Nx,Ny,Nzをそれぞれ1+Nx(Ny,Nz)/2として画像データとしているので、法線方向データに戻す
     
     for (int i = 1; i < 8; ++i)
     {

@@ -62,6 +62,16 @@ void ViewCreator::CreateDSVWrapper(ComPtr<ID3D12Device> _dev)
 		&dsvDesc,
 		handle
 	);
+
+	// for AO
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	_dev->CreateDepthStencilView
+	(
+		bufferHeapCreator->GetDepthBuff2().Get(),
+		&dsvDesc,
+		handle
+	);
 }
 
 void ViewCreator::CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev)

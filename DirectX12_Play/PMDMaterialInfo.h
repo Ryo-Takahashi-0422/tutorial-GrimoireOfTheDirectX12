@@ -29,13 +29,16 @@ using namespace DirectX;
 	//シェーダー側に渡す基本的な行列データ
 	struct SceneMatrix
 	{
-		XMMATRIX world; // モデル本体の回転・移動行列
-		XMMATRIX view; // ビュー行列
-		XMMATRIX proj; // プロジェクション行列
-		XMMATRIX lightCamera; // ライトからみたビュー
-		XMMATRIX shadow; // 影
-		XMFLOAT3 eye; // 視点座標
-		XMMATRIX bones[256]; // ボーン行列
+		XMMATRIX world; // world matrix
+		XMMATRIX view; // view matrix
+		XMMATRIX proj; // projection matri
+		XMMATRIX lightCamera; // view from light(view * projection)
+		XMMATRIX shadow; // shadow matrix
+		XMFLOAT3 eye; // position of camera
+		XMMATRIX invProj; // inverse projection matrix
+		XMMATRIX bones[256]; // pmd bone matrix
+		//XMMATRIX invProj; // inverse projection matrix
+		
 	};
 
 	//マテリアル読み込み用の構造体2セット

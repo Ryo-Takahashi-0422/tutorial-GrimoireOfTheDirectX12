@@ -39,6 +39,7 @@ private:
 	ComPtr<ID3D12Resource> vertBuff = nullptr; // 頂点用バッファ
 	ComPtr<ID3D12Resource> idxBuff = nullptr; // 頂点インデックス用バッファ
 	ComPtr<ID3D12Resource> depthBuff = nullptr; // デプスバッファー
+	ComPtr<ID3D12Resource> depthBuff2 = nullptr; // デプスバッファー
 	ComPtr<ID3D12Resource> lightMapBuff = nullptr; // ライトマップバッファー
 	ComPtr<ID3D12Resource> matrixBuff = nullptr; // 行列用定数バッファー
 	ComPtr<ID3D12Resource> matrixBuff4Multipass = nullptr; // ﾏﾙﾁﾊﾟｽ用行列用定数バッファー
@@ -167,6 +168,7 @@ public:
 	ComPtr<ID3D12Resource> GetVertBuff() { return vertBuff; };
 	ComPtr<ID3D12Resource> GetIdxBuff() { return idxBuff; };
 	ComPtr<ID3D12Resource> GetDepthBuff() { return depthBuff; };
+	ComPtr<ID3D12Resource> GetDepthBuff2() { return depthBuff2; };
 	ComPtr<ID3D12Resource> GetLightMapBuff() { return lightMapBuff; };
 	ComPtr<ID3D12Resource> GetMatrixBuff() { return matrixBuff; };
 	ComPtr<ID3D12Resource> GetMatrixBuff4Multipass() { return matrixBuff4Multipass; };

@@ -105,7 +105,7 @@ private:
 	// AO
 	AOShaderCompile* aoShaderCompile = nullptr;
 	AOGraphicsPipelineSetting* aoGPLSetting = nullptr;
-	PeraSetRootSignature* aoRootSignature = nullptr;
+	SetRootSignature* aoRootSignature = nullptr;
 	ComPtr<ID3D10Blob> _aoVSBlob = nullptr; // AO用頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _aoPSBlob = nullptr; // AO用ピクセルシェーダーオブジェクト格納用
 

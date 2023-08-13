@@ -58,11 +58,15 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC AOGraphicsPipelineSetting::SetGPL(
 
 	gpipeLine.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-	gpipeLine.DepthStencilState.DepthEnable = false;
-	gpipeLine.DepthStencilState.StencilEnable = false;
-	//gpipeLine.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // 深度バッファーに深度値を描き込む
-	//gpipeLine.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // ソースデータがコピー先データより小さい場合書き込む
-	//gpipeLine.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	//gpipeLine.DepthStencilState.DepthEnable = false;
+	//gpipeLine.DepthStencilState.StencilEnable = false;
+	////gpipeLine.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // 深度バッファーに深度値を描き込む
+	////gpipeLine.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // ソースデータがコピー先データより小さい場合書き込む
+	////gpipeLine.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	gpipeLine.DepthStencilState.DepthEnable = true;
+	gpipeLine.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // 深度バッファーに深度値を描き込む
+	gpipeLine.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // ソースデータがコピー先データより小さい場合書き込む
+	gpipeLine.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 
 	gpipeLine.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
