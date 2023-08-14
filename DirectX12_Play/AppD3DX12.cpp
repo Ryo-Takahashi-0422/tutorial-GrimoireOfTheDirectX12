@@ -524,6 +524,7 @@ bool AppD3DX12::ResourceInit() {
 		pmdMaterialInfo[i]->mapMatrix->view = viewMat;
 		pmdMaterialInfo[i]->mapMatrix->proj = projMat;
 		pmdMaterialInfo[i]->mapMatrix->invProj = XMMatrixInverse(&det, projMat);
+		pmdMaterialInfo[i]->mapMatrix->invView = XMMatrixInverse(&det, viewMat);
 		pmdMaterialInfo[i]->mapMatrix->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
 		pmdMaterialInfo[i]->mapMatrix->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
 		pmdMaterialInfo[i]->mapMatrix->eye = eye;
@@ -534,10 +535,19 @@ bool AppD3DX12::ResourceInit() {
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->world = pmdMaterialInfo[i]->worldMat;
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->view = viewMat;
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->proj = projMat;
-		pmdMaterialInfo[i]->mapMatrix4Lightmap->invProj = XMMatrixInverse(&det, projMat);
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->shadow = XMMatrixShadow(XMLoadFloat4(&_planeNormalVec), -XMLoadFloat3(&lightVec));
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->invProj = XMMatrixInverse(&det, projMat);
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->invView = XMMatrixInverse(&det, viewMat);				
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->eye = eye;
+
+		auto p = XMMatrixTranslation(2.0f, 3.0f, 4.0f);
+		p *= viewMat;
+		p *= projMat;
+		p *= XMMatrixInverse(&det, projMat);
+		p *= XMMatrixInverse(&det, viewMat);
+		
+		
 
 		//マテリアル用バッファーへのマッピング
 		mappingExecuter[i]->MappingMaterialBuff();
@@ -680,16 +690,17 @@ void AppD3DX12::Run() {
 
 		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
+		pmdMaterialInfo[0]->worldMat = XMMatrixTranslation(0.0f, 0, -5.0f);
+		pmdMaterialInfo[1]->worldMat = XMMatrixTranslation(-24.0f, 0, 20.0f);
+		pmdMaterialInfo[2]->worldMat = XMMatrixTranslation(15.0f, 0, 10.0f);
 
 		for (int i = 0; i < strModelNum; ++i)
 		{
 			//行列情報の更新
-			//pmdMaterialInfo->angle += 0.01f;
+			//pmdMaterialInfo[i]->angle += 0.01f;
 			//pmdMaterialInfo->angle = 200.0f;
-			//pmdMaterialInfo[i]->worldMat = XMMatrixRotationY(pmdMaterialInfo[i]->angle);
-			pmdMaterialInfo[0]->worldMat = XMMatrixTranslation(0.0f, 0, -5.0f);
-			pmdMaterialInfo[1]->worldMat = XMMatrixTranslation(-24.0f, 0, 20.0f);
-			pmdMaterialInfo[2]->worldMat = XMMatrixTranslation(15.0f, 0, 10.0f);
+			//pmdMaterialInfo[i]->worldMat *= XMMatrixRotationY(pmdMaterialInfo[i]->angle);
+
 			pmdMaterialInfo[i]->mapMatrix->world = pmdMaterialInfo[i]->worldMat;
 			pmdMaterialInfo[i]->mapMatrix4Lightmap->world = pmdMaterialInfo[i]->worldMat; // for AO!!!
 
@@ -1117,7 +1128,7 @@ void AppD3DX12::DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize)
 	_cmdList->OMSetRenderTargets(1, &baseH, false, &dsvh);
 	_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
-	float clearColor[] = { 0.5f, 0.0f, 1.0f, 1.0f };
+	float clearColor[] = { 1.0f, 0.0f, 1.0f, 1.0f };
 	_cmdList->ClearRenderTargetView(baseH, clearColor, 0, nullptr);
 
 	_cmdList->SetGraphicsRootSignature(aoRootSignature->GetRootSignature().Get());
@@ -1137,6 +1148,7 @@ void AppD3DX12::DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize)
 		srvHandle00.ptr += buffSize * 3; // normalmap
 		_cmdList->SetGraphicsRootDescriptorTable(3, srvHandle00);
 
+		// i→0にするとモデルはばぐるがデプスは見えるようになる
 		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[i]->GetMultipassSRVHeap().GetAddressOf());
 		auto srvHandle = bufferHeapCreator[i]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
 		srvHandle.ptr += buffSize * 6; // scene matrix
@@ -1159,14 +1171,16 @@ void AppD3DX12::DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize)
 		//srvHandle.ptr += buffSize; // normalmap
 		//_cmdList->SetGraphicsRootDescriptorTable(3, srvHandle);
 
-		unsigned int idxOffset = 0;
-		//インデックス付きインスタンス化されたプリミティブを描画
-		for (auto m : pmdMaterialInfo[/*modelNum*/i]->materials)
-		{
-			//インデックス付きインスタンス化されたプリミティブを描画
-			_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
-			idxOffset += m.indiceNum;
-		}
+		//unsigned int idxOffset = 0;
+		////インデックス付きインスタンス化されたプリミティブを描画
+		//for (auto m : pmdMaterialInfo[/*modelNum*/i]->materials)
+		//{
+		//	//インデックス付きインスタンス化されたプリミティブを描画
+		//	_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
+		//	idxOffset += m.indiceNum;
+		//}
+		_cmdList->DrawIndexedInstanced(pmdMaterialInfo[modelNum]->indicesNum, 1, 0, 0, 0);
+
 	}
 
 	//  AO renderer status to

@@ -36,6 +36,7 @@ using namespace DirectX;
 		XMMATRIX shadow; // shadow matrix
 		XMFLOAT3 eye; // position of camera
 		XMMATRIX invProj; // inverse projection matrix
+		XMMATRIX invView; // inverted view matrix
 		XMMATRIX bones[256]; // pmd bone matrix
 		//XMMATRIX invProj; // inverse projection matrix
 		

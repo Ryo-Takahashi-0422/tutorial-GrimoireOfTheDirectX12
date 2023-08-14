@@ -7,10 +7,11 @@ cbuffer SceneBuffer : register(b0) // affine transformation matrix
     matrix world; // world matrix
     matrix view; // view matrix
     matrix proj; // projection matrix
-    matrix invProj; // inverse matrix of projection matrix
     matrix lightCamera; // view matrix from light * orthographic projection matrix
     matrix shadow; // shadow matrix
     float3 eye; // eye(camera) position
+    matrix invProj; // inverse matrix of projection matrix
+    matrix invView; // inverted view matrix 
     matrix bones[256]; // bone matrix
 };
 

@@ -26,6 +26,7 @@ cbuffer SceneBuffer : register(b0) // ïœä∑çsóÒ
     matrix shadow; // shadow matrix
     float3 eye; // eye(camera) position
     matrix invProj; // inverse matrix of projection matrix
+    matrix invView; // inverted view matrix 
     matrix bones[256]; // bone matrix
 };
 
