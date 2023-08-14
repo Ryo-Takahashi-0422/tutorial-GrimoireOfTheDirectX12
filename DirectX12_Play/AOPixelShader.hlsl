@@ -31,10 +31,10 @@ float SsaoPs(Output input) : SV_TARGET
 
     float div = 0.0f;
     float ao = 0.0f;
-    float3 norm = normalize(input.norm.xyz); //normalize( /*normtex*/depthmap.Sample(smp, input.uv) * 2 - 1);
+    float3 norm = normalize(input.norm.xyz); //normalize(normalmap.Sample(smp, input.uv) * 2 - 1);
     //return float4(norm.x, norm.y, norm.z, 1);
-    const int trycnt = 32;
-    const float radius = 0.5f;
+    const int trycnt = 128;
+    const float radius = 10.0f;
     
     if(dp < 1.0f)
     {
@@ -58,12 +58,12 @@ float SsaoPs(Output input) : SV_TARGET
             //ao += step(depthmap.Sample(smp, (rpos.xy + float2(1, -1)) * float2(0.5f, -0.5f)), rpos.z) * dt;
             // ★            
             
-            rpos.x = respos.x + omega.x * radius;
-            rpos.y = respos.y + omega.y * radius; // omega.yを足すとなぜかrpos.zに悪影響が出て深度チェックが上手くいかない...なぜ？？？
-            rpos.z = respos.z + omega.z * radius;
-            rpos.w = respos.w;            
-            rpos = mul(view, rpos);
-            rpos = mul(proj, rpos);
+            rpos.x = input.svpos.x + omega.x * radius;
+            rpos.y = input.svpos.y + omega.y * radius; // omega.yを足すとなぜかrpos.zに悪影響が出て深度チェックが上手くいかない...なぜ？？？
+            rpos.z = input.svpos.z/* + omega.z * radius*/;
+            rpos.w = input.svpos.w;
+            //rpos = mul(view, rpos);
+            //rpos = mul(proj, rpos);
             //return rpos.z;
             
             //rpos = mul(proj, float4(respos.x + omega.x * radius, respos.y + omega.y * radius, respos.z + omega.z * radius, 1));
@@ -75,7 +75,7 @@ float SsaoPs(Output input) : SV_TARGET
             // 計算結果が現在の場所の深度より奥に入っているなら遮断されているので加算する
             // x > y = 1, x < y = 0
             //ao += step(depthmap.Sample(smp, (rpos.xy + float2(1, -1)) * float2(0.5f, -0.5f)), rpos.z) * dt;
-            ao += step(depthmap.Sample(smp, float2(rpos.x / w, rpos.y / h)), rpos.z) * dt;
+            ao += step(depthmap.Sample(smp, float2(rpos.x / w, rpos.y / h)) / 1.0001f, rpos.z) * dt;
 
         }
         
