@@ -1140,46 +1140,47 @@ void AppD3DX12::DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize)
 	
 	for (int i = 0; i < strModelNum; ++i)
 	{
-		// ﾃﾞﾌﾟｽﾏｯﾌﾟと法線マップはbufferHeapCreator[0]のものを利用する。シーン行列はそれぞれのモデルのものを利用する。
-		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[0]->GetMultipassSRVHeap().GetAddressOf());
-		auto srvHandle00 = bufferHeapCreator[0]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		srvHandle00.ptr += buffSize * 4; // depthmap
-		_cmdList->SetGraphicsRootDescriptorTable(2, srvHandle00);
-		srvHandle00.ptr += buffSize * 3; // normalmap
-		_cmdList->SetGraphicsRootDescriptorTable(3, srvHandle00);
-
-		// i→0にするとモデルはばぐるがデプスは見えるようになる
-		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[i]->GetMultipassSRVHeap().GetAddressOf());
-		auto srvHandle = bufferHeapCreator[i]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		srvHandle.ptr += buffSize * 6; // scene matrix
-
-		_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
 		//頂点バッファーのCPU記述子ハンドルを設定
 		_cmdList->IASetVertexBuffers(0, 1, viewCreator[/*modelNum*/i]->GetVbView());
-
 		//インデックスバッファーのビューを設定
 		_cmdList->IASetIndexBuffer(viewCreator[/*modelNum*/i]->GetIbView());
 
+		//// ﾃﾞﾌﾟｽﾏｯﾌﾟと法線マップはbufferHeapCreator[0]のものを利用する。シーン行列はそれぞれのモデルのものを利用する。
+		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[0]->GetMultipassSRVHeap().GetAddressOf());
+		//auto srvHandle00 = bufferHeapCreator[0]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		//srvHandle00.ptr += buffSize * 4; // depthmap
+		//_cmdList->SetGraphicsRootDescriptorTable(2, srvHandle00);
+		//srvHandle00.ptr += buffSize * 3; // normalmap
+		//_cmdList->SetGraphicsRootDescriptorTable(3, srvHandle00);
 
-		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[/*modelNum*/i]->GetMultipassSRVHeap().GetAddressOf());
-
-		//auto srvHandle = bufferHeapCreator[/*modelNum*/i]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
-		//srvHandle.ptr += buffSize * 4; // depthmap
-		//_cmdList->SetGraphicsRootDescriptorTable(2, srvHandle);
-		//srvHandle.ptr += buffSize * 2; // scene matrix
+		//// i→0にするとモデルはばぐるがデプスは見えるようになる
+		//_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[i]->GetMultipassSRVHeap().GetAddressOf());
+		//auto srvHandle = bufferHeapCreator[i]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		//srvHandle.ptr += buffSize * 6; // scene matrix
 		//_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
-		//srvHandle.ptr += buffSize; // normalmap
-		//_cmdList->SetGraphicsRootDescriptorTable(3, srvHandle);
 
-		//unsigned int idxOffset = 0;
-		////インデックス付きインスタンス化されたプリミティブを描画
-		//for (auto m : pmdMaterialInfo[/*modelNum*/i]->materials)
-		//{
-		//	//インデックス付きインスタンス化されたプリミティブを描画
-		//	_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
-		//	idxOffset += m.indiceNum;
-		//}
-		_cmdList->DrawIndexedInstanced(pmdMaterialInfo[modelNum]->indicesNum, 1, 0, 0, 0);
+
+
+
+		_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[/*modelNum*/i]->GetMultipassSRVHeap().GetAddressOf());
+
+		auto srvHandle = bufferHeapCreator[/*modelNum*/i]->GetMultipassSRVHeap()->GetGPUDescriptorHandleForHeapStart();
+		srvHandle.ptr += buffSize * 4; // depthmap
+		_cmdList->SetGraphicsRootDescriptorTable(2, srvHandle);
+		srvHandle.ptr += buffSize * 2; // scene matrix
+		_cmdList->SetGraphicsRootDescriptorTable(0, srvHandle);
+		srvHandle.ptr += buffSize; // normalmap
+		_cmdList->SetGraphicsRootDescriptorTable(3, srvHandle);
+
+		unsigned int idxOffset = 0;
+		//インデックス付きインスタンス化されたプリミティブを描画
+		for (auto m : pmdMaterialInfo[/*modelNum*/i]->materials)
+		{
+			//インデックス付きインスタンス化されたプリミティブを描画
+			_cmdList->DrawIndexedInstanced(m.indiceNum, 1, idxOffset, 0, 0);
+			idxOffset += m.indiceNum;
+		}
+		//_cmdList->DrawIndexedInstanced(pmdMaterialInfo[modelNum]->indicesNum, 1, 0, 0, 0);
 
 	}
 
