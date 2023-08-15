@@ -10,7 +10,7 @@ float SsaoPs(Output input) : SV_TARGET
     float4 rpos = (0, 0, 0, 0);
 
     float dp = normalmap.Sample(smp, float2(input.svpos.x / w, input.svpos.y / h));
-    return dp;
+    //return dp;
     // SSAO
 
     float div = 0.0f;

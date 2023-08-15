@@ -117,6 +117,8 @@ private:
 	void DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize); // draw ambient occlusion
 	void DrawBackBuffer(UINT buffSize); // draw back buffers
 
+	void DrawModel4AO(unsigned int modelNum, UINT buffSize);
+
 public:
 	///Applicationのシングルトンインスタンスを得る
 	static AppD3DX12& Instance();
