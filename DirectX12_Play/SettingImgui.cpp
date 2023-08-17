@@ -84,7 +84,7 @@ void SettingImgui::DrawDateOfImGUI(
 	//auto cmdList = _cmdList;
 	auto handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
 	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 7;
-	const float clear_color_with_alpha[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
+	const float clear_color_with_alpha[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	_cmdList->ClearRenderTargetView(handle, clear_color_with_alpha, 0, nullptr);
 	_cmdList->OMSetRenderTargets(1, &handle, FALSE, nullptr);
 	_cmdList->SetDescriptorHeaps(1, imguiSRVHeap.GetAddressOf());

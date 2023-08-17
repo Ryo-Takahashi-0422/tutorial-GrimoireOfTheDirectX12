@@ -12,7 +12,7 @@ float4 psBuffer(Output input) : SV_TARGET
     //return float4(depthDiff, depthDiff, depthDiff, 1);
 
     
-    return FOVEffect(shrinkedModel, smp, input.uv, 0.0f);// +imgui.Sample(smp, input.uv);
+    return FOVEffect(shrinkedModel, smp, input.uv, 0.0f) + imgui.Sample(smp, input.uv);
     return BloomEffect(shrinkedbloommap, input.uv);
 }
 

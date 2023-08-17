@@ -1314,8 +1314,8 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 
 	//if (bbIdx == 0)
 	//{
-	//	gHandle2.ptr += buffSize;
-	//	_cmdList->SetGraphicsRootDescriptorTable(12, gHandle2); // imgui
+		gHandle2.ptr += buffSize;
+		_cmdList->SetGraphicsRootDescriptorTable(12, gHandle2); // imgui
 	//}
 
 	_cmdList->DrawInstanced(4, 1, 0, 0);
