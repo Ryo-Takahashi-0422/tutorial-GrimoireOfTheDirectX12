@@ -20,7 +20,7 @@ public:
 	void DrawDateOfImGUI(
 		ComPtr<ID3D12Device> _dev,
 		ComPtr<ID3D12GraphicsCommandList> _cmdList,
-		std::vector<ComPtr<ID3D12Resource>> pResoures,
+		ComPtr<ID3D12Resource> pResoures,
 		BufferHeapCreator*/*std::vector<BufferHeapCreator*>*/ bufferHeapCreator,
 		UINT backBufferIndex);
 

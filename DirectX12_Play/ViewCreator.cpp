@@ -280,6 +280,16 @@ void ViewCreator::CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev)
 	);
 
 	multipassRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	// No.8 imgui
+	_dev->CreateRenderTargetView
+	(
+		bufferHeapCreator->GetImguiBuff().Get(),
+		&multipassRTVDesc,
+		handle
+	);
 }
 
 void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
@@ -403,6 +413,15 @@ void ViewCreator::CreateSRV4Multipasses(ComPtr<ID3D12Device> _dev)
 	(
 		bufferHeapCreator->GetAOBuff().Get(),
 		&srv4AO,
+		handle4SRVMultipass
+	);
+
+	handle4SRVMultipass.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	// No.13 imgui
+	_dev->CreateShaderResourceView
+	(
+		bufferHeapCreator->GetImguiBuff().Get(),
+		&multipassSRVDesc,
 		handle4SRVMultipass
 	);
 }

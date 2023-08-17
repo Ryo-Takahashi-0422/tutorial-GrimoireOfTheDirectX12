@@ -677,26 +677,25 @@ void AppD3DX12::Run() {
 				
 		DrawAmbientOcclusion(0, cbv_srv_Size); // draw AO
 		
+		auto k = _swapChain->GetCurrentBackBufferIndex();
+		settingImgui->DrawDateOfImGUI(_dev, _cmdList, bufferHeapCreator[0]->GetImguiBuff(), bufferHeapCreator[0], k);
+
 		DrawBackBuffer(cbv_srv_Size); // draw back buffer
 
 		// imgui _backBuffer[2] is rendering resource for it of backbuffer
-		auto k = _swapChain->GetCurrentBackBufferIndex();
-		if (k == 1)
-		{
-		settingImgui->DrawDateOfImGUI(_dev, _cmdList4Imgui, _backBuffers, bufferHeapCreator[0], k);
-		}
+		//auto k = _swapChain->GetCurrentBackBufferIndex();
+		//if (k == 1)
+		//{
+		//settingImgui->DrawDateOfImGUI(_dev, _cmdList, bufferHeapCreator[0]->GetImguiBuff(), bufferHeapCreator[0], k);
+		//}
 		
 
 		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();
-		_cmdList4Imgui->Close(); //
 
 		//コマンドキューの実行
 		ID3D12CommandList* cmdLists[] = { _cmdList.Get() };
 		_cmdQueue->ExecuteCommandLists(1, cmdLists);
-
-		ID3D12CommandList* cmdLists4Imgui[] = { _cmdList4Imgui.Get() };
-		_cmdQueue->ExecuteCommandLists(1, cmdLists4Imgui);
 
 		//ID3D12FenceのSignalはCPU側のフェンスで即時実行
 		//ID3D12CommandQueueのSignalはGPU側のフェンスで
@@ -715,10 +714,7 @@ void AppD3DX12::Run() {
 
 		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する		
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
-
-		_cmdAllocator4Imgui->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
-		_cmdList4Imgui->Reset(_cmdAllocator4Imgui.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
-		
+	
 		pmdMaterialInfo[0]->worldMat = XMMatrixTranslation(0.0f, 0, -5.0f);
 		pmdMaterialInfo[1]->worldMat = XMMatrixTranslation(-24.0f, 0, 20.0f);
 		pmdMaterialInfo[2]->worldMat = XMMatrixTranslation(15.0f, 0, 10.0f);
@@ -1315,6 +1311,12 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 
 	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(11, gHandle2); // AO
+
+	//if (bbIdx == 0)
+	//{
+	//	gHandle2.ptr += buffSize;
+	//	_cmdList->SetGraphicsRootDescriptorTable(12, gHandle2); // imgui
+	//}
 
 	_cmdList->DrawInstanced(4, 1, 0, 0);
 

@@ -55,7 +55,7 @@ HRESULT SettingImgui::Init
 void SettingImgui::DrawDateOfImGUI(
 	ComPtr<ID3D12Device> _dev,
 	ComPtr<ID3D12GraphicsCommandList> _cmdList,
-	/*ComPtr<ID3D12Resource>*/std::vector<ComPtr<ID3D12Resource>> pResoures,
+	ComPtr<ID3D12Resource>/*std::vector<ComPtr<ID3D12Resource>>*/ pResoures,
 	BufferHeapCreator*/*std::vector<BufferHeapCreator*>*/ bufferHeapCreator,
 	UINT backBufferIndex)
 {
@@ -75,15 +75,15 @@ void SettingImgui::DrawDateOfImGUI(
 
 	D3D12_RESOURCE_BARRIER barrierDesc = CD3DX12_RESOURCE_BARRIER::Transition
 	(
-		pResoures[backBufferIndex].Get(),
-		D3D12_RESOURCE_STATE_PRESENT,
+		pResoures.Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc);
 
 	//auto cmdList = _cmdList;
-	auto handle = bufferHeapCreator->GetRTVHeap()->GetCPUDescriptorHandleForHeapStart();
-	handle.ptr += backBufferIndex * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	auto handle = bufferHeapCreator->GetMultipassRTVHeap()->GetCPUDescriptorHandleForHeapStart();
+	handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * 7;
 	const float clear_color_with_alpha[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	_cmdList->ClearRenderTargetView(handle, clear_color_with_alpha, 0, nullptr);
 	_cmdList->OMSetRenderTargets(1, &handle, FALSE, nullptr);
@@ -91,7 +91,7 @@ void SettingImgui::DrawDateOfImGUI(
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), _cmdList.Get());
 
 	barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	_cmdList->ResourceBarrier(1, &barrierDesc);
 }
 

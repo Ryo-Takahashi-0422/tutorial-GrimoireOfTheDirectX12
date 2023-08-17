@@ -53,6 +53,7 @@ private:
 	ComPtr<ID3D12Resource> gaussianBuff = nullptr; // ガウスぼかし用バッファー
 	std::array<ComPtr<ID3D12Resource>, 3> _bloomBuff; // ブルーム用バッファー+shrinkedModel
 	ComPtr<ID3D12Resource> aoBuff = nullptr; // buffer for AO
+	ComPtr<ID3D12Resource> imguiBuff = nullptr; // buffer for imgui
 
 	std::vector<ComPtr<ID3D12Resource>> normalMapUploadBuff; // ノーマルマップ用アップロードバッファー
 	std::vector<ComPtr<ID3D12Resource>> normalMapReadBuff; // ノーマルマップ用リードバッファー
@@ -183,6 +184,7 @@ public:
 	ComPtr<ID3D12Resource> GetGrayTextureBuff() { return grayTextureBuff; };
 	ComPtr<ID3D12Resource> GetGaussianBuff() { return gaussianBuff; };
 	ComPtr<ID3D12Resource> GetAOBuff() { return aoBuff; };
+	ComPtr<ID3D12Resource> GetImguiBuff() { return imguiBuff; };
 
 	std::vector<ComPtr<ID3D12Resource>> GetNormalMapUploadBuff() { return normalMapUploadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetNormalMapReadBuff() { return normalMapReadBuff; };
@@ -194,6 +196,7 @@ public:
 	std::vector<ComPtr<ID3D12Resource>> GetToonUploadBuff() { return toonUploadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetToonReadBuff() { return toonReadBuff; };
 	std::array<ComPtr<ID3D12Resource>, 3> GetBloomBuff() { return _bloomBuff; };
+	
 	
 	// texture情報群
 	std::vector<DirectX::TexMetadata*> GetNormalMapMetadata() { return normalMapMetaData; };
