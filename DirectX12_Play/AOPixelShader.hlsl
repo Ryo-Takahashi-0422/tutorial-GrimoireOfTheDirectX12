@@ -17,12 +17,12 @@ float SsaoPs(Output input) : SV_TARGET
     float ao = 0.0f;
     float3 norm = normalize(input.norm.xyz);
     const int trycnt = 32;
-    const float radius = 12.0f;
+    const float radius = 15.0f;
     
     if(dp < 1.0f)
     {
         for (int i = 0; i < trycnt; ++i)
-        {
+        {            
             float rnd1 = random(float2(i * dx, i * dy)) * 2 - 1;
             float rnd2 = random(float2(rnd1, i * dy)) * 2 - 1;
             float rnd3 = random(float2(rnd2, rnd1)) * 2 - 1;
@@ -49,7 +49,7 @@ float SsaoPs(Output input) : SV_TARGET
         ao /= div;
     }
     
-    return (1.0f - ao) * 3;
+    return (1.0f - ao)*1.7;
 }
 
 float random(float2 uv)

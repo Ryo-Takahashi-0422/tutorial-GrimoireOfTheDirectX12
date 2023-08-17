@@ -25,7 +25,7 @@ BufferHeapCreator::BufferHeapCreator(PMDMaterialInfo* _pmdMaterialInfo,  Prepare
 void BufferHeapCreator::SetRTVHeapDesc()
 {
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvHeapDesc.NumDescriptors = 2;
+	rtvHeapDesc.NumDescriptors = 3;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	rtvHeapDesc.NodeMask = 0;
 }

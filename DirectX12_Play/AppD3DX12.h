@@ -11,7 +11,9 @@ private:
 	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
 	ComPtr<IDXGISwapChain4> _swapChain = nullptr;
 	ComPtr<ID3D12CommandAllocator> _cmdAllocator = nullptr;
+	ComPtr<ID3D12CommandAllocator> _cmdAllocator4Imgui = nullptr;
 	ComPtr<ID3D12GraphicsCommandList> _cmdList = nullptr;
+	ComPtr<ID3D12GraphicsCommandList> _cmdList4Imgui = nullptr;
 	ComPtr<ID3D12CommandQueue> _cmdQueue = nullptr;
 	ComPtr<ID3D10Blob> _vsBlob = nullptr; // 頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _psBlob = nullptr; // ピクセルシェーダーオブジェクト格納用
@@ -108,6 +110,9 @@ private:
 	SetRootSignature* aoRootSignature = nullptr;
 	ComPtr<ID3D10Blob> _aoVSBlob = nullptr; // AO用頂点シェーダーオブジェクト格納用
 	ComPtr<ID3D10Blob> _aoPSBlob = nullptr; // AO用ピクセルシェーダーオブジェクト格納用
+
+	// Imgui
+	SettingImgui* settingImgui = nullptr;
 
 	// draw method
 	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map

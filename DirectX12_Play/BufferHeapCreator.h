@@ -115,6 +115,8 @@ public:
 	// マルチパスSRV用ディスクリプタヒープの作成
 	HRESULT CreateMultipassSRVHeap(ComPtr<ID3D12Device> _dev);
 
+
+
 	// 頂点バッファーの作成
 	HRESULT CreateBufferOfVertex(ComPtr<ID3D12Device> _dev);
 

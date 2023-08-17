@@ -5,7 +5,7 @@ float4 psBuffer(Output input) : SV_TARGET
 {
     //return depthmap.Sample(smp, input.uv);
     float ao = aomap.Sample(smp, input.uv);
-    return float4(ao, ao, ao, 1);
+    //return float4(ao, ao, ao, 1);
     //return DefferedShading(input.uv);
     //return pow(depthmap.Sample(smp, input.uv), 20);
     

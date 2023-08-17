@@ -108,6 +108,7 @@ bool AppD3DX12::PrepareRendering() {
 	strModelPath =
 	{
 		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク.pmd",
+		//"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\初音ミク3rd_normal_A.pmd",
 		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\鏡音レン.pmd",
 		"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\model\\弱音ハク.pmd"
 	};
@@ -323,6 +324,7 @@ bool AppD3DX12::PipelineInit(){
 //初期化処理７：コマンドアロケーターを作成
 			//コマンドアロケーター生成>>コマンドリスト作成
 	result = _dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator.ReleaseAndGetAddressOf()));
+	result = _dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator4Imgui.ReleaseAndGetAddressOf()));
 
 	return true;
 }
@@ -424,7 +426,7 @@ bool AppD3DX12::ResourceInit() {
 
 // 初期化処理5：コマンドリスト生成
 	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator.Get(), nullptr, IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
-
+	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator4Imgui.Get(), nullptr, IID_PPV_ARGS(_cmdList4Imgui.ReleaseAndGetAddressOf()));
 // 初期化処理6：コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 	//cmdList->Close();
 
@@ -541,13 +543,11 @@ bool AppD3DX12::ResourceInit() {
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->invView = XMMatrixInverse(&det, viewMat);				
 		pmdMaterialInfo[i]->mapMatrix4Lightmap->eye = eye;
 
-		auto p = XMMatrixTranslation(2.0f, 3.0f, 4.0f);
-		p *= viewMat;
-		p *= projMat;
-		p *= XMMatrixInverse(&det, projMat);
-		p *= XMMatrixInverse(&det, viewMat);
-		
-		
+		//auto p = XMMatrixTranslation(2.0f, 3.0f, 4.0f);
+		//p *= viewMat;
+		//p *= projMat;
+		//p *= XMMatrixInverse(&det, projMat);
+		//p *= XMMatrixInverse(&det, viewMat);		
 
 		//マテリアル用バッファーへのマッピング
 		mappingExecuter[i]->MappingMaterialBuff();
@@ -610,6 +610,7 @@ bool AppD3DX12::ResourceInit() {
 		viewCreator[i]->CreateRTV4Multipasses(_dev);
 		viewCreator[i]->CreateSRV4Multipasses(_dev);
 	}
+
 // 初期化処理9：フェンスの生成
 	//	ID3D12Fence* _fence = nullptr;
 	//	UINT64 _fenceVal = 0;
@@ -617,6 +618,14 @@ bool AppD3DX12::ResourceInit() {
 
 // 初期化処理10：イベントハンドルの作成
 // 初期化処理11：GPUの処理完了待ち
+
+// Imgui独自の初期設定
+	settingImgui = new SettingImgui;
+
+	if (FAILED(settingImgui->Init(_dev, prepareRenderingWindow)))
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -670,12 +679,24 @@ void AppD3DX12::Run() {
 		
 		DrawBackBuffer(cbv_srv_Size); // draw back buffer
 
+		// imgui _backBuffer[2] is rendering resource for it of backbuffer
+		auto k = _swapChain->GetCurrentBackBufferIndex();
+		if (k == 1)
+		{
+		settingImgui->DrawDateOfImGUI(_dev, _cmdList4Imgui, _backBuffers, bufferHeapCreator[0], k);
+		}
+		
+
 		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();
+		_cmdList4Imgui->Close(); //
 
 		//コマンドキューの実行
 		ID3D12CommandList* cmdLists[] = { _cmdList.Get() };
 		_cmdQueue->ExecuteCommandLists(1, cmdLists);
+
+		ID3D12CommandList* cmdLists4Imgui[] = { _cmdList4Imgui.Get() };
+		_cmdQueue->ExecuteCommandLists(1, cmdLists4Imgui);
 
 		//ID3D12FenceのSignalはCPU側のフェンスで即時実行
 		//ID3D12CommandQueueのSignalはGPU側のフェンスで
@@ -692,8 +713,12 @@ void AppD3DX12::Run() {
 			CloseHandle(event);
 		}
 
-		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
+		_cmdAllocator->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する		
 		_cmdList->Reset(_cmdAllocator.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
+
+		_cmdAllocator4Imgui->Reset();//コマンド アロケーターに関連付けられているメモリを再利用する
+		_cmdList4Imgui->Reset(_cmdAllocator4Imgui.Get(), nullptr);//コマンドリストを、新しいコマンドリストが作成されたかのように初期状態にリセット
+		
 		pmdMaterialInfo[0]->worldMat = XMMatrixTranslation(0.0f, 0, -5.0f);
 		pmdMaterialInfo[1]->worldMat = XMMatrixTranslation(-24.0f, 0, 20.0f);
 		pmdMaterialInfo[2]->worldMat = XMMatrixTranslation(15.0f, 0, 10.0f);
@@ -754,6 +779,8 @@ void AppD3DX12::Run() {
 	delete peraLayout;
 	delete peraPolygon;
 	delete peraShaderCompile;	
+
+	delete settingImgui;
 
 	//delete bufferSetRootSignature;
 	//delete lightMapRootSignature;
@@ -1183,6 +1210,32 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 {
 
 	auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
+		
+	//if (bbIdx == 2)
+	//{
+	//	for (int i = 0; i < strModelNum; ++i)
+	//	{
+	//		// デプスマップ用バッファの状態を書き込み可能に戻す
+	//		auto barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
+	//		(
+	//			bufferHeapCreator[i]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
+	//			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+	//			D3D12_RESOURCE_STATE_DEPTH_WRITE
+	//		);
+
+	//		// ライトマップ用バッファの状態を書き込み可能に戻す
+	//		auto barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
+	//		(
+	//			bufferHeapCreator[i]->GetLightMapBuff().Get(),
+	//			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+	//			D3D12_RESOURCE_STATE_DEPTH_WRITE
+
+	//		);
+
+	//		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
+	//	}
+	//	return;
+	//}
 
 	//for (int i = 0; i < strModelNum; ++i)
 	//{
