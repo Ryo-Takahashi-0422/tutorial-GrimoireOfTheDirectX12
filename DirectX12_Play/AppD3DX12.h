@@ -113,6 +113,7 @@ private:
 
 	// Imgui
 	SettingImgui* settingImgui = nullptr;
+	void SetFov();
 
 	// draw method
 	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map
@@ -121,8 +122,11 @@ private:
 	void DrawPeraPolygon(unsigned int modelNum); // draw background polygon	
 	void DrawAmbientOcclusion(unsigned int modelNum, UINT buffSize); // draw ambient occlusion
 	void DrawBackBuffer(UINT buffSize); // draw back buffers
-
 	void DrawModel4AO(unsigned int modelNum, UINT buffSize);
+
+	// Matrix
+	XMMATRIX projMat;
+
 
 public:
 	///Applicationのシングルトンインスタンスを得る

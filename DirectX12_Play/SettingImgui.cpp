@@ -4,6 +4,8 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
+//float SettingImgui::fov;
+
 HRESULT SettingImgui::Init
 (
 	ComPtr<ID3D12Device> _dev,
@@ -65,9 +67,37 @@ void SettingImgui::DrawDateOfImGUI(
 
 	ImGui::Begin("Rendering Test Menu");
 	ImGui::SetWindowSize(ImVec2(400, 500), ImGuiCond_::ImGuiCond_FirstUseEver);
-	ImGui::Text("This is some useful text."); // Display some text (you can use a format strings too)
-	ImGui::Checkbox("Demo Window", &blnResult);      // Edit bools storing our window open/close state
-	ImGui::Checkbox("Another Window", &blnResult);
+	//ImGui::Text("This is some useful text."); // Display some text (you can use a format strings too)
+
+	static bool blnDebugDisp = false;
+	ImGui::Checkbox("Debug Display", &blnDebugDisp);
+	static bool blnSSAO = false;
+	ImGui::Checkbox("SSAO on/off", &blnSSAO);
+	static bool blnShadowmap = false;
+	ImGui::Checkbox("Self Shadow on/off", &blnShadowmap);
+
+	//static int radio = 0;
+	//ImGui::RadioButton("Radio 1", &radio, 0);
+	//ImGui::SameLine();
+	//ImGui::RadioButton("Radio 2", &radio, 1);
+	//ImGui::SameLine();
+	//ImGui::RadioButton("Radio 3", &radio, 2);
+
+	constexpr float pi = 3.141592653589f;
+	static float fov = XM_PIDIV2;
+	ImGui::SliderFloat("Field Of View", &fov, pi / 6.0f, pi * 5.0f / 6.0f);
+	fovValue = fov;
+
+	static float lightVec[3] = { 1.0f, -1.0f, 1.0f };
+	ImGui::SliderFloat("Light Vector", lightVec, -1.0f, 1.0f);
+
+	static float bgCol[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+	ImGui::ColorPicker4("BackGround Color", bgCol, ImGuiColorEditFlags_::ImGuiColorEditFlags_PickerHueWheel |
+		ImGuiColorEditFlags_::ImGuiColorEditFlags_AlphaBar);
+
+	static float bloomCol[3] = {};
+	ImGui::ColorPicker3("bloom color", bloomCol/*, ImGuiColorEditFlags_::ImGuiColorEditFlags_InputRGB*/);
+
 	ImGui::End();
 
 	ImGui::Render();

@@ -12,6 +12,7 @@ private:
 	HRESULT CreateBuff4Imgui(ComPtr<ID3D12Device> _dev);
 	void CreateRTV4Imgui(ComPtr<ID3D12Device> _dev);
 	bool blnResult;
+	float fovValue;
 
 public:
 	// マルチパスSRV用ディスクリプタヒープの作成
@@ -23,4 +24,7 @@ public:
 		ComPtr<ID3D12Resource> pResoures,
 		BufferHeapCreator*/*std::vector<BufferHeapCreator*>*/ bufferHeapCreator,
 		UINT backBufferIndex);
+
+	float GetFovValue() { return fovValue; };
+	
 };

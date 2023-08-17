@@ -480,7 +480,7 @@ bool AppD3DX12::ResourceInit() {
 		);
 
 		//プロジェクション(射影)行列の生成・乗算
-		auto projMat = XMMatrixPerspectiveFovLH
+		projMat = XMMatrixPerspectiveFovLH
 		(
 			XM_PIDIV2, // 画角90°
 			static_cast<float>(prepareRenderingWindow->GetWindowHeight()) / static_cast<float>(prepareRenderingWindow->GetWindowWidth()),
@@ -737,6 +737,10 @@ void AppD3DX12::Run() {
 			std::copy(boneMatrices[i]->begin(), boneMatrices[i]->end(), pmdMaterialInfo[i]->mapMatrix->bones);
 			std::copy(boneMatrices[i]->begin(), boneMatrices[i]->end(), pmdMaterialInfo[i]->mapMatrix4Lightmap->bones); // for AO!!!
 		}
+
+		// update by imgui
+		SetFov();
+
 		//フリップしてレンダリングされたイメージをユーザーに表示
 		_swapChain->Present(1, 0);		
 	}
@@ -1498,4 +1502,20 @@ void AppD3DX12::DrawModel4AO(unsigned int modelNum, UINT buffSize)
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
 	_cmdList->ResourceBarrier(1, &barrierDesc4Bloom);
+}
+
+void AppD3DX12::SetFov()
+{
+	projMat = XMMatrixPerspectiveFovLH
+	(		
+		settingImgui->GetFovValue(), // 画角90°
+		static_cast<float>(prepareRenderingWindow->GetWindowHeight()) / static_cast<float>(prepareRenderingWindow->GetWindowWidth()),
+		1.0, // ニア―クリップ
+		100.0 // ファークリップ
+	);
+
+	for (int i = 0; i < strModelNum; ++i)
+	{
+		pmdMaterialInfo[i]->mapMatrix->proj = projMat;
+	}
 }
