@@ -23,6 +23,4 @@ public:
 		ComPtr<ID3D12Resource> pResoures,
 		BufferHeapCreator*/*std::vector<BufferHeapCreator*>*/ bufferHeapCreator,
 		UINT backBufferIndex);
-
-	//ComPtr<ID3D12DescriptorHeap> GetImguiDHeap() { return imguiHeap; };
 };
