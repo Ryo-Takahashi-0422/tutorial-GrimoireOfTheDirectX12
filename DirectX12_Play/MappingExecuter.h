@@ -1,4 +1,5 @@
 #pragma once
+#include <SettingImgui.h>
 
 class MappingExecuter
 {
@@ -12,6 +13,8 @@ private:
 	char* mapMaterial = nullptr;
 	uint8_t* mapforImg = nullptr;
 	float* mappedweight = nullptr;
+	
+	PostSetting* mappedPostSetting;
 
 	HRESULT result;
 
@@ -33,5 +36,8 @@ public:
 	// ガウシアンぼかしバッファーへのウェイト値マッピング
 	void MappingGaussianWeight(std::vector<float> weights);
 
+	// imgui PostSettingへのマッピング
+	void MappingPostSetting();
 
+	PostSetting* GetMappedPostSetting() { return mappedPostSetting; };
 };

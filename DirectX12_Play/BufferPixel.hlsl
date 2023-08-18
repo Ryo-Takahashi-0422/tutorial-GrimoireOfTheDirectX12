@@ -3,17 +3,27 @@
 // entry point for BufferShaderCompile
 float4 psBuffer(Output input) : SV_TARGET
 {
-    //return depthmap.Sample(smp, input.uv);
-    float ao = aomap.Sample(smp, input.uv);
-    //return float4(ao, ao, ao, 1);
-    //return DefferedShading(input.uv);
-    //return pow(depthmap.Sample(smp, input.uv), 20);
+    float4 result = { 0, 0, 0, 0 };    
+    result = model.Sample(smp, input.uv); // default
     
-    //return float4(depthDiff, depthDiff, depthDiff, 1);
-
+    if (isFoV)
+    {
+        result = FOVEffect(shrinkedModel, smp, input.uv, 0.0f);
+    }   
     
-    return FOVEffect(shrinkedModel, smp, input.uv, 0.0f) + imgui.Sample(smp, input.uv);
-    return BloomEffect(shrinkedbloommap, input.uv);
+    if (isSSAO)
+    {
+        float ao = aomap.Sample(smp, input.uv);
+        float4 aoValue = float4(ao, ao, ao, 1);
+        result *= aoValue;
+    }
+    
+    if (isBloom)
+    {
+        result += BloomEffect(shrinkedbloommap, input.uv);
+    }    
+        
+    return result + imgui.Sample(smp, input.uv);
 }
 
 float4 MakePAL(float4 col)
@@ -285,9 +295,9 @@ float4 BloomEffect(Texture2D _texture, float2 _uv)
     }
     
     // all 1 = white bloom. xy /= 10 is blue cool bloom.
-    bloomAccum.xy /= 10;
+    bloomAccum.xyz /= 10;
     
-    return model.Sample(smp, _uv) + saturate(bloomAccum);
+    return /*model.Sample(smp, _uv) + */float4(saturate(bloomAccum.xyz * bloomCol), bloomAccum.w);
 }
 
 float4 FOVEffect(Texture2D _texture, SamplerState _smp, float2 _uv, float focusDistance)

@@ -18,6 +18,7 @@ private:
 	ComPtr<ID3D12DescriptorHeap> cbvsrvHeap = nullptr; // 行列CBV, SRV用ディスクリプタヒープ
 	ComPtr<ID3D12DescriptorHeap> multipassRTVHeap = nullptr; // マルチパスレンダーターゲット用ディスクリプタヒープ
 	ComPtr<ID3D12DescriptorHeap> multipassSRVHeap = nullptr; // マルチパステクスチャ用ディスクリプタヒープ
+	//ComPtr<ID3D12DescriptorHeap> imguiPostSettingHeap = nullptr; // imgui PostSetting構造体用ディスクリプタヒープ
 
 	D3D12_HEAP_PROPERTIES vertexHeapProps = {}; // 頂点、頂点インデックス用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES depthHeapProps = {}; // 深度用ヒーププロパティ
@@ -53,7 +54,8 @@ private:
 	ComPtr<ID3D12Resource> gaussianBuff = nullptr; // ガウスぼかし用バッファー
 	std::array<ComPtr<ID3D12Resource>, 3> _bloomBuff; // ブルーム用バッファー+shrinkedModel
 	ComPtr<ID3D12Resource> aoBuff = nullptr; // buffer for AO
-	ComPtr<ID3D12Resource> imguiBuff = nullptr; // buffer for imgui
+	ComPtr<ID3D12Resource> imguiBuff = nullptr; // buffer for imgui rendering
+	ComPtr<ID3D12Resource> imguiPostSettingBuff = nullptr; // buffer for imgui PostSetting
 
 	std::vector<ComPtr<ID3D12Resource>> normalMapUploadBuff; // ノーマルマップ用アップロードバッファー
 	std::vector<ComPtr<ID3D12Resource>> normalMapReadBuff; // ノーマルマップ用リードバッファー
@@ -79,6 +81,9 @@ private:
 	HRESULT result;
 
 	unsigned long materialBuffSize;
+
+	
+
 
 public:
 	BufferHeapCreator(PMDMaterialInfo* _pmdMaterialInfo, PrepareRenderingWindow* _prepareRenderingWindow, TextureLoader* _textureLoader);
@@ -159,6 +164,9 @@ public:
 
 	// 白黒グレー各テクスチャバッファ作成
 	void CreateTextureBuffers(ComPtr<ID3D12Device> _dev);
+
+	// imgui用にﾃﾞｨｽｸﾘﾌﾟﾀﾋｰﾌﾟ、ﾘｿｰｽを作成する
+	HRESULT CreateBuff4Imgui(ComPtr<ID3D12Device> _dev, size_t sizeofPostSetting);
 	
 	// 外部公開用
 	unsigned long GetMaterialBuffSize() { return materialBuffSize; };
@@ -167,6 +175,7 @@ public:
 	ComPtr<ID3D12DescriptorHeap> GetCBVSRVHeap() { return cbvsrvHeap; };
 	ComPtr<ID3D12DescriptorHeap> GetMultipassRTVHeap() { return multipassRTVHeap; };
 	ComPtr<ID3D12DescriptorHeap> GetMultipassSRVHeap() { return multipassSRVHeap; };
+	//ComPtr<ID3D12DescriptorHeap> GetImguiPostSettingHeap() { return imguiPsotSettingHeap; };
 
 	ComPtr<ID3D12Resource> GetVertBuff() { return vertBuff; };
 	ComPtr<ID3D12Resource> GetIdxBuff() { return idxBuff; };
@@ -185,6 +194,7 @@ public:
 	ComPtr<ID3D12Resource> GetGaussianBuff() { return gaussianBuff; };
 	ComPtr<ID3D12Resource> GetAOBuff() { return aoBuff; };
 	ComPtr<ID3D12Resource> GetImguiBuff() { return imguiBuff; };
+	ComPtr<ID3D12Resource> GetImguiPostSettingBuff() { return imguiPostSettingBuff; };
 
 	std::vector<ComPtr<ID3D12Resource>> GetNormalMapUploadBuff() { return normalMapUploadBuff; };
 	std::vector<ComPtr<ID3D12Resource>> GetNormalMapReadBuff() { return normalMapReadBuff; };

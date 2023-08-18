@@ -114,6 +114,18 @@ private:
 	// Imgui
 	SettingImgui* settingImgui = nullptr;
 	void SetFov();
+	float SetBackGroundColor(int rgbaNum);
+	void SetSelfShadowLight(int modelNum);
+	void SetSelfShadowSwitch(int modelNum);
+	void SetBloomSwitch(int modelNum);
+	void SetFoVSwitch();
+	void SetSSAOSwitch();
+	void SetBloomColor();
+
+	DirectX::XMVECTOR light;
+	DirectX::XMVECTOR eyePos;
+	DirectX::XMVECTOR targetPos;
+	DirectX::XMVECTOR upVec;
 
 	// draw method
 	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map
@@ -126,7 +138,6 @@ private:
 
 	// Matrix
 	XMMATRIX projMat;
-
 
 public:
 	///Applicationのシングルトンインスタンスを得る

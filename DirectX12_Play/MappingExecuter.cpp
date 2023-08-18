@@ -5,6 +5,7 @@ MappingExecuter::MappingExecuter(PMDMaterialInfo* _pmdMaterialInfo, BufferHeapCr
 {
 	pmdMaterialInfo = _pmdMaterialInfo;
 	bufferHeapCreator = _bufferHeapCreator;
+	mappedPostSetting = new PostSetting{};
 }
 
 void MappingExecuter::MappingVertBuff()
@@ -63,4 +64,10 @@ void MappingExecuter::MappingGaussianWeight(std::vector<float> weights)
 	bufferHeapCreator->GetGaussianBuff()->Map(0, nullptr, (void**)&mappedweight);
 	std::copy(weights.begin(), weights.end(), mappedweight);
 	bufferHeapCreator->GetGaussianBuff()->Unmap(0, nullptr);
+}
+
+void MappingExecuter::MappingPostSetting()
+{
+	
+	auto result = bufferHeapCreator->GetImguiPostSettingBuff()->Map(0, nullptr, (void**)&mappedPostSetting);
 }

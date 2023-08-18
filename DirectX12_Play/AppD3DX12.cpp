@@ -513,11 +513,11 @@ bool AppD3DX12::ResourceInit() {
 		//行列用定数バッファーのマッピング
 		// 平面、ライト座標
 		_planeNormalVec = XMFLOAT4(0, 1, 0, 0);
+		eyePos = XMLoadFloat3(&eye);
+		targetPos = XMLoadFloat3(&target);
+		upVec = XMLoadFloat3(&up);
 		lightVec = XMFLOAT3(-0.5f, 1, -0.5f);
-		auto light = XMLoadFloat3(&lightVec);
-		auto eyePos = XMLoadFloat3(&eye);
-		auto targetPos = XMLoadFloat3(&target);
-		auto upVec = XMLoadFloat3(&up);
+		light = XMLoadFloat3(&lightVec);
 		light = targetPos + XMVector3Normalize(light) * XMVector3Length(XMVectorSubtract(targetPos, eyePos)).m128_f32[0];
 		XMVECTOR det;
 
@@ -625,8 +625,15 @@ bool AppD3DX12::ResourceInit() {
 	if (FAILED(settingImgui->Init(_dev, prepareRenderingWindow)))
 	{
 		return false;
-	}
+	}	
 
+	for (int i = 0; i < strModelNum; ++i)
+	{
+		bufferHeapCreator[i]->CreateBuff4Imgui(_dev, settingImgui->GetPostSettingSize());
+		viewCreator[i]->CreateCBV4ImguiPostSetting(_dev);
+		mappingExecuter[i]->MappingPostSetting();
+	}
+	
 	return true;
 }
 
@@ -653,19 +660,18 @@ void AppD3DX12::Run() {
 			break;
 		}
 
+		auto k = _swapChain->GetCurrentBackBufferIndex();
+		settingImgui->DrawDateOfImGUI(_dev, _cmdList, bufferHeapCreator[0]->GetImguiBuff(), bufferHeapCreator[0], k);
+
 		for (int i = 0; i < strModelNum; ++i)
 		{
-			//auto dsvh = bufferHeapCreator[i]->GetDSVHeap()->GetCPUDescriptorHandleForHeapStart();
-
 			DrawLightMap(i, cbv_srv_Size); // draw lightmap
-
 			DrawPeraPolygon(i); // draw background polygon
-
-			//DrawModel(i, cbv_srv_Size); // draw pmd model
-
-			//DrawShrinkTextureForBlur(i); // draw shrink buffer
+		    SetSelfShadowLight(i);			
+			SetSelfShadowSwitch(i);
+			SetBloomSwitch(i);
 		}
-
+		
 		DrawModel(0, cbv_srv_Size); // draw pmd model
 
 		for (int i = 1; i < strModelNum; ++i)
@@ -673,22 +679,13 @@ void AppD3DX12::Run() {
 			DrawModel4AO(i, cbv_srv_Size); // draw pmd model for AO to hand over Depth, Normal map.
 		}
 
-		DrawShrinkTextureForBlur(0, cbv_srv_Size); // draw shrink buffer
-				
-		DrawAmbientOcclusion(0, cbv_srv_Size); // draw AO
-		
-		auto k = _swapChain->GetCurrentBackBufferIndex();
-		settingImgui->DrawDateOfImGUI(_dev, _cmdList, bufferHeapCreator[0]->GetImguiBuff(), bufferHeapCreator[0], k);
+		DrawShrinkTextureForBlur(0, cbv_srv_Size); // draw shrink buffer				
+		DrawAmbientOcclusion(0, cbv_srv_Size); // draw AO	
+		SetFoVSwitch();
+		SetSSAOSwitch();
+		SetBloomColor();
 
 		DrawBackBuffer(cbv_srv_Size); // draw back buffer
-
-		// imgui _backBuffer[2] is rendering resource for it of backbuffer
-		//auto k = _swapChain->GetCurrentBackBufferIndex();
-		//if (k == 1)
-		//{
-		//settingImgui->DrawDateOfImGUI(_dev, _cmdList, bufferHeapCreator[0]->GetImguiBuff(), bufferHeapCreator[0], k);
-		//}
-		
 
 		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();
@@ -732,8 +729,6 @@ void AppD3DX12::Run() {
 			// モーション用行列の更新と書き込み
 			pmdActor[i]->MotionUpdate(pmdActor[i]->GetDuration());
 			pmdActor[i]->UpdateVMDMotion();
-			//pmdActor->RecursiveMatrixMultiply(XMMatrixIdentity());
-			//pmdActor->IKSolve();
 			std::copy(boneMatrices[i]->begin(), boneMatrices[i]->end(), pmdMaterialInfo[i]->mapMatrix->bones);
 			std::copy(boneMatrices[i]->begin(), boneMatrices[i]->end(), pmdMaterialInfo[i]->mapMatrix4Lightmap->bones); // for AO!!!
 		}
@@ -939,7 +934,12 @@ void AppD3DX12::DrawModel(unsigned int modelNum, UINT buffSize)
 	_cmdList->ClearDepthStencilView(dsvh, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr); // 深度バッファーをクリア
 
 	//画面クリア
-	float clearColor[] = { 0.1f, 0.1f, 0.2f, 1.0f };
+	float clearColor[4];// = { 0.1f, 0.1f, 0.2f, 1.0f };
+	
+	for (int i = 0; i < 4; ++i)
+	{
+		clearColor[i] = SetBackGroundColor(i);
+	}
 	_cmdList->ClearRenderTargetView(handles[0], clearColor, 0, nullptr);
 	_cmdList->ClearRenderTargetView(handles[1], clearColor, 0, nullptr);
 	clearColor[0] = 0;
@@ -1002,8 +1002,8 @@ void AppD3DX12::DrawModel(unsigned int modelNum, UINT buffSize)
 			materialHandle.ptr += materialHInc;
 			idxOffset += m.indiceNum;
 		}
-
 	}
+
 	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -1210,43 +1210,7 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 {
 
 	auto bbIdx = _swapChain->GetCurrentBackBufferIndex();//現在のバックバッファをインデックスにて取得
-		
-	//if (bbIdx == 2)
-	//{
-	//	for (int i = 0; i < strModelNum; ++i)
-	//	{
-	//		// デプスマップ用バッファの状態を書き込み可能に戻す
-	//		auto barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
-	//		(
-	//			bufferHeapCreator[i]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
-	//			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-	//			D3D12_RESOURCE_STATE_DEPTH_WRITE
-	//		);
-
-	//		// ライトマップ用バッファの状態を書き込み可能に戻す
-	//		auto barrierDesc4LightMap = CD3DX12_RESOURCE_BARRIER::Transition
-	//		(
-	//			bufferHeapCreator[i]->GetLightMapBuff().Get(),
-	//			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-	//			D3D12_RESOURCE_STATE_DEPTH_WRITE
-
-	//		);
-
-	//		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
-	//	}
-	//	return;
-	//}
-
-	//for (int i = 0; i < strModelNum; ++i)
-	//{
-	//	// デプスマップ用バッファの状態を読み込み可能に変える
-	//	D3D12_RESOURCE_BARRIER barrierDesc4DepthMap = CD3DX12_RESOURCE_BARRIER::Transition
-	//	(
-	//		bufferHeapCreator[i]->/*GetDepthMapBuff*/GetDepthBuff().Get(),
-	//		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-	//		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-	//	);
-	//}
+	
 	_cmdList->RSSetViewports(1, prepareRenderingWindow->GetViewPortPointer()); // 実は重要
 	_cmdList->RSSetScissorRects(1, prepareRenderingWindow->GetRectPointer()); // 実は重要
 
@@ -1268,8 +1232,6 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 
 	float clsClr[4] = { 0.2,0.5,0.5,1.0 };
 	_cmdList->ClearRenderTargetView(rtvHeapPointer, clsClr, 0, nullptr);
-	
-
 
 	// 作成したﾃｸｽﾁｬの利用処理
 	_cmdList->SetGraphicsRootSignature(/*peraSetRootSignature*/bufferSetRootSignature->GetRootSignature().Get());
@@ -1316,11 +1278,11 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 	gHandle2.ptr += buffSize;
 	_cmdList->SetGraphicsRootDescriptorTable(11, gHandle2); // AO
 
-	//if (bbIdx == 0)
-	//{
-		gHandle2.ptr += buffSize;
-		_cmdList->SetGraphicsRootDescriptorTable(12, gHandle2); // imgui
-	//}
+	gHandle2.ptr += buffSize;
+	_cmdList->SetGraphicsRootDescriptorTable(12, gHandle2); // imgui
+
+	gHandle2.ptr += buffSize;
+	_cmdList->SetGraphicsRootDescriptorTable(13, gHandle2); // imgui PostSetting
 
 	_cmdList->DrawInstanced(4, 1, 0, 0);
 
@@ -1351,13 +1313,6 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 		_cmdList->ResourceBarrier(1, &barrierDesc4LightMap);
 	}
 }
-
-
-
-
-
-
-
 
 void AppD3DX12::DrawModel4AO(unsigned int modelNum, UINT buffSize)
 {
@@ -1478,7 +1433,6 @@ void AppD3DX12::DrawModel4AO(unsigned int modelNum, UINT buffSize)
 			materialHandle.ptr += materialHInc;
 			idxOffset += m.indiceNum;
 		}
-
 	
 	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -1517,5 +1471,63 @@ void AppD3DX12::SetFov()
 	for (int i = 0; i < strModelNum; ++i)
 	{
 		pmdMaterialInfo[i]->mapMatrix->proj = projMat;
+		pmdMaterialInfo[i]->mapMatrix4Lightmap->proj = projMat;
+	}
+}
+
+float AppD3DX12::SetBackGroundColor(int rgbaNum)
+{
+	assert(rgbaNum < 4);
+	float colorValue = settingImgui->GetBGColor(rgbaNum);
+	
+	return colorValue;
+
+}
+
+void AppD3DX12::SetSelfShadowLight(int modelNum)
+{
+	float lightVec[3];
+	XMFLOAT3 lightVecFloat3 = { 0.0f,0.0f,0.0f };
+
+	for (int rgbNum = 0; rgbNum < 3; ++rgbNum)
+	{
+		lightVec[rgbNum] = settingImgui->GetLightVector(rgbNum);
+		pmdMaterialInfo[modelNum]->mapMatrix->lightVec[rgbNum] = lightVec[rgbNum];
+	}
+
+	lightVecFloat3.x = lightVec[0];
+	lightVecFloat3.y = lightVec[1];
+	lightVecFloat3.z = lightVec[2];
+
+	light = XMLoadFloat3(&lightVecFloat3);
+	light = targetPos + XMVector3Normalize(light) * XMVector3Length(XMVectorSubtract(targetPos, eyePos)).m128_f32[0];	
+	pmdMaterialInfo[modelNum]->mapMatrix->lightCamera = XMMatrixLookAtLH(light, targetPos, upVec) * XMMatrixOrthographicLH(40, 40, 1.0f, 100.0f);
+}
+
+void AppD3DX12::SetSelfShadowSwitch(int modelNum)
+{
+	pmdMaterialInfo[modelNum]->mapMatrix->isSelfShadow = settingImgui->GetShadowmapOnOffBool();
+}
+
+void AppD3DX12::SetBloomSwitch(int modelNum)
+{
+	mappingExecuter[modelNum]->GetMappedPostSetting()->isBloom = settingImgui->GetBloomOnOffBool();
+}
+
+void AppD3DX12::SetFoVSwitch()
+{
+	mappingExecuter[0]->GetMappedPostSetting()->isFoV = settingImgui->GetFoVBool();
+}
+
+void AppD3DX12::SetSSAOSwitch()
+{
+	mappingExecuter[0]->GetMappedPostSetting()->isSSAO = settingImgui->GetSSAOBool();
+}
+
+void AppD3DX12::SetBloomColor()
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		mappingExecuter[0]->GetMappedPostSetting()->bloomCol[i] = settingImgui->GetBloomValue(i);
 	}
 }

@@ -28,6 +28,17 @@ cbuffer SceneBuffer : register(b1) // affine transformation matrix
     matrix invProj; // inverse matrix of projection matrix
     matrix bones[256]; // bone matrix
     
+    float3 lightVec;
+    bool isSelfShadow;
+};
+
+cbuffer PostSetting : register(b2) // imgui PostSetting
+{
+    bool isFoV;
+    float3 bloomCol;
+    bool isSSAO;
+    float dummy;
+    bool isBloom;    
 };
 
 struct Output

@@ -31,11 +31,29 @@ void ViewCreator::CreateCBV4Matrix(ComPtr<ID3D12Device> _dev)
 	{
 		handle4SRVMultipass = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
 	}
-	handle4SRVMultipass.ptr += inc * 6;
+	handle4SRVMultipass.ptr += inc * 6; // 7ŒÂ–Ú
 
 	_dev->CreateConstantBufferView
 	(
 		&cbvDesc4MultipassMatrix,
+		handle4SRVMultipass
+	);
+}
+
+void ViewCreator::CreateCBV4ImguiPostSetting(ComPtr<ID3D12Device> _dev)
+{
+	// imgui PostSetting—p‚É—pˆÓ
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc4ImguiPostSetting;
+	cbvDesc4ImguiPostSetting.BufferLocation = bufferHeapCreator->GetImguiPostSettingBuff()->GetGPUVirtualAddress();
+	cbvDesc4ImguiPostSetting.SizeInBytes = bufferHeapCreator->GetImguiPostSettingBuff()->GetDesc().Width;
+
+	auto handle4SRVMultipass = bufferHeapCreator->GetMultipassSRVHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto inc = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	handle4SRVMultipass.ptr += inc * 13; // 14ŒÂ–Ú
+
+	_dev->CreateConstantBufferView
+	(
+		&cbvDesc4ImguiPostSetting,
 		handle4SRVMultipass
 	);
 }

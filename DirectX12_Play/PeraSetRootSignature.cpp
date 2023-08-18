@@ -22,6 +22,7 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	descTableRange[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 8); // shirinked Model
 	descTableRange[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9); // AO
 	descTableRange[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10); // imgui
+	descTableRange[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // imgui PostSetting
 
 	rootParam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParam[0].DescriptorTable.NumDescriptorRanges = 1;
@@ -88,7 +89,12 @@ HRESULT PeraSetRootSignature::SetRootsignatureParam(ComPtr<ID3D12Device> _dev) {
 	rootParam[12].DescriptorTable.pDescriptorRanges = &descTableRange[12];
 	rootParam[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	rootSignatureDesc.NumParameters = 13;
+	rootParam[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParam[13].DescriptorTable.NumDescriptorRanges = 1;
+	rootParam[13].DescriptorTable.pDescriptorRanges = &descTableRange[13];
+	rootParam[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	rootSignatureDesc.NumParameters = 14;
 	rootSignatureDesc.pParameters = rootParam;
 	rootSignatureDesc.NumStaticSamplers = 1;
 	rootSignatureDesc.pStaticSamplers = &sampler;

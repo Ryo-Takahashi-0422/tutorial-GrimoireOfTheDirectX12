@@ -38,8 +38,9 @@ using namespace DirectX;
 		XMMATRIX invProj; // inverse projection matrix
 		XMMATRIX invView; // inverted view matrix
 		XMMATRIX bones[256]; // pmd bone matrix
-		//XMMATRIX invProj; // inverse projection matrix
 		
+		float lightVec[3]; // vector of light from imgui
+		bool isSelfShadow; // Self Shadow on/off
 	};
 
 	//マテリアル読み込み用の構造体2セット

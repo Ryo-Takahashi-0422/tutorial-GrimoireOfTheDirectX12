@@ -28,6 +28,9 @@ cbuffer SceneBuffer : register(b0) // ïœä∑çsóÒ
     matrix invProj; // inverse matrix of projection matrix
     matrix invView; // inverted view matrix 
     matrix bones[256]; // bone matrix
+    
+    float3 lightVec;
+    bool isSelfShadow;
 };
 
 cbuffer Material : register(b1)

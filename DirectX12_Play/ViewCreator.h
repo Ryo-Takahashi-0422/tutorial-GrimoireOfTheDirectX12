@@ -34,6 +34,7 @@ private:
 public:
 	ViewCreator(PMDMaterialInfo* _pmdMaterialInfo, BufferHeapCreator* _bufferHeapCreator);
 	void CreateCBV4Matrix(ComPtr<ID3D12Device> _dev); // 行列用cbvを生成 戻り値がvoidなのに注意
+	void CreateCBV4ImguiPostSetting(ComPtr<ID3D12Device> _dev); // imgui PostSetting用
 	void CreateDSVWrapper(ComPtr<ID3D12Device> _dev); //デプスステンシルビュー作成
 	void CreateCBVSRV4MateriallTextureSph(ComPtr<ID3D12Device> _dev); // マテリアル、テクスチャ、sphファイル用のCBV,SRVをまとめて作成
 	void CreateRTV4Multipasses(ComPtr<ID3D12Device> _dev); // まとめてマルチパス用RTV作成

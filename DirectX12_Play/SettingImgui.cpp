@@ -69,34 +69,53 @@ void SettingImgui::DrawDateOfImGUI(
 	ImGui::SetWindowSize(ImVec2(400, 500), ImGuiCond_::ImGuiCond_FirstUseEver);
 	//ImGui::Text("This is some useful text."); // Display some text (you can use a format strings too)
 
-	static bool blnDebugDisp = false;
-	ImGui::Checkbox("Debug Display", &blnDebugDisp);
+	static bool blnFoV = false;
+	ImGui::Checkbox("Field of View on/off", &blnFoV);
+	isFoV = blnFoV;
+
 	static bool blnSSAO = false;
 	ImGui::Checkbox("SSAO on/off", &blnSSAO);
+	isSSAO = blnSSAO;
+
 	static bool blnShadowmap = false;
 	ImGui::Checkbox("Self Shadow on/off", &blnShadowmap);
+	isSelfShadowOn = blnShadowmap;
 
-	//static int radio = 0;
-	//ImGui::RadioButton("Radio 1", &radio, 0);
-	//ImGui::SameLine();
-	//ImGui::RadioButton("Radio 2", &radio, 1);
-	//ImGui::SameLine();
-	//ImGui::RadioButton("Radio 3", &radio, 2);
+	static bool blnBloom = false;
+	ImGui::Checkbox("Bloom on/off", &blnBloom);
+	isBloomOn = blnBloom;
 
 	constexpr float pi = 3.141592653589f;
 	static float fov = XM_PIDIV2;
 	ImGui::SliderFloat("Field Of View", &fov, pi / 6.0f, pi * 5.0f / 6.0f);
-	fovValue = fov;
+	fovValueExp = fov;
 
-	static float lightVec[3] = { 1.0f, -1.0f, 1.0f };
-	ImGui::SliderFloat("Light Vector", lightVec, -1.0f, 1.0f);
+	static float lightVec[3] = { -1.0f, 1.0f, -0.5f };
+	// lightVec.x
+	ImGui::SliderFloat("Light Vector.x", &lightVec[0], 1.0f, -1.0f);
+	// lightVec.y
+	ImGui::SliderFloat("Light Vector.y", &lightVec[1], 1.0f, -1.0f);
+	// lightVec.y
+	ImGui::SliderFloat("Light Vector.z", &lightVec[2], 1.0f, -1.0f);
+	for (int i = 0; i < 3; ++i)
+	{
+		lightVecExp[i] = lightVec[i];
+	}
 
 	static float bgCol[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
 	ImGui::ColorPicker4("BackGround Color", bgCol, ImGuiColorEditFlags_::ImGuiColorEditFlags_PickerHueWheel |
 		ImGuiColorEditFlags_::ImGuiColorEditFlags_AlphaBar);
+	for (int i = 0; i < 4; ++i)
+	{
+		bgColorExp[i] = bgCol[i];
+	}
 
 	static float bloomCol[3] = {};
 	ImGui::ColorPicker3("bloom color", bloomCol/*, ImGuiColorEditFlags_::ImGuiColorEditFlags_InputRGB*/);
+	for (int i = 0; i < 3; ++i)
+	{
+		bloomExp[i] = bloomCol[i];
+	}
 
 	ImGui::End();
 

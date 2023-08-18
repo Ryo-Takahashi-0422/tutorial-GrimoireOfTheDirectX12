@@ -8,23 +8,23 @@
     //    return float4(0, 0, 0, 1);
     //}
     
-        float3 light = normalize(float3(1, -1, 1));
-        float3 lightColor = float3(1, 1, 1);
+    float3 light = normalize( /*float3(1, -1, 1)*/lightVec);
+    float3 lightColor = float3(1, 1, 1);
     
     // ディフューズ計算
-        float diffuseB = saturate(dot(-light, input.norm.xyz));
-        float4 toonDif = toon.Sample(smpToon, float2(0, diffuseB));
+    float diffuseB = saturate(dot(-light, input.norm.xyz));
+    float4 toonDif = toon.Sample(smpToon, float2(0, diffuseB));
     
     //光の反射ベクトル
-        float3 refLight = normalize(reflect(light, input.norm.xyz));
-        float specularB = pow(saturate(dot(refLight, -input.ray)), specular.a);
-        float4 toonSpecB = toon.Sample(smpToon, float2(0, specularB));
+    float3 refLight = normalize(reflect(light, input.norm.xyz));
+    float specularB = pow(saturate(dot(refLight, -input.ray)), specular.a);
+    float4 toonSpecB = toon.Sample(smpToon, float2(0, specularB));
     
     //スフィアマップ用UV
-        float2 sphereMapUV = (input.vnormal.xy + float2(1, -1)) * float2(0.5, -0.5);
+    float2 sphereMapUV = (input.vnormal.xy + float2(1, -1)) * float2(0.5, -0.5);
     
     // テクスチャカラー
-        float4 texColor = tex.Sample(smp, input.uv);
+    float4 texColor = tex.Sample(smp, input.uv);
       
     float4 result = saturate(diffuse * texColor + toonSpecB * float4(specular.rgb, 1));
    
@@ -42,7 +42,7 @@
     
     
     
-    light = normalize(float3(1, -1, 1));
+    light = normalize( /*float3(1, -1, 1)*/lightVec);
     float bright = dot(input.norm, -light);
     
     float shadowWeight = 1.0f;
@@ -71,10 +71,17 @@
     float4 lmap4 = float4(lmap, lmap, lmap, 1);
     //return lmap4; //!!!この結果がBufferPixelと異なっている。こちらがオカシイ。テクスチャが読み込めていない様子。
     
-    output.col = shadowWeight * result;
-    output.mnormal.rgb = float3((input.norm.xyz + 1.0f) / 2.0f);
-    float y = dot(float3(0.299f, 0.587f, 0.114f), output.col.xyz);
-    output.highLum = y > 0.7f ? y : 0.0f;
-    return output;
+    if(isSelfShadow)
+    {
+        output.col = shadowWeight * result;
+    }
+    else
+    {
+        output.col = result;
+    }
+        output.mnormal.rgb = float3((input.norm.xyz + 1.0f) / 2.0f);
+        float y = dot(float3(0.299f, 0.587f, 0.114f), output.col.xyz);
+        output.highLum = y > 0.7f ? y : 0.0f;
+        return output;
     
-}
+    }

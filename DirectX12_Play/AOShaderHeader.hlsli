@@ -13,6 +13,9 @@ cbuffer SceneBuffer : register(b0) // affine transformation matrix
     matrix invProj; // inverse matrix of projection matrix
     matrix invView; // inverted view matrix 
     matrix bones[256]; // bone matrix
+    
+    float3 lightVec;
+    bool isSelfShadow;
 };
 
 SamplerState smp : register(s0); // sampler

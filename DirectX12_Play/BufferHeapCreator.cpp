@@ -53,7 +53,7 @@ void BufferHeapCreator::SetMutipassRTVHeapDesc()
 void BufferHeapCreator::SetMutipassSRVHeapDesc()
 {
 	mutipassSRVHeapDesc = rtvHeaps->GetDesc(); // 既存のヒープから設定継承
-	mutipassSRVHeapDesc.NumDescriptors = 13; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2 + shrinkedModel + AO + imgui
+	mutipassSRVHeapDesc.NumDescriptors = 14; // マルチパス対象数で変動する + effectCBV + normalmapSRV + shadow + lightmap + シーン行列 + マルチターゲット + bloom*2 + shrinkedModel + AO + imgui + imgui PostSetting
 	mutipassSRVHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	mutipassSRVHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 }
@@ -559,4 +559,40 @@ void BufferHeapCreator::CreateTextureBuffers(ComPtr<ID3D12Device> _dev)
 	whiteTextureBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0xff);
 	blackTextureBuff = CreateD3DX12ResourceBuffer::CreateColorTexture(_dev, 0x00);
 	grayTextureBuff = CreateD3DX12ResourceBuffer::CreateGrayGradationTexture(_dev);
+}
+
+HRESULT BufferHeapCreator::CreateBuff4Imgui(ComPtr<ID3D12Device> _dev, size_t sizeofPostSetting)
+{
+	auto bufferSize = Utility::AlignmentSize(sizeofPostSetting, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	auto buffResDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+	HRESULT result;
+
+	result = _dev->CreateCommittedResource
+	(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&buffResDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, // Uploadヒープでのリソース初期状態はこのタイプが公式ルール
+		nullptr,
+		IID_PPV_ARGS(imguiPostSettingBuff.ReleaseAndGetAddressOf())
+	);
+
+	//if (result != S_OK)
+	//{
+	//	return result;
+	//}
+
+	//D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	//desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	//desc.NodeMask = 0;
+	//desc.NumDescriptors = 1;
+	//desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+	//result = _dev->CreateDescriptorHeap
+	//(
+	//	&desc, IID_PPV_ARGS(imguiPostSettingHeap.GetAddressOf())
+	//);
+
+	return result;
 }
