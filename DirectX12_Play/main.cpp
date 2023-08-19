@@ -23,6 +23,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	if (!app.ResourceInit()) {
 		return -1;
 	}
+
+	app.EffekseerInit();
 	
 	app.Run();
 	//app.Terminate();

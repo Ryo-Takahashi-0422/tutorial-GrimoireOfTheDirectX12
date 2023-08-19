@@ -1,4 +1,5 @@
 #pragma once
+#define NOMINMAX
 
 #include <DirectXTex.h>
 #include <Windows.h>
@@ -21,6 +22,10 @@
 #include <algorithm>
 #include <array>
 #include <ReadData.h>
+
+// Effekseer
+#include <Effekseer.h>
+#include <EffekseerRendererDx12.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;

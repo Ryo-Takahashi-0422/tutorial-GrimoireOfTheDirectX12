@@ -33,7 +33,11 @@ std::string Utility::GetTexPathFromModeAndTexlPath
 {
 	int pathIndex1 = modelPath.rfind('/');
 	int pathIndex2 = modelPath.rfind('\\');
-	auto pathIndex = max(pathIndex1, pathIndex2);
+	//auto pathIndex = max(pathIndex1, pathIndex2);
+	int pathIndex;
+	if (pathIndex1 > pathIndex2) pathIndex = pathIndex1;
+	else pathIndex = pathIndex2;
+
 	auto folderPath = modelPath.substr(0, pathIndex + 1); // ––”ö‚Ì\‚àŽæ“¾‚·‚é‚½‚ß +1
 
 	return folderPath + texPath;

@@ -270,7 +270,9 @@ void PMDActor::SolveCCDIK(const PMDIK& ik)
 			float angle = XMVector2AngleBetweenVectors(vecToEnd, vecToTarget).m128_f32[0]; // 0°～90°、-90°～0°の判別不能
 
 			// 回転限界を超えたときの補正
-			angle = min(angle, ikLimit);
+			//angle = min(angle, ikLimit);
+			if (angle < ikLimit) angle = angle;
+			else angle = ikLimit;
 
 			// 外積と角度から回転行列の算出
 			XMMATRIX rot = XMMatrixRotationAxis(cross, angle);
@@ -371,8 +373,10 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 	//float A = XMVector3Length(linearVec).m128_f32[0]; // 座標変換後のルート→末端ベクトル長さ
 	float B = edgeLens[0]; // ルート→中間ベクトルの長さ
 	float C = edgeLens[1]; // 中間→末端ベクトルの長さ
-	float A = min(B + C - 0.01f, XMVector3Length(linearVec).m128_f32[0]); // 座標変換後のルート→末端ベクトル長さ
-
+	//float A = min(B + C - 0.01f, XMVector3Length(linearVec).m128_f32[0]); // 座標変換後のルート→末端ベクトル長さ
+	float A;
+	if (B + C - 0.01f < XMVector3Length(linearVec).m128_f32[0]) A = B + C - 0.01f;
+	else A = XMVector3Length(linearVec).m128_f32[0];
 	// 座標変換後にルート→中間ベクトルとルート→末端ベクトルの成す角度θ1
 	float x1 = (A * A + B * B - C * C) / (2 * A * B);
 	float theta1 = acosf(x1);
@@ -400,7 +404,10 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 			float D = XMVector3Length(root2IK).m128_f32[0];
 			float E = XMVector3Length(rootMinusroot2IK).m128_f32[0];
 			float y = (B * B + D * D - E * E) / (2 * B * D);
-			y = min(1, y); // 1超えるとarccos値が計算できない
+			//y = min(1, y); // 1超えるとarccos値が計算できない
+
+			if (1 < y) y = 1;
+
 			theta3 = acosf(y);
 		}
 
@@ -413,7 +420,8 @@ void PMDActor::SolveCosineIK(const PMDIK& ik)
 			float D = XMVector3Length(root2IK).m128_f32[0];
 			float E = XMVector3Length(rootMinusroot2IK).m128_f32[0];
 			float y = (B * B + D * D - E * E) / (2 * B * D);
-			y = min(1, y); // 1超えるとarccos値が計算できない
+			//y = min(1, y); // 1超えるとarccos値が計算できない
+			if (1 < y) y = 1;
 			theta3 = -acosf(y);
 		}
 	}

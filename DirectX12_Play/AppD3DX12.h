@@ -127,6 +127,14 @@ private:
 	DirectX::XMVECTOR targetPos;
 	DirectX::XMVECTOR upVec;
 
+	// Effekseer
+	EffekseerRenderer::RendererRef _efkRenderer = nullptr; // effect renderer
+	Effekseer::ManagerRef _efkManager = nullptr; // effect manager
+	Effekseer::RefPtr<EffekseerRenderer::SingleFrameMemoryPool> _efkMemoryPool = nullptr; // memory pool
+	Effekseer::RefPtr<EffekseerRenderer::CommandList> _efkCmdList = nullptr; // for DirectX12, Vulkan
+	Effekseer::EffectRef _effect = nullptr; // entity of effect(effect file)
+	Effekseer::Handle _efkHandle; // effect handle(exceuted effect address)
+
 	// draw method
 	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map
 	void DrawModel(unsigned int modelNum, UINT buffSize); // draw pmd model
@@ -146,8 +154,11 @@ public:
 	// 描画領域などの初期化
 	bool PrepareRendering();
 
-	///パイプライン初期化
+	// パイプライン初期化
 	bool PipelineInit();
+
+	// effekseer initialize
+	void EffekseerInit();
 
 	/// <summary>
 	/// 各種リソースの初期化

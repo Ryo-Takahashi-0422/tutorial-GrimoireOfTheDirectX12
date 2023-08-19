@@ -6,6 +6,13 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
+// effekseer
+#pragma comment(lib, "EffekseerRendererDx12.lib")
+#pragma comment(lib, "Effekseer.lib")
+#pragma comment(lib, "LLGI.lib")
+#pragma comment(lib, "EffekseerRendererCommon.lib")
+#pragma comment(lib, "EffekseerRendererLLGI.lib")
+
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
@@ -329,6 +336,45 @@ bool AppD3DX12::PipelineInit(){
 	return true;
 }
 
+void AppD3DX12::EffekseerInit()
+{
+	_efkManager = Effekseer::Manager::Create(8000);
+	auto graphicsDevice = EffekseerRendererDX12::CreateGraphicsDevice(_dev.Get(), _cmdQueue.Get(), 2);
+	
+	auto format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	_efkRenderer = EffekseerRendererDX12::Create(graphicsDevice, &format, 1, DXGI_FORMAT_UNKNOWN, false, 8000);
+	_efkMemoryPool = EffekseerRenderer::CreateSingleFrameMemoryPool(_efkRenderer->GetGraphicsDevice());
+	_efkCmdList = EffekseerRenderer::CreateCommandList(_efkRenderer->GetGraphicsDevice(), _efkMemoryPool);
+
+	_efkRenderer->SetCommandList(_efkCmdList);
+
+	// 描画モジュールの設定
+	_efkManager->SetSpriteRenderer(_efkRenderer->CreateSpriteRenderer());
+	_efkManager->SetRibbonRenderer(_efkRenderer->CreateRibbonRenderer());
+	_efkManager->SetRingRenderer(_efkRenderer->CreateRingRenderer());
+	_efkManager->SetTrackRenderer(_efkRenderer->CreateTrackRenderer());
+	_efkManager->SetModelRenderer(_efkRenderer->CreateModelRenderer());
+
+	// テクスチャ、モデル、カーブ、マテリアルローダーの設定する。
+	// ユーザーが独自で拡張できる。現在はファイルから読み込んでいる。
+	_efkManager->SetTextureLoader(_efkRenderer->CreateTextureLoader());
+	_efkManager->SetModelLoader(_efkRenderer->CreateModelLoader());
+	_efkManager->SetMaterialLoader(_efkRenderer->CreateMaterialLoader());
+	_efkManager->SetCurveLoader(Effekseer::MakeRefPtr<Effekseer::CurveLoader>());
+
+	// エフェクト自体の設定
+	_effect = Effekseer::Effect::Create
+	(
+		_efkManager,
+		(const EFK_CHAR*)L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\EffekseerTexture\\10\\SimpleLaser.efk",
+		1.0f,
+		(const EFK_CHAR*)L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\EffekseerTexture\\10"
+	);
+
+	/*_efkHandle = _efkManager->Play(_effect, 0, 0, 0);*/
+
+}
+
 bool AppD3DX12::ResourceInit() {
 	//●リソース初期化
 
@@ -645,6 +691,14 @@ void AppD3DX12::Run() {
 		pmdActor[i]->PlayAnimation(); // アニメーション開始時刻の取得
 		pmdActor[i]->MotionUpdate(_duration);
 	}
+
+	/////////////////////////////////////////////////////////
+	//int32_t time = 0;
+	//Effekseer::Handle efkHandle = 0;
+
+	//// Play an effect
+	//// エフェクトの再生
+	//efkHandle = _efkManager->Play(_effect, 0, 0, 0);
 
 	while (true)
 	{
@@ -1003,6 +1057,55 @@ void AppD3DX12::DrawModel(unsigned int modelNum, UINT buffSize)
 			idxOffset += m.indiceNum;
 		}
 	}
+
+	///////////////////////////////////////////////////////////////
+	//_efkHandle = _efkManager->Play(_effect, 0, 0, 0);
+	//_efkManager->Update();
+	//_efkMemoryPool->NewFrame();
+	//EffekseerRendererDX12::BeginCommandList(_efkCmdList, _cmdList.Get());
+	//_efkRenderer->BeginRendering();
+	//_efkManager->Draw();
+	//_efkRenderer->EndRendering();
+	//EffekseerRendererDX12::EndCommandList(_efkCmdList);
+
+	//{
+	//	// Set layer parameters
+	//	// レイヤーパラメータの設定
+	//	Effekseer::Manager::LayerParameter layerParameter;
+	//	layerParameter.ViewerPosition.X = eyePos.m128_f32[0];
+	//	layerParameter.ViewerPosition.Y = eyePos.m128_f32[1];
+	//	layerParameter.ViewerPosition.Z = eyePos.m128_f32[2];
+	//	_efkManager->SetLayerParameter(0, layerParameter);
+
+	//	// Update the manager
+	//	// マネージャーの更新
+	//	Effekseer::Manager::UpdateParameter updateParameter;
+	//	_efkManager->Update(updateParameter);
+
+	//	//// Specify a projection matrix
+	//	//// 投影行列を設定
+	//	//_efkRenderer->SetProjectionMatrix(pmdMaterialInfo[0]->mapMatrix->proj);
+
+	//	//// Specify a camera matrix
+	//	//// カメラ行列を設定
+	//	//_efkRenderer->SetCameraMatrix(pmdMaterialInfo[0]->mapMatrix->view);
+
+	//	// Begin to rendering effects
+	//	// エフェクトの描画開始処理を行う。
+	//	_efkRenderer->BeginRendering();
+
+	//	// Render effects
+	//	// エフェクトの描画を行う。
+	//	Effekseer::Manager::DrawParameter drawParameter;
+	//	drawParameter.ZNear = 0.0f;
+	//	drawParameter.ZFar = 1.0f;
+	//	drawParameter.ViewProjectionMatrix = _efkRenderer->GetCameraProjectionMatrix();
+	//	_efkManager->Draw(drawParameter);
+
+	//	// Finish to rendering effects
+	//	// エフェクトの描画終了処理を行う。
+	//	//_efkRenderer->EndRendering();
+	//}
 
 	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
