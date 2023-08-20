@@ -85,6 +85,10 @@ void SettingImgui::DrawDateOfImGUI(
 	ImGui::Checkbox("Bloom on/off", &blnBloom);
 	isBloomOn = blnBloom;
 
+	static bool blnEffect = false;
+	ImGui::Checkbox("Effect on/off", &blnEffect);
+	isEffectOn = blnEffect;
+
 	constexpr float pi = 3.141592653589f;
 	static float fov = XM_PIDIV2;
 	ImGui::SliderFloat("Field Of View", &fov, pi / 6.0f, pi * 5.0f / 6.0f);

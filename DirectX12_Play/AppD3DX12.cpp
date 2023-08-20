@@ -1059,7 +1059,10 @@ void AppD3DX12::DrawModel(unsigned int modelNum, UINT buffSize)
 	}
 
 	// Draw Effeksser Animation
-	DrawEffect();
+	if (settingImgui->GetEffectOnOffBool())
+	{
+		DrawEffect();
+	}
 
 	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;

@@ -37,8 +37,8 @@ cbuffer PostSetting : register(b2) // imgui PostSetting
     bool isFoV;
     float3 bloomCol;
     bool isSSAO;
-    float dummy;
-    bool isBloom;    
+    float dummy; // to alignment
+    bool isBloom;
 };
 
 struct Output

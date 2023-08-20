@@ -29,6 +29,7 @@ private:
 	bool isSSAO;
 	bool isSelfShadowOn;
 	bool isBloomOn;
+	bool isEffectOn;
 
 	PostSetting* mappedPostSetting = nullptr;
 
@@ -51,5 +52,6 @@ public:
 	bool GetSSAOBool() { return isSSAO; };
 	bool GetShadowmapOnOffBool() { return isSelfShadowOn; };
 	bool GetBloomOnOffBool() { return isBloomOn; };
+	bool GetEffectOnOffBool() { return isEffectOn; };
 	size_t GetPostSettingSize() { return sizeof(PostSetting); };
 };
