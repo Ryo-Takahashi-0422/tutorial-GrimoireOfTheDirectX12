@@ -138,6 +138,13 @@ private:
 	Effekseer::Matrix44 fkProjMat;
 	void DrawEffect();
 
+	// DirectXTK
+	GraphicsMemory* _gmemory = nullptr; // ｸﾞﾗﾌｨｯｸｽﾒﾓﾘｵﾌﾞｼﾞｪｸﾄ
+	SpriteFont* _spriteFont = nullptr; // フォント表示用オブジェクト
+	SpriteBatch* _spriteBatch = nullptr; // スプライト表示用オブジェクト
+	void DirectXTKInit();
+	void DrawSpriteFont();
+
 	// draw method
 	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map
 	void DrawModel(unsigned int modelNum, UINT buffSize); // draw pmd model

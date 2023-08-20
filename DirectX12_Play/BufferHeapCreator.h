@@ -18,7 +18,7 @@ private:
 	ComPtr<ID3D12DescriptorHeap> cbvsrvHeap = nullptr; // 行列CBV, SRV用ディスクリプタヒープ
 	ComPtr<ID3D12DescriptorHeap> multipassRTVHeap = nullptr; // マルチパスレンダーターゲット用ディスクリプタヒープ
 	ComPtr<ID3D12DescriptorHeap> multipassSRVHeap = nullptr; // マルチパステクスチャ用ディスクリプタヒープ
-	//ComPtr<ID3D12DescriptorHeap> imguiPostSettingHeap = nullptr; // imgui PostSetting構造体用ディスクリプタヒープ
+	ComPtr<ID3D12DescriptorHeap> spriteFontHeap = nullptr; // DirectXTK SpriteFont用ディスクリプタヒープ
 
 	D3D12_HEAP_PROPERTIES vertexHeapProps = {}; // 頂点、頂点インデックス用ヒーププロパティ
 	D3D12_HEAP_PROPERTIES depthHeapProps = {}; // 深度用ヒーププロパティ
@@ -121,7 +121,8 @@ public:
 	// マルチパスSRV用ディスクリプタヒープの作成
 	HRESULT CreateMultipassSRVHeap(ComPtr<ID3D12Device> _dev);
 
-
+	// SpriteFont用ディスクリプタヒープの作成
+	HRESULT CreateSpriteFontHeap(ComPtr<ID3D12Device> _dev);
 
 	// 頂点バッファーの作成
 	HRESULT CreateBufferOfVertex(ComPtr<ID3D12Device> _dev);
@@ -175,7 +176,7 @@ public:
 	ComPtr<ID3D12DescriptorHeap> GetCBVSRVHeap() { return cbvsrvHeap; };
 	ComPtr<ID3D12DescriptorHeap> GetMultipassRTVHeap() { return multipassRTVHeap; };
 	ComPtr<ID3D12DescriptorHeap> GetMultipassSRVHeap() { return multipassSRVHeap; };
-	//ComPtr<ID3D12DescriptorHeap> GetImguiPostSettingHeap() { return imguiPsotSettingHeap; };
+	ComPtr<ID3D12DescriptorHeap> GetSpriteFontHeap() { return spriteFontHeap; };
 
 	ComPtr<ID3D12Resource> GetVertBuff() { return vertBuff; };
 	ComPtr<ID3D12Resource> GetIdxBuff() { return idxBuff; };

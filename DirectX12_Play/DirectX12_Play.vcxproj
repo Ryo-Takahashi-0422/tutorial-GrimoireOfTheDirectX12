@@ -135,12 +135,12 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);$(DXTEX_DIR);$(Imgui);$(EFK_ROOT_DIR)\Effekseer;$(EFK_ROOT_DIR)\Effekseer\Effekseer;$(EFK_ROOT_DIR)\EffekseerRendererDX12;$(EFK_ROOT_DIR)\EffekseerRendererLLGI;$(EFK_ROOT_DIR)\EffekseerRendererDX12\EffekseerRenderer;$(EFK_ROOT_DIR)\EffekseerRendererCommon</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);$(DXTEX_DIR);$(Imgui);$(EFK_ROOT_DIR)\Effekseer;$(EFK_ROOT_DIR)\Effekseer\Effekseer;$(EFK_ROOT_DIR)\EffekseerRendererDX12;$(EFK_ROOT_DIR)\EffekseerRendererLLGI;$(EFK_ROOT_DIR)\EffekseerRendererDX12\EffekseerRenderer;$(EFK_ROOT_DIR)\EffekseerRendererCommon;$(DirectXTK_hpp)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(DXTEX_DIR)\Bin\Desktop_2019\x64\Debug;$(EFK_ROOT_DIR)\Effekseer\Debug;$(EFK_ROOT_DIR)\EffekseerRendererDX12\Debug;$(EFK_ROOT_DIR)\3rdParty\LLGI\src\Debug;$(EFK_ROOT_DIR)\EffekseerRendererCommon\Debug;$(EFK_ROOT_DIR)\EffekseerRendererLLGI\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(DXTEX_DIR)\Bin\Desktop_2019\x64\Debug;$(EFK_ROOT_DIR)\Effekseer\Debug;$(EFK_ROOT_DIR)\EffekseerRendererDX12\Debug;$(EFK_ROOT_DIR)\3rdParty\LLGI\src\Debug;$(EFK_ROOT_DIR)\EffekseerRendererCommon\Debug;$(EFK_ROOT_DIR)\EffekseerRendererLLGI\Debug;$(DirectXTK_vs2019_lib)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <EntryPointName>main</EntryPointName>

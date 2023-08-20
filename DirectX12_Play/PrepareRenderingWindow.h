@@ -28,6 +28,7 @@ public:
 	void SetViewportAndRect();
 	HWND GetHWND() { return hwnd; };
 	WNDCLASSEX GetWNDCCLASSEX() { return w; };
+	D3D12_VIEWPORT GetViewPort() { return viewport; };
 	const D3D12_VIEWPORT* GetViewPortPointer() { return &viewport; };
 	const D3D12_RECT* GetRectPointer() { return &scissorRect; };
 	const unsigned int GetWindowWidth() { return window_width; };

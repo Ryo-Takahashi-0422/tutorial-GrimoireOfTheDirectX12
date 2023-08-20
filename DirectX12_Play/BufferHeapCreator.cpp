@@ -142,6 +142,21 @@ HRESULT BufferHeapCreator::CreateMultipassSRVHeap(ComPtr<ID3D12Device> _dev)
 	);
 }
 
+HRESULT BufferHeapCreator::CreateSpriteFontHeap(ComPtr<ID3D12Device> _dev)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC spriteFontHeapDesc = {};
+	spriteFontHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	spriteFontHeapDesc.NumDescriptors = 1;
+	spriteFontHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	spriteFontHeapDesc.NodeMask = 0;
+
+	return _dev->CreateDescriptorHeap
+	(
+		&spriteFontHeapDesc,
+		IID_PPV_ARGS(spriteFontHeap.ReleaseAndGetAddressOf())
+	);
+}
+
 HRESULT BufferHeapCreator::CreateBufferOfVertex(ComPtr<ID3D12Device> _dev)
 {
 	SetVertexHeapProp();

@@ -31,6 +31,11 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 using LoadLambda_t = std::function<HRESULT(const std::wstring& path, TexMetadata*, ScratchImage&)>;
 
+// DirectXTK
+#include <SpriteFont.h> // 文字列表示に必要
+#include <ResourceUploadBatch.h> // DirectXTK関連のリソース使用に必要
+#pragma comment(lib, "DirectXTK12.lib")
+
 //#include <AppD3DX12.h>
 #include <InputLayoutBase.h>
 #include <VertexInputLayout.h>

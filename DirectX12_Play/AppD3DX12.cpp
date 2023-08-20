@@ -684,6 +684,9 @@ bool AppD3DX12::ResourceInit() {
 		viewCreator[i]->CreateCBV4ImguiPostSetting(_dev);
 		mappingExecuter[i]->MappingPostSetting();
 	}
+
+// DirectXTK独自の初期設定
+	DirectXTKInit();
 	
 	return true;
 }
@@ -739,7 +742,7 @@ void AppD3DX12::Run() {
 		SetSSAOSwitch();
 		SetBloomColor();
 
-		DrawBackBuffer(cbv_srv_Size); // draw back buffer
+		DrawBackBuffer(cbv_srv_Size); // draw back buffer and DirectXTK
 
 		//コマンドリストのクローズ(コマンドリストの実行前には必ずクローズする)
 		_cmdList->Close();
@@ -791,7 +794,9 @@ void AppD3DX12::Run() {
 		SetFov();
 
 		//フリップしてレンダリングされたイメージをユーザーに表示
-		_swapChain->Present(1, 0);		
+		_swapChain->Present(1, 0);	
+
+		_gmemory->Commit(_cmdQueue.Get());
 	}
 
 	delete bufferGPLSetting;
@@ -1346,6 +1351,9 @@ void AppD3DX12::DrawBackBuffer(UINT buffSize)
 
 	_cmdList->DrawInstanced(4, 1, 0, 0);
 
+	// after all of drawings, DirectXTK drawing is able to be valid.
+	DrawSpriteFont();
+
 	// ﾊﾞｯｸﾊﾞｯﾌｧ状態をﾚﾝﾀﾞﾘﾝｸﾞﾀｰｹﾞｯﾄから元に戻す
 	barrierDesc4BackBuffer.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrierDesc4BackBuffer.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
@@ -1613,4 +1621,56 @@ void AppD3DX12::DrawEffect()
 	_efkManager->Draw();
 	_efkRenderer->EndRendering();
 	EffekseerRendererDX12::EndCommandList(_efkCmdList);
+}
+
+void AppD3DX12::DirectXTKInit()
+{
+	// Initialize GraphicsMemory object
+	_gmemory = new GraphicsMemory(_dev.Get());
+
+	// Initialize SpriteBatch object
+	ResourceUploadBatch resUploadBatch(_dev.Get());
+	resUploadBatch.Begin();
+	RenderTargetState rsState(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	SpriteBatchPipelineStateDescription pd(rsState);
+	_spriteBatch = new SpriteBatch(_dev.Get(), resUploadBatch, pd);
+	_spriteBatch->SetViewport(prepareRenderingWindow->GetViewPort());
+
+	bufferHeapCreator[0]->CreateSpriteFontHeap(_dev);
+
+	// Initialize SpriteFont object
+	auto _heapSpriteFont = bufferHeapCreator[0]->GetSpriteFontHeap();
+	_spriteFont = new SpriteFont
+	(
+		_dev.Get(),
+		resUploadBatch,
+		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\font\\fonttest.spritefont",
+		_heapSpriteFont->GetCPUDescriptorHandleForHeapStart(),
+		_heapSpriteFont->GetGPUDescriptorHandleForHeapStart()
+	);
+
+	auto _future = resUploadBatch.End(_cmdQueue.Get());
+
+	_future.wait();
+}
+
+void AppD3DX12::DrawSpriteFont()
+{
+	_cmdList->SetDescriptorHeaps(1, bufferHeapCreator[0]->GetSpriteFontHeap().GetAddressOf());
+	_spriteBatch->Begin(_cmdList.Get());
+	_spriteFont->DrawString
+	(
+		_spriteBatch,
+		"Hello World",
+		XMFLOAT2(102,102),
+		Colors::Black
+	);
+	_spriteFont->DrawString
+	(
+		_spriteBatch,
+		"Hello World",
+		XMFLOAT2(100, 100),
+		Colors::Yellow
+	);
+	_spriteBatch->End();
 }
