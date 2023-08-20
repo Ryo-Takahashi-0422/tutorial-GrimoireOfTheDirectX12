@@ -339,6 +339,9 @@ bool AppD3DX12::PipelineInit(){
 void AppD3DX12::EffekseerInit()
 {
 	_efkManager = Effekseer::Manager::Create(8000);
+	// DirectXは左手系のため、これに合わせる
+	_efkManager->SetCoordinateSystem(Effekseer::CoordinateSystem::LH);
+
 	auto graphicsDevice = EffekseerRendererDX12::CreateGraphicsDevice(_dev.Get(), _cmdQueue.Get(), 2);
 	
 	auto format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -370,6 +373,8 @@ void AppD3DX12::EffekseerInit()
 		1.0f,
 		(const EFK_CHAR*)L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\EffekseerTexture\\10"
 	);
+
+
 
 	/*_efkHandle = _efkManager->Play(_effect, 0, 0, 0);*/
 
@@ -692,13 +697,8 @@ void AppD3DX12::Run() {
 		pmdActor[i]->MotionUpdate(_duration);
 	}
 
-	/////////////////////////////////////////////////////////
-	//int32_t time = 0;
-	//Effekseer::Handle efkHandle = 0;
-
-	//// Play an effect
-	//// エフェクトの再生
-	//efkHandle = _efkManager->Play(_effect, 0, 0, 0);
+	// エフェクトの再生
+	_efkHandle = _efkManager->Play(_effect, 0, 0, 0);
 
 	while (true)
 	{
@@ -1058,54 +1058,8 @@ void AppD3DX12::DrawModel(unsigned int modelNum, UINT buffSize)
 		}
 	}
 
-	///////////////////////////////////////////////////////////////
-	//_efkHandle = _efkManager->Play(_effect, 0, 0, 0);
-	//_efkManager->Update();
-	//_efkMemoryPool->NewFrame();
-	//EffekseerRendererDX12::BeginCommandList(_efkCmdList, _cmdList.Get());
-	//_efkRenderer->BeginRendering();
-	//_efkManager->Draw();
-	//_efkRenderer->EndRendering();
-	//EffekseerRendererDX12::EndCommandList(_efkCmdList);
-
-	//{
-	//	// Set layer parameters
-	//	// レイヤーパラメータの設定
-	//	Effekseer::Manager::LayerParameter layerParameter;
-	//	layerParameter.ViewerPosition.X = eyePos.m128_f32[0];
-	//	layerParameter.ViewerPosition.Y = eyePos.m128_f32[1];
-	//	layerParameter.ViewerPosition.Z = eyePos.m128_f32[2];
-	//	_efkManager->SetLayerParameter(0, layerParameter);
-
-	//	// Update the manager
-	//	// マネージャーの更新
-	//	Effekseer::Manager::UpdateParameter updateParameter;
-	//	_efkManager->Update(updateParameter);
-
-	//	//// Specify a projection matrix
-	//	//// 投影行列を設定
-	//	//_efkRenderer->SetProjectionMatrix(pmdMaterialInfo[0]->mapMatrix->proj);
-
-	//	//// Specify a camera matrix
-	//	//// カメラ行列を設定
-	//	//_efkRenderer->SetCameraMatrix(pmdMaterialInfo[0]->mapMatrix->view);
-
-	//	// Begin to rendering effects
-	//	// エフェクトの描画開始処理を行う。
-	//	_efkRenderer->BeginRendering();
-
-	//	// Render effects
-	//	// エフェクトの描画を行う。
-	//	Effekseer::Manager::DrawParameter drawParameter;
-	//	drawParameter.ZNear = 0.0f;
-	//	drawParameter.ZFar = 1.0f;
-	//	drawParameter.ViewProjectionMatrix = _efkRenderer->GetCameraProjectionMatrix();
-	//	_efkManager->Draw(drawParameter);
-
-	//	// Finish to rendering effects
-	//	// エフェクトの描画終了処理を行う。
-	//	//_efkRenderer->EndRendering();
-	//}
+	// Draw Effeksser Animation
+	DrawEffect();
 
 	// color
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -1633,4 +1587,27 @@ void AppD3DX12::SetBloomColor()
 	{
 		mappingExecuter[0]->GetMappedPostSetting()->bloomCol[i] = settingImgui->GetBloomValue(i);
 	}
+}
+
+void AppD3DX12::DrawEffect()
+{
+	_efkHandle = _efkManager->Play(_effect, 0, 0, 0);
+	_efkManager->Update();
+	for (int j = 0; j < 4; ++j)
+	{
+		for (int k = 0; k < 4; ++k)
+		{
+			fkViewMat.Values[j][k] = pmdMaterialInfo[0]->mapMatrix->view.r[j].m128_f32[k];
+			fkProjMat.Values[j][k] = pmdMaterialInfo[0]->mapMatrix->proj.r[j].m128_f32[k];
+		}
+	}
+	_efkRenderer->SetCameraMatrix(fkViewMat);
+	_efkRenderer->SetProjectionMatrix(fkProjMat);
+
+	_efkMemoryPool->NewFrame();
+	EffekseerRendererDX12::BeginCommandList(_efkCmdList, _cmdList.Get());
+	_efkRenderer->BeginRendering();
+	_efkManager->Draw();
+	_efkRenderer->EndRendering();
+	EffekseerRendererDX12::EndCommandList(_efkCmdList);
 }

@@ -134,6 +134,9 @@ private:
 	Effekseer::RefPtr<EffekseerRenderer::CommandList> _efkCmdList = nullptr; // for DirectX12, Vulkan
 	Effekseer::EffectRef _effect = nullptr; // entity of effect(effect file)
 	Effekseer::Handle _efkHandle; // effect handle(exceuted effect address)
+	Effekseer::Matrix44 fkViewMat;
+	Effekseer::Matrix44 fkProjMat;
+	void DrawEffect();
 
 	// draw method
 	void DrawLightMap(unsigned int modelNum, UINT buffSize); // draw light map
