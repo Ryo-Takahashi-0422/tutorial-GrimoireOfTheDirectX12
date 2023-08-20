@@ -1644,7 +1644,7 @@ void AppD3DX12::DirectXTKInit()
 	(
 		_dev.Get(),
 		resUploadBatch,
-		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\font\\fonttest.spritefont",
+		L"C:\\Users\\takataka\\source\\repos\\DirectX12_Play\\font\\kanji.spritefont",
 		_heapSpriteFont->GetCPUDescriptorHandleForHeapStart(),
 		_heapSpriteFont->GetGPUDescriptorHandleForHeapStart()
 	);
@@ -1661,14 +1661,14 @@ void AppD3DX12::DrawSpriteFont()
 	_spriteFont->DrawString
 	(
 		_spriteBatch,
-		"Hello World",
+		L"DirectX12ÇÃñÇì±èë",
 		XMFLOAT2(102,102),
 		Colors::Black
 	);
 	_spriteFont->DrawString
 	(
 		_spriteBatch,
-		"Hello World",
+		L"DirectX12ÇÃñÇì±èë",
 		XMFLOAT2(100, 100),
 		Colors::Yellow
 	);
