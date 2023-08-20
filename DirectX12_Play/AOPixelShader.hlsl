@@ -2,6 +2,8 @@
 
 float SsaoPs(Output input) : SV_TARGET
 {
+    float result = 0.0f;
+    
     float w, h, levels;
     depthmap.GetDimensions(0, w, h, levels);
     float dx = 1.0f / w;
@@ -9,14 +11,14 @@ float SsaoPs(Output input) : SV_TARGET
  
     float4 rpos = (0, 0, 0, 0);
 
-    float dp = normalmap.Sample(smp, float2(input.svpos.x / w, input.svpos.y / h));
+    float dp = depthmap.Sample(smp, float2(input.svpos.x / w, input.svpos.y / h));
     //return dp;
     // SSAO
 
     float div = 0.0f;
     float ao = 0.0f;
     float3 norm = normalize(input.norm.xyz);
-    const int trycnt = 32;
+    const int trycnt = 256;
     const float radius = 15.0f;
     
     if(dp < 1.0f)
@@ -28,6 +30,12 @@ float SsaoPs(Output input) : SV_TARGET
             float rnd3 = random(float2(rnd2, rnd1)) * 2 - 1;
             float3 omega = normalize(float3(rnd1, rnd2, rnd3));
             omega = normalize(omega);
+            
+            ///////
+            norm.x += omega.x * radius;
+            norm.y += omega.y * radius;
+            norm.z += omega.z * radius;
+
             
             // —”‚ÌŒ‹‰Ê–@ü‚Ì”½‘Î‘¤‚ÉŒü‚¢‚Ä‚¢‚½‚ç”½“]
             float dt = dot(norm, omega);
@@ -47,9 +55,11 @@ float SsaoPs(Output input) : SV_TARGET
         }
         
         ao /= div;
+        result = saturate((1.0f - ao) * 1.6f);
+        return result/*saturate((1.0f - ao) * 1.6f)*/;
     }
     
-    return (1.0f - ao)*1.7;
+    return 1.0f;
 }
 
 float random(float2 uv)

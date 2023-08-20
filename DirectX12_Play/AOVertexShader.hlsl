@@ -29,7 +29,7 @@ uint instNo : SV_InstanceID
     output.svpos = mul(proj, output.svpos);
     
     norm.w = 0; // worldに平行移動成分が含まれている場合、法線が並行移動する。(この時モデルは暗くなる。なぜ？？)
-    output.norm = mul(world, norm);
+    output.norm = mul(view, mul(world, norm));
     output.vnormal = mul(view, output.norm);
     output.uv = uv;
     output.ray = normalize(pos.xyz - eye);

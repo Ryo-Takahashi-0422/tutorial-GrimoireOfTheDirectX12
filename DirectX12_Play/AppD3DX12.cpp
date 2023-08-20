@@ -736,8 +736,11 @@ void AppD3DX12::Run() {
 			DrawModel4AO(i, cbv_srv_Size); // draw pmd model for AO to hand over Depth, Normal map.
 		}
 
-		DrawShrinkTextureForBlur(0, cbv_srv_Size); // draw shrink buffer				
-		DrawAmbientOcclusion(0, cbv_srv_Size); // draw AO	
+		DrawShrinkTextureForBlur(0, cbv_srv_Size); // draw shrink buffer
+		if (settingImgui->GetSSAOBool())
+		{
+			DrawAmbientOcclusion(0, cbv_srv_Size); // draw AO	
+		}
 		SetFoVSwitch();
 		SetSSAOSwitch();
 		SetBloomColor();

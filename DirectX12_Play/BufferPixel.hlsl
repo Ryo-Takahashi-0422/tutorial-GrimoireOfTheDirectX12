@@ -13,9 +13,10 @@ float4 psBuffer(Output input) : SV_TARGET
     
     if (isSSAO)
     {
-        float ao = aomap.Sample(smp, input.uv);
+        float ao = SSAOBlur(smp, input.uv);
         float4 aoValue = float4(ao, ao, ao, 1);
-        result *= aoValue;
+        //return saturate(aoValue);
+        result *= saturate(aoValue); // AOPixelShader側で最後にSaturateしているにも関わらず1.0以上の値が返ってきている...なぜ？？？？
     }
     
     if (isBloom)
@@ -199,9 +200,14 @@ float4 AverageBlur(Texture2D _texture, SamplerState _smp, float2 _uv, int offset
     return ret / 9.0f;
 }
 
-float4 SimpleGaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, float dx, float dy)
+float4 SimpleGaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv/*, float dx, float dy*/)
 {
     float4 ret = float4(0, 0, 0, 0);
+    
+    float w, h, levels;
+    model.GetDimensions(0, w, h, levels);
+    float dx = 1.0f / w;
+    float dy = 1.0f / h;
 
     // highest
     ret += _texture.Sample(smp, _uv + float2(-2 * dx, 2 * dy)) * 1;
@@ -324,10 +330,53 @@ float4 FOVEffect(Texture2D _texture, SamplerState _smp, float2 _uv, float focusD
 
     //ret = SimpleGaussianBlur(model, smp, input.uv, dx, dy);
     
-    ret = SimpleGaussianBlur(shrinkedModel, smp, _uv * uvSize + uvOfst, dx, dy);
+    ret = SimpleGaussianBlur(shrinkedModel, smp, _uv * uvSize + uvOfst/*, dx, dy*/);
 
     retColor[1] = ret;
     
     depthDiff = saturate(depthDiff * 2);
     return lerp(retColor[0], retColor[1], depthDiff);
+}
+
+float SSAOBlur(SamplerState _smp, float2 _uv)
+{
+    float ret = 0.0f;
+    
+    float w, h, levels;
+    model.GetDimensions(0, w, h, levels);
+    float dx = 1.0f / w;
+    float dy = 1.0f / h;
+
+    ret = aomap.Sample(smp, _uv);
+    ret += bkweights[0] * ret;
+    
+    // 横方向
+    for (int i = 1; i < 8; ++i)
+    {
+        ret += bkweights[i >> 2][i % 4] * aomap.Sample(smp, _uv + float2(i * dx, 0));
+        //0000, 1
+        //0000, 2
+        //0000, 3
+        //0001, 0
+        //0001, 1
+        //0001, 2
+        //0001, 3の並び。次の行は-iより-1～-8まで
+        ret += bkweights[i >> 2][i % 4] * aomap.Sample(smp, _uv + float2(-i * dx, 0));
+    }
+    
+    // 縦方向
+    for (int j = 1; j < 8; ++j)
+    {
+        ret += bkweights[j >> 2][j % 4] * aomap.Sample(smp, _uv + float2(0, 1 * dy));
+        //0000, 1
+        //0000, 2
+        //0000, 3
+        //0001, 0
+        //0001, 1
+        //0001, 2
+        //0001, 3の並び。次の行は-jより-1～-8まで
+        ret += bkweights[j >> 2][j % 4] * aomap.Sample(smp, _uv + float2(0, -j * dy));
+    }
+    
+    return ret;
 }

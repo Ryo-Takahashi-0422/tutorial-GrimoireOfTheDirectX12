@@ -79,7 +79,7 @@ float4 Gauss(Texture2D<float4> tex, SamplerState smp, float2 uv, float dx, float
 float4 AverageBlur(Texture2D _texture, SamplerState _smp, float2 _uv, int offset, float dx, float dy);
 
 // simple gaussian blur
-float4 SimpleGaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv, float dx, float dy);
+float4 SimpleGaussianBlur(Texture2D _texture, SamplerState _smp, float2 _uv/*, float dx, float dy*/);
 
 // normalize texture use
 float4 NormalmapEffect(float2 _uv);
@@ -92,3 +92,5 @@ float4 BloomEffect(Texture2D _texture, float2 _uv);
 
 // Field Of Depth
 float4 FOVEffect(Texture2D _texture, SamplerState _smp, float2 _uv, float focusDistance);
+
+float SSAOBlur(SamplerState _smp, float2 _uv);
